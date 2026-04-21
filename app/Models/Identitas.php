@@ -13,20 +13,11 @@ class Identitas extends Model
     protected $table = 'identitas';
 
     protected $fillable = [
-        'jenis_identitas',
-        'nomor_identitas',
-        'nama_lengkap',
-        'panggilan',
-        'jenis_umat',
-        'bhante_lay',
-        'nomor_hp_primary',
-        'divisi_id',
-        'triyana',
-        'email',
-        'pekerjaan',
-        'is_agen_purna',
-        'is_dharma_patriot',
-        'status_keamanan',
+    'nama_lengkap', 'panggilan', 'jenis_identitas', 'nomor_identitas',
+    'jenis_kelamin', 'nomor_hp_primary', 'email', 'pekerjaan',
+    'kategori_jarkom', 'alamat', 'kota', 'triyana', 'status_keamanan',
+    'jenis_umat', 'bhante_lay', 'is_agen_purna', 'is_dharma_patriot',
+    'divisi_id', 'created_by'
     ];
 
     protected $attributes = [
@@ -88,5 +79,21 @@ class Identitas extends Model
     public function primaryAddress()
     {
         return $this->hasOne(IdentitasAddress::class, 'identitas_id')->where('is_primary', true);
+    }
+
+
+    public function contacts()
+    {
+    return $this->hasMany(IdentitasContact::class);
+    }
+
+    public function primaryPhone()
+    {
+    return $this->contacts()->where('type', 'hp')->where('is_primary', true)->first();
+    }
+
+    public function primaryEmail()
+    {
+    return $this->contacts()->where('type', 'email')->where('is_primary', true)->first();
     }
 }

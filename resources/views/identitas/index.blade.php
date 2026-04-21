@@ -70,7 +70,7 @@
 </style>
 
 <div class="container-fluid py-4 px-4">
-    {{-- Notifikasi --}}
+    {{-- Notifikasi Error & Success --}}
     @if(session('success'))
         <div class="alert alert-success border-0 shadow-sm rounded-4 mb-4 d-flex align-items-center p-3" role="alert">
             <i class="bi bi-check-circle-fill fs-4 me-3"></i>
@@ -79,6 +79,17 @@
                 <div class="small">{{ session('success') }}</div>
             </div>
             <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
+    @if ($errors->any())
+        <div class="alert alert-danger border-0 shadow-sm rounded-4 mb-4 p-3" role="alert">
+            <div class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill me-2"></i> Ada Kesalahan:</div>
+            <ul class="mb-0 small">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
         </div>
     @endif
 
@@ -106,7 +117,7 @@
             </div>
             <button type="button" class="btn btn-success fw-bold rounded-3 px-4 shadow-sm d-flex align-items-center gap-2"
                     data-bs-toggle="modal" data-bs-target="#addModal" style="height: 45px;">
-                <i class="bi bi-plus-lg"></i> Add New Data
+                <i class="bi bi-person-plus"></i> Add New Data
             </button>
         </div>
     </div>
@@ -147,22 +158,18 @@
             <table class="table align-middle mb-0">
                 <thead>
                     <tr>
-                        <th class="ps-4" width="60">
-                            <div class="form-check"><input type="checkbox" id="checkAll" class="form-check-input"></div>
-                        </th>
+                        <th class="ps-4" width="60">No</th>
                         <th>Profil & Identitas</th>
-                        <th>Informasi Alamat</th>
+                        <th>Kontak & Alamat</th>
                         <th class="text-center">Kategori</th>
                         <th class="text-center">Divisi</th>
                         <th class="text-center">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($identitas as $idnt)
+                    @forelse($identitas as $index => $idnt)
                     <tr class="data-row">
-                        <td class="ps-4">
-                            <div class="form-check"><input type="checkbox" class="form-check-input select-item" value="{{ $idnt->id }}"></div>
-                        </td>
+                        <td class="ps-4 small text-muted">{{ $identitas->firstItem() + $index }}</td>
                         <td>
                             <div class="d-flex align-items-center">
                                 <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-3 fw-bold text-primary shadow-sm" style="width: 40px; height: 40px; font-size: 14px;">
@@ -171,24 +178,22 @@
                                 <div>
                                     <div class="fw-bold text-dark">{{ strtoupper($idnt->nama_lengkap) }}</div>
                                     <div class="text-muted small d-flex align-items-center gap-2">
-                                        <span class="text-primary fw-600">{{ $idnt->gelar_panggilan }} {{ $idnt->nama_panggilan }}</span>
+                                        <span class="text-primary fw-600">{{ $idnt->panggilan }}</span>
                                         <span class="text-silver">|</span>
-                                        <span>ID: {{ $idnt->no_ktp }}</span>
+                                        <span>ID: {{ $idnt->nomor_identitas }}</span>
                                     </div>
                                 </div>
                             </div>
                         </td>
                         <td>
-                            @if($idnt->primaryAddress)
-                                <div class="small fw-500 text-dark text-truncate" style="max-width: 250px;">{{ $idnt->primaryAddress->alamat_lengkap }}</div>
-                                <div class="text-muted" style="font-size: 11px;"><i class="bi bi-geo-alt me-1"></i>{{ $idnt->primaryAddress->kota }} {{ $idnt->primaryAddress->kode_pos }}</div>
-                            @else
-                                <span class="badge bg-light text-muted fw-normal border italic">Alamat Kosong</span>
-                            @endif
+                            <div class="small fw-500 text-dark">{{ $idnt->nomor_hp_primary }}</div>
+                            <div class="text-muted text-truncate" style="font-size: 11px; max-width: 200px;">
+                                <i class="bi bi-geo-alt me-1"></i>{{ $idnt->alamat ?? 'Alamat Belum Diisi' }}
+                            </div>
                         </td>
                         <td class="text-center">
-                            <span class="badge-custom {{ $idnt->jenis_anggota == 'Sangha' ? 'bg-warning bg-opacity-10 text-warning' : 'bg-info bg-opacity-10 text-info' }}">
-                                {{ $idnt->jenis_anggota }}
+                            <span class="badge-custom {{ $idnt->jenis_umat == 'Sangha' ? 'bg-warning bg-opacity-10 text-warning' : 'bg-info bg-opacity-10 text-info' }}">
+                                {{ $idnt->jenis_umat }}
                             </span>
                         </td>
                         <td class="text-center">
@@ -207,7 +212,7 @@
                     @empty
                     <tr>
                         <td colspan="6" class="text-center py-5">
-                            <img src="https://cdn-icons-png.flaticon.com/512/7486/7486744.png" width="80" class="opacity-25 mb-3" alt="Empty">
+                            <i class="bi bi-database-exclamation fs-1 opacity-25 d-block mb-3"></i>
                             <p class="text-muted fw-500">Belum ada data identitas yang tersimpan.</p>
                         </td>
                     </tr>
@@ -215,6 +220,9 @@
                 </tbody>
             </table>
         </div>
+    </div>
+    <div class="mt-4">
+        {{ $identitas->links() }}
     </div>
 </div>
 
@@ -229,7 +237,7 @@
                         <i class="bi bi-person-plus-fill fs-3"></i>
                         <div>
                             <h5 class="modal-title fw-bold mb-0">Input Identitas Baru</h5>
-                            <small class="opacity-75">Pastikan data KTP sesuai dengan dokumen fisik</small>
+                            <small class="opacity-75">Pastikan data sesuai dengan dokumen fisik</small>
                         </div>
                     </div>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -245,22 +253,20 @@
                                 </h6>
                                 <div class="row g-3">
                                     <div class="col-md-7">
-                                        <label class="form-label">Nomor KTP (16 Digit)</label>
-                                        <input type="text" name="no_ktp" class="form-control form-control-mis" placeholder="" required>
+                                        <label class="form-label">Nomor Identitas (KTP/Lainnya)</label>
+                                        <input type="text" name="nomor_identitas" class="form-control form-control-mis" placeholder="Contoh: 317XXXXXXXXXXXXX" required>
                                     </div>
                                     <div class="col-md-5">
-                                        <label class="form-label">Gelar Sapaan</label>
-                                        <select name="gelar_panggilan" class="form-select form-control-mis">
-                                            <option value="Ci">Ci (Cici)</option>
-                                            <option value="Ko">Ko (Koko)</option>
-                                            <option value="Suhu">Suhu</option>
-                                            <option value="Bhante">Bhante</option>
-                                            <option value="Kak">Kakak</option>
+                                        <label class="form-label">Jenis Identitas</label>
+                                        <select name="jenis_identitas" class="form-select form-control-mis">
+                                            <option value="KTP">KTP</option>
+                                            <option value="Paspor">Paspor</option>
+                                            <option value="Lainnya">Lainnya</option>
                                         </select>
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label">Nama Lengkap (Sesuai KTP)</label>
-                                        <input type="text" name="nama_lengkap" class="form-control form-control-mis" placeholder="" required>
+                                        <input type="text" name="nama_lengkap" class="form-control form-control-mis" placeholder="Nama Tanpa Gelar" required>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Jenis Kelamin</label>
@@ -277,7 +283,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Kategori Anggota</label>
-                                        <select name="jenis_anggota" class="form-select form-control-mis" required>
+                                        <select name="jenis_umat" class="form-select form-control-mis" required>
                                             <option value="Umat">Umat</option>
                                             <option value="Sangha">Sangha</option>
                                         </select>
@@ -304,27 +310,38 @@
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="form-label">Nama Panggilan</label>
-                                        <input type="text" name="nama_panggilan" class="form-control form-control-mis" placeholder="">
+                                        <input type="text" name="panggilan" class="form-control form-control-mis" placeholder="Nama Akrab">
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Nomor WhatsApp</label>
-                                        <input type="text" name="nomor_hp_primary" class="form-control form-control-mis" placeholder="" required>
+                                        <input type="text" name="nomor_hp_primary" class="form-control form-control-mis" placeholder="Contoh: 0812XXXX" required>
                                     </div>
                                     <div class="col-12">
-                                        <label class="form-label">Alamat Lengkap Pengiriman</label>
-                                        <textarea name="alamat_primary" class="form-control form-control-mis" rows="2" placeholder=""></textarea>
+                                        <label class="form-label">Alamat Domisili</label>
+                                        <textarea name="alamat" class="form-control form-control-mis" rows="2" placeholder="Nama jalan, nomor rumah, RT/RW"></textarea>
                                     </div>
                                     <div class="col-md-7">
                                         <label class="form-label">Kota / Kabupaten</label>
                                         <input type="text" name="kota" class="form-control form-control-mis">
                                     </div>
                                     <div class="col-md-5">
-                                        <label class="form-label">Kode Pos</label>
-                                        <input type="text" name="kode_pos" class="form-control form-control-mis">
+                                        <label class="form-label">Triyana</label>
+                                        <select name="triyana" class="form-select form-control-mis">
+                                            <option value="">- Pilih -</option>
+                                            <option value="Theravada">Theravada</option>
+                                            <option value="Mahayana">Mahayana</option>
+                                            <option value="Tantrayana">Tantrayana</option>
+                                        </select>
                                     </div>
-                                    <div class="col-12">
-                                        <label class="form-label">Patokan / Catatan Alamat</label>
-                                        <input type="text" name="note_pengiriman" class="form-control form-control-mis" placeholder="">
+                                    <div class="col-12 mt-4">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" name="is_agen_purna" id="agen_purna">
+                                            <label class="form-check-label small fw-bold" for="agen_purna">Agen Purna</label>
+                                        </div>
+                                        <div class="form-check form-switch mt-2">
+                                            <input class="form-check-input" type="checkbox" name="is_dharma_patriot" id="dharma_patriot">
+                                            <label class="form-check-label small fw-bold" for="dharma_patriot">Dharma Patriot</label>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -348,22 +365,6 @@
         $('#liveSearch').on('keypress', function(e) {
             if(e.which == 13) window.location.href = "{{ route('identitas.index') }}?search=" + $(this).val();
         });
-
-        // Check All Logic
-        $('#checkAll').on('click', function() {
-            $('.select-item').prop('checked', this.checked);
-            updateBulkUI();
-        });
-
-        $(document).on('change', '.select-item', function() {
-            updateBulkUI();
-        });
-
-        function updateBulkUI() {
-            let count = $('.select-item:checked').length;
-            $('#btnBulkDelete').toggleClass('d-none', count === 0);
-            $('#countSelected').text(count);
-        }
     });
 </script>
 @endsection

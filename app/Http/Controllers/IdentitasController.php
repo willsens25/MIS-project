@@ -17,12 +17,12 @@ class IdentitasController extends Controller
     {
         $search = $request->input('search');
 
-        $identitas = Identitas::with(['divisi', 'primaryAddress'])
+        $identitas = Identitas::with(['divisi', 'addresses'])
             ->when($search, function($query) use ($search) {
                 $query->where(function($q) use ($search) {
                     $q->where('nama_lengkap', 'LIKE', "%{$search}%")
-                    ->orWhere('nama_panggilan', 'LIKE', "%{$search}%")
-                    ->orWhere('no_ktp', 'LIKE', "%{$search}%")
+                    ->orWhere('panggilan', 'LIKE', "%{$search}%")
+                    ->orWhere('nomor_identitas', 'LIKE', "%{$search}%")
                     ->orWhereHas('divisi', function($sq) use ($search) {
                         $sq->where('nama_divisi', 'LIKE', "%{$search}%");
                     });
@@ -34,6 +34,7 @@ class IdentitasController extends Controller
 
         $divisi = Divisi::all();
 
+        // Statistik
         $stats = Transaksi::selectRaw("
             SUM(CASE WHEN jenis = 'DONASI' THEN nominal ELSE 0 END) as total_donasi,
             SUM(CASE WHEN jenis = 'SALUR' THEN nominal ELSE 0 END) as total_salur
@@ -53,131 +54,95 @@ class IdentitasController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $request->validate([
-            'no_ktp'           => 'required|string|max:50|unique:identitas,no_ktp',
-            'nama_lengkap'     => 'required|string|max:255',
-            'nama_panggilan'   => 'nullable|string|max:100',
-            'gelar_panggilan'  => 'nullable|string',
-            'jenis_kelamin'    => 'required|in:pria,wanita',
-            'divisi_id'        => 'required|exists:divisi,id',
-            'jenis_anggota'    => 'required|in:Umat,Sangha',
-            'nomor_hp_primary' => 'required|string',
-            'alamat_primary'   => 'required|string',
-        ], [
-            'no_ktp.unique'    => 'Gagal! Nomor KTP ini sudah terdaftar.',
-            'nama_lengkap.required' => 'Nama wajib diisi sesuai KTP.',
+{
+    DB::transaction(function () use ($request) {
+        $identitas = Identitas::create([
+            'nomor_identitas' => $request->nomor_identitas,
+            'nama_ktp' => $request->nama_ktp,
+            'nama_lengkap' => $request->nama_lengkap,
+            'panggilan' => $request->panggilan,
+            'sapaan' => $request->sapaan,
+            // ... field lainnya
         ]);
 
-        try {
-            DB::beginTransaction();
-
-            $identitas = Identitas::create([
-                'no_ktp'           => $request->no_ktp,
-                'nama_ktp'         => $request->nama_ktp ?? $request->nama_lengkap,
-                'nama_lengkap'     => strtoupper($request->nama_lengkap),
-                'nama_panggilan'   => $request->nama_panggilan,
-                'gelar_panggilan'  => $request->gelar_panggilan,
-                'jenis_kelamin'    => $request->jenis_kelamin,
-                'tempat_lahir'     => $request->tempat_lahir,
-                'tanggal_lahir'    => $request->tanggal_lahir,
-                'pekerjaan'        => $request->pekerjaan,
-                'agama'            => $request->agama,
-                'triyana'          => $request->triyana,
-                'kewarganegaraan'  => $request->kewarganegaraan ?? 'WNI',
-                'divisi_id'        => $request->divisi_id,
-                'jenis_anggota'    => $request->jenis_anggota,
-                'created_by'       => Auth::id(),
-                'status_keamanan'  => $request->status_keamanan ?? 'Normal',
-                'email'            => $request->email,
+        // Simpan HP Primary
+        if ($request->nomor_hp) {
+            $identitas->contacts()->create([
+                'type' => 'hp',
+                'value' => $request->nomor_hp,
+                'is_primary' => true
             ]);
-
-            $identitas->addresses()->create([
-                'nama_penerima'  => $request->nama_penerima ?? $request->nama_lengkap,
-                'hp_penerima'    => $request->nomor_hp_primary,
-                'alamat_lengkap' => $request->alamat_primary,
-                'kelurahan'      => $request->kelurahan,
-                'kecamatan'      => $request->kecamatan,
-                'kota'           => $request->kota,
-                'kode_pos'       => $request->kode_pos,
-                'note'           => $request->note_pengiriman,
-                'is_primary'     => true,
-            ]);
-
-            DB::commit();
-            return redirect()->back()->with('success', 'Data ' . $request->gelar_panggilan . ' ' . $request->nama_panggilan . ' berhasil disimpan!');
-
-        } catch (\Exception $e) {
-            DB::rollback();
-            return redirect()->back()->with('error', 'Gagal Simpan: ' . $e->getMessage());
         }
-    }
+
+        // Simpan Email Primary
+        if ($request->email) {
+            $identitas->contacts()->create([
+                'type' => 'email',
+                'value' => $request->email,
+                'is_primary' => true
+            ]);
+        }
+    });
+}
 
     public function show($id)
     {
-        $identitas = Identitas::with(['divisi', 'addresses', 'transaksi' => function($query) {
-            $query->latest('tanggal_transaksi');
-        }])->findOrFail($id);
-
-        $totalDonasi = $identitas->transaksi->where('jenis', 'DONASI')->sum('nominal');
-        $totalSalur = $identitas->transaksi->where('jenis', 'SALUR')->sum('nominal');
-
-        return view('identitas.show', compact('identitas', 'totalDonasi', 'totalSalur'));
+    $identitas = Identitas::with('divisi', 'primaryAddress')->findOrFail($id);
+    $totalDonasi = 0;
+    $totalSalur = 0;
+    return view('identitas.show', compact('identitas', 'totalDonasi', 'totalSalur'));
     }
 
-    /**
-     * Tampilkan halaman form edit (Method yang tadi hilang)
-     */
     public function edit($id)
     {
-        $identitas = Identitas::with('primaryAddress')->findOrFail($id);
+        $identitas = Identitas::findOrFail($id);
         $divisi = Divisi::all();
 
         return view('identitas.edit', compact('identitas', 'divisi'));
     }
 
     public function update(Request $request, $id)
-{
-    $identitas = Identitas::findOrFail($id);
+    {
+        $identitas = Identitas::findOrFail($id);
 
-    // Sesuaikan validasi dengan nama input di view edit
-    $request->validate([
-        'nama_lengkap'      => 'required|string|max:255',
-        'nomor_identitas'   => 'required|string|max:50|unique:identitas,no_ktp,'.$id, // Mapping ke kolom no_ktp
-        'divisi_id'         => 'required|exists:divisi,id',
-        'jenis_identitas'   => 'required',
-    ]);
-
-    try {
-        DB::beginTransaction();
-
-        // Update data identitas (Mapping input form ke kolom database)
-        $identitas->update([
-            'no_ktp'            => $request->nomor_identitas,
-            'nama_lengkap'      => strtoupper($request->nama_lengkap),
-            'nama_panggilan'    => $request->panggilan,
-            'jenis_identitas'   => $request->jenis_identitas,
-            'divisi_id'         => $request->divisi_id,
-            'status_keamanan'   => $request->status_keamanan,
-            'is_agen_purna'     => $request->is_agen_purna,
-            'is_dharma_patriot' => $request->is_dharma_patriot,
+        $request->validate([
+            'nama_lengkap'     => 'required|string|max:255',
+            'nomor_identitas'  => 'required|string|max:50|unique:identitas,nomor_identitas,'.$id,
+            'divisi_id'        => 'required|exists:divisi,id',
         ]);
 
-        // Jika ada perubahan nama atau info dasar, update juga data di alamat utama (opsional)
-        if ($identitas->primaryAddress) {
-            $identitas->primaryAddress()->update([
-                'nama_penerima' => strtoupper($request->nama_lengkap),
+        try {
+            DB::beginTransaction();
+
+            $identitas->update([
+                'nama_lengkap'      => strtoupper($request->nama_lengkap),
+                'panggilan'         => $request->panggilan,
+                'nomor_identitas'   => $request->nomor_identitas,
+                'jenis_identitas'   => $request->jenis_identitas,
+                'divisi_id'         => $request->divisi_id,
+                'status_keamanan'   => $request->status_keamanan,
+                'jenis_kelamin'     => $request->jenis_kelamin,
+                'nomor_hp_primary'  => $request->nomor_hp_primary,
+                'email'             => $request->email,
+                'pekerjaan'         => $request->pekerjaan,
+                'alamat'            => $request->alamat,
+                'kota'              => $request->kota,
+                'triyana'           => $request->triyana,
+                'jenis_umat'        => $request->jenis_umat,
+                'bhante_lay'        => $request->bhante_lay,
+                'is_agen_purna'     => $request->has('is_agen_purna'),
+                'is_dharma_patriot' => $request->has('is_dharma_patriot'),
             ]);
+
+            DB::commit();
+            return redirect()->route('identitas.show', $identitas->id)
+                            ->with('success', 'Data berhasil diperbarui!');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->back()->with('error', 'Gagal Update: ' . $e->getMessage())->withInput();
         }
-
-        DB::commit();
-        return redirect()->route('identitas.index')->with('success', 'Profil ' . $request->nama_lengkap . ' berhasil diperbarui!');
-
-    } catch (\Exception $e) {
-        DB::rollback();
-        return redirect()->back()->with('error', 'Gagal Update: ' . $e->getMessage())->withInput();
     }
-}
 
     public function destroy($id)
     {
@@ -185,39 +150,5 @@ class IdentitasController extends Controller
         $identitas->delete();
 
         return redirect()->route('identitas.index')->with('success', 'Data berhasil dihapus.');
-    }
-
-    public function exportPDF(Request $request)
-    {
-        $search = $request->input('search');
-        $identitas = Identitas::with('transaksi', 'divisi', 'primaryAddress')
-            ->when($search, function($query) use ($search) {
-                $query->where('nama_lengkap', 'LIKE', "%{$search}%");
-            })->get();
-
-        $totals = Transaksi::selectRaw("
-            SUM(CASE WHEN jenis = 'DONASI' THEN nominal ELSE 0 END) as total_donasi,
-            SUM(CASE WHEN jenis = 'SALUR' THEN nominal ELSE 0 END) as total_salur
-        ")->first();
-
-        $pdf = Pdf::loadView('identitas.pdf', [
-            'identitas' => $identitas,
-            'totalDonasi' => $totals->total_donasi ?? 0,
-            'totalSalur' => $totals->total_salur ?? 0
-        ]);
-
-        $pdf->setPaper('a4', 'portrait');
-        return $pdf->stream('Laporan-Database-Identitas.pdf');
-    }
-
-    public function bulkDelete(Request $request)
-    {
-        $ids = $request->ids;
-        if (!$ids) {
-            return response()->json(['success' => false, 'message' => 'Pilih data dulu!']);
-        }
-
-        Identitas::whereIn('id', explode(',', $ids))->delete();
-        return response()->json(['success' => true, 'message' => 'Data terpilih berhasil dihapus!']);
     }
 }
