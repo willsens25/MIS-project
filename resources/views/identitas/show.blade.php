@@ -62,6 +62,11 @@
                     <div class="badge-status {{ $statusClass }} d-inline-block">
                         <i class="bi bi-shield-check me-1"></i> STATUS: {{ strtoupper($identitas->status_keamanan ?? 'NORMAL') }}
                     </div>
+
+                    <div class="mt-3 d-flex justify-content-center gap-2">
+                        @if($identitas->is_agen_purna) <span class="badge bg-info text-white">AGEN</span> @endif
+                        @if($identitas->is_dharma_patriot) <span class="badge bg-primary">PATRIOT</span> @endif
+                    </div>
                 </div>
 
                 <hr class="my-4 opacity-50">
@@ -69,7 +74,7 @@
                 <div class="row g-3">
                     <div class="col-6 text-center border-end">
                         <p class="info-label">Total Donasi</p>
-                        <h6 class="fw-800 text-success">Rp {{ number_format($totalDonasi ?? 0, 0, ',', '.') }}</h6>
+                        <h6 class="fw-800 text-success">Rp {{ number_format($identitas->total_donasi ?? 0, 0, ',', '.') }}</h6>
                     </div>
                     <div class="col-6 text-center">
                         <p class="info-label">Total Salur</p>
@@ -78,29 +83,20 @@
                 </div>
             </div>
 
-            {{-- KONTAK (Multi HP & Email) --}}
+            {{-- KONTAK --}}
             <div class="card card-custom p-4 mb-4">
-                <h6 class="fw-800 mb-3 small text-uppercase"><i class="bi bi-person-lines-fill me-2"></i>Kontak Utama</h6>
+                <h6 class="fw-800 mb-3 small text-uppercase"><i class="bi bi-person-lines-fill me-2"></i>Kontak & Jarkom</h6>
 
                 <p class="info-label">Nomor WhatsApp / HP</p>
-                @forelse($identitas->contacts->where('type', 'hp') as $hp)
-                    <div class="contact-item d-flex justify-content-between align-items-center">
-                        <span class="fw-bold text-dark">{{ $hp->value }}</span>
-                        @if($hp->is_primary) <span class="badge bg-primary style="font-size: 10px">Utama</span> @endif
-                    </div>
-                @empty
-                    <p class="info-value text-muted mb-3">-</p>
-                @endforelse
+                <div class="contact-item d-flex justify-content-between align-items-center">
+                    <span class="fw-bold text-dark">{{ $identitas->nomor_hp_primary ?? '-' }}</span>
+                    <span class="badge bg-primary" style="font-size: 10px">Utama</span>
+                </div>
 
                 <p class="info-label mt-3">Email</p>
-                @forelse($identitas->contacts->where('type', 'email') as $email)
-                    <div class="contact-item d-flex justify-content-between align-items-center">
-                        <span class="fw-bold text-dark">{{ $email->value }}</span>
-                        @if($email->is_primary) <span class="badge bg-primary" style="font-size: 10px">Utama</span> @endif
-                    </div>
-                @empty
-                    <p class="info-value text-muted">-</p>
-                @endforelse
+                <div class="contact-item d-flex justify-content-between align-items-center">
+                    <span class="fw-bold text-dark">{{ $identitas->email ?? '-' }}</span>
+                </div>
             </div>
         </div>
 
@@ -129,12 +125,20 @@
                         <p class="info-label">Tempat, Tanggal Lahir</p>
                         <p class="info-value">
                             {{ $identitas->tempat_lahir ?? '-' }},
-                            {{ $identitas->tanggal_lahir ? \Carbon\Carbon::parse($identitas->tanggal_lahir)->format('d M Y') : '-' }}
+                            {{ $identitas->tanggal_lahir ? $identitas->tanggal_lahir->format('d M Y') : '-' }}
                         </p>
                     </div>
                     <div class="col-md-6">
-                        <p class="info-label">Jenis Kelamin</p>
-                        <p class="info-value">{{ $identitas->jenis_kelamin ? ucfirst($identitas->jenis_kelamin) : '-' }}</p>
+                    <p class="info-label">Jenis Kelamin</p>
+                    <p class="info-value">
+                        @if($identitas->jenis_kelamin == 'pria')
+                        Laki-laki
+                        @elseif($identitas->jenis_kelamin == 'wanita')
+                        Perempuan
+                        @else
+                        {{ ucfirst($identitas->jenis_kelamin) ?? '-' }}
+                        @endif
+                        </p>
                     </div>
                     <div class="col-md-6">
                         <p class="info-label">Pekerjaan</p>
@@ -149,31 +153,18 @@
 
             {{-- ALAMAT --}}
             <div class="card card-custom p-4">
-                <h5 class="fw-800 mb-4"><i class="bi bi-geo-alt-fill me-2 text-danger"></i>Daftar Alamat</h5>
-                @forelse($identitas->addresses as $address)
-                <div class="p-3 rounded-4 bg-light mb-3 border-start border-4 {{ $address->is_primary ? 'border-primary' : 'border-secondary' }}">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h6 class="fw-bold mb-1">{{ $address->nama_penerima }}
-                                @if($address->is_primary) <span class="badge bg-primary ms-1" style="font-size: 10px">Utama</span> @endif
-                            </h6>
-                            <p class="text-muted small mb-2"><i class="bi bi-telephone me-1"></i> {{ $address->hp_penerima }}</p>
-                        </div>
+                <h5 class="fw-800 mb-4"><i class="bi bi-geo-alt-fill me-2 text-danger"></i>Alamat Tinggal</h5>
+                @if($identitas->alamat)
+                    <div class="p-3 rounded-4 bg-light mb-3 border-start border-4 border-primary">
+                        <p class="text-dark small mb-1 fw-semibold">{{ $identitas->alamat }}</p>
+                        <p class="text-muted small mb-0">{{ $identitas->kota ?? '' }}</p>
                     </div>
-                    <p class="text-dark small mb-1 fw-semibold">{{ $address->alamat_lengkap }}</p>
-                    <p class="text-muted small mb-0">{{ $address->kelurahan }}, {{ $address->kecamatan }}, {{ $address->kota }}, {{ $address->kode_pos }}</p>
-                    @if($address->note)
-                        <div class="mt-2 p-2 bg-white rounded-3 small border">
-                            <i class="bi bi-info-circle text-primary me-1"></i> <span class="text-muted">Note:</span> {{ $address->note }}
-                        </div>
-                    @endif
-                </div>
-                @empty
-                <div class="text-center py-4 text-muted">
-                    <i class="bi bi-geo fs-2 d-block mb-2"></i>
-                    <small>Belum ada data alamat.</small>
-                </div>
-                @endforelse
+                @else
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-geo fs-2 d-block mb-2"></i>
+                        <small>Belum ada data alamat.</small>
+                    </div>
+                @endif
             </div>
         </div>
     </div>

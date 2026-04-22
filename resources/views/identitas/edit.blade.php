@@ -10,13 +10,10 @@
     .form-label-custom { font-weight: 700; font-size: 11px; color: #94a3b8; letter-spacing: 0.5px; text-transform: uppercase; }
     .input-custom { border: none; background-color: #f1f5f9; border-radius: 12px; padding: 12px 16px; font-weight: 600; transition: all 0.2s; }
     .input-custom:focus { background-color: #ffffff; box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.1); outline: none; border: 1px solid #007BFF; }
-
     .btn-save { background-color: #007BFF; border: none; border-radius: 14px; padding: 14px 30px; font-weight: 700; transition: 0.3s; }
     .btn-save:hover { background-color: #0056b3; transform: translateY(-2px); box-shadow: 0 8px 15px rgba(0, 123, 255, 0.2); }
-
     .preview-card { position: sticky; top: 20px; }
     .avatar-preview { width: 80px; height: 80px; background: linear-gradient(135deg, #007BFF, #00d4ff); border-radius: 24px; display: flex; align-items: center; justify-content: center; font-size: 32px; color: white; margin: 0 auto 15px; box-shadow: 0 10px 20px rgba(0, 123, 255, 0.2); }
-
     .form-switch .form-check-input { width: 2.5em; height: 1.25em; cursor: pointer; }
 </style>
 
@@ -31,37 +28,46 @@
         </div>
     </div>
 
+    @if(session('error'))
+        <div class="alert alert-danger border-0 rounded-4 mb-4 shadow-sm">
+            {{ session('error') }}
+        </div>
+    @endif
+
     <form action="{{ route('identitas.update', $identitas->id) }}" method="POST">
         @csrf
         @method('PUT')
 
         <div class="row g-4">
             <div class="col-lg-8">
+                {{-- INFORMASI UTAMA --}}
                 <div class="card card-custom p-4 bg-white mb-4">
                     <h5 class="fw-800 mb-4"><i class="bi bi-person-badge me-2 text-primary"></i>Informasi Utama</h5>
-
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label-custom">Nomor KTP / Identitas</label>
-                            <input type="text" name="nomor_identitas" class="form-control input-custom"
-                                   value="{{ old('nomor_identitas', $identitas->no_ktp) }}" required>
+                            <input type="text" name="nomor_identitas" class="form-control input-custom" value="{{ old('nomor_identitas', $identitas->nomor_identitas) }}" required>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label-custom">Jenis Identitas</label>
-                            <select name="jenis_identitas" class="form-select input-custom">
-                                <option value="KTP" {{ $identitas->jenis_identitas == 'KTP' ? 'selected' : '' }}>KTP</option>
-                                <option value="PASSPORT" {{ $identitas->jenis_identitas == 'PASSPORT' ? 'selected' : '' }}>Passport</option>
+                            <label class="form-label-custom">Sapaan / Gelar Panggilan</label>
+                            <select name="gelar_panggilan" class="form-select input-custom">
+                                <option value="Sdr/Sdri" {{ $identitas->gelar_panggilan == 'Sdr/Sdri' ? 'selected' : '' }}>Sdr/Sdri</option>
+                                <option value="Bpk/Ibu" {{ $identitas->gelar_panggilan == 'Bpk/Ibu' ? 'selected' : '' }}>Bpk/Ibu</option>
+                                <option value="Ko" {{ $identitas->gelar_panggilan == 'Ko' ? 'selected' : '' }}>Ko</option>
+                                <option value="Ci" {{ $identitas->gelar_panggilan == 'Ci' ? 'selected' : '' }}>Ci</option>
                             </select>
                         </div>
                         <div class="col-md-12 mb-3">
-                            <label class="form-label-custom">Nama Lengkap (Sesuai Identitas)</label>
-                            <input type="text" name="nama_lengkap" id="input-nama" class="form-control input-custom"
-                                   value="{{ old('nama_lengkap', $identitas->nama_lengkap) }}" required>
+                            <label class="form-label-custom">Nama Lengkap (Sesuai Sistem)</label>
+                            <input type="text" name="nama_lengkap" id="input-nama" class="form-control input-custom" value="{{ old('nama_lengkap', $identitas->nama_lengkap) }}" required>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label-custom">Nama Sesuai KTP (Jika Berbeda)</label>
+                            <input type="text" name="nama_ktp" class="form-control input-custom" value="{{ old('nama_ktp', $identitas->nama_ktp) }}">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label-custom">Nama Panggilan</label>
-                            <input type="text" name="panggilan" class="form-control input-custom"
-                                   value="{{ old('panggilan', $identitas->nama_panggilan) }}">
+                            <input type="text" name="nama_panggilan" class="form-control input-custom" value="{{ old('nama_panggilan', $identitas->nama_panggilan) }}">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label-custom">Divisi</label>
@@ -72,6 +78,43 @@
                                     </option>
                                 @endforeach
                             </select>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- BIODATA TAMBAHAN --}}
+                <div class="card card-custom p-4 bg-white mb-4">
+                    <h5 class="fw-800 mb-4"><i class="bi bi-info-circle me-2 text-info"></i>Biodata & Kewarganegaraan</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label-custom">Tempat Lahir</label>
+                            <input type="text" name="tempat_lahir" class="form-control input-custom" value="{{ old('tempat_lahir', $identitas->tempat_lahir) }}" placeholder="Contoh: Jakarta">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label-custom">Tanggal Lahir</label>
+                            <input type="date" name="tanggal_lahir" class="form-control input-custom" value="{{ old('tanggal_lahir', $identitas->tanggal_lahir ? (\Illuminate\Support\Carbon::parse($identitas->tanggal_lahir)->format('Y-m-d')) : '') }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label-custom">Jenis Kelamin</label>
+                            <select name="jenis_kelamin" class="form-select input-custom">
+                                <option value="pria" {{ $identitas->jenis_kelamin == 'pria' ? 'selected' : '' }}>Laki-laki</option>
+                                <option value="wanita" {{ $identitas->jenis_kelamin == 'wanita' ? 'selected' : '' }}>Perempuan</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label-custom">Kewarganegaraan</label>
+                            <select name="kewarganegaraan" class="form-select input-custom">
+                                <option value="WNI" {{ $identitas->kewarganegaraan == 'WNI' ? 'selected' : '' }}>WNI</option>
+                                <option value="WNA" {{ $identitas->kewarganegaraan == 'WNA' ? 'selected' : '' }}>WNA</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label-custom">Agama</label>
+                            <input type="text" name="agama" class="form-control input-custom" value="{{ old('agama', $identitas->agama) }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label-custom">Pekerjaan</label>
+                            <input type="text" name="pekerjaan" class="form-control input-custom" value="{{ old('pekerjaan', $identitas->pekerjaan) }}">
                         </div>
                     </div>
                 </div>
@@ -111,7 +154,7 @@
                     <button type="submit" class="btn btn-save text-white px-5 shadow-sm">
                         <i class="bi bi-cloud-arrow-up me-2"></i> Update Data Anggota
                     </button>
-                    <a href="{{ route('identitas.index') }}" class="btn btn-light rounded-4 px-4 fw-bold py-3">Batal</a>
+                    <a href="{{ route('identitas.show', $identitas->id) }}" class="btn btn-light rounded-4 px-4 fw-bold py-3">Batal</a>
                 </div>
             </div>
 
@@ -147,36 +190,29 @@
         const inputNama = document.getElementById('input-nama');
         const previewNama = document.getElementById('preview-nama');
         const previewAvatar = document.getElementById('preview-avatar');
-
         const inputDivisi = document.getElementById('input-divisi');
         const previewDivisiText = document.getElementById('preview-divisi-text');
-
         const inputStatus = document.getElementById('input-status');
         const previewStatus = document.getElementById('preview-status');
-
         const checkAgen = document.getElementById('check-agen');
         const badgeAgen = document.getElementById('badge-agen');
         const checkPatriot = document.getElementById('check-patriot');
         const badgePatriot = document.getElementById('badge-patriot');
 
-        // Live Update Nama & Avatar
         inputNama.addEventListener('input', function() {
             previewNama.innerText = this.value || 'Nama Lengkap';
             previewAvatar.innerText = this.value ? this.value.charAt(0).toUpperCase() : '?';
         });
 
-        // Live Update Divisi
         inputDivisi.addEventListener('change', function() {
             const selectedOption = this.options[this.selectedIndex];
             previewDivisiText.innerText = selectedOption.getAttribute('data-nama');
         });
 
-        // Live Update Status
         inputStatus.addEventListener('change', function() {
             previewStatus.innerText = this.value;
         });
 
-        // Toggle Badges
         checkAgen.addEventListener('change', function() {
             this.checked ? badgeAgen.classList.remove('d-none') : badgeAgen.classList.add('d-none');
         });
