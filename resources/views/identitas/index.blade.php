@@ -47,76 +47,54 @@
     .table tbody td { padding: 16px 24px; border-bottom: 1px solid #f1f5f9; }
     .data-row:hover { background-color: #f8fafc; }
 
-    /* Form Design */
-    .form-box-wajib { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 16px; padding: 24px; }
-    .form-box-opsional { background: #fffbeb; border: 1px solid #fef3c7; border-radius: 16px; padding: 24px; }
-    .form-label { font-weight: 600; font-size: 12px; color: #475569; margin-bottom: 6px; }
+    /* Modern Form Design */
+    .form-section-card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; }
+    .form-label { font-weight: 700; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
     .form-control-mis {
-        border-radius: 10px; border: 1px solid #cbd5e1; padding: 11px 14px;
-        font-size: 14px; background: white !important; transition: all 0.2s;
+        border-radius: 10px; border: 1px solid #e2e8f0; padding: 11px 14px;
+        font-size: 14px; background: #f8fafc !important; transition: all 0.2s;
     }
-    .form-control-mis:focus { border-color: #10b981; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); }
+    .form-control-mis:focus { background: white !important; border-color: #10b981; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); }
 
-    /* Action Buttons */
     .btn-action {
         width: 36px; height: 36px; border-radius: 10px; border: 1px solid #e2e8f0;
         display: inline-flex; align-items: center; justify-content: center;
         background: white; color: #64748b; transition: all 0.2s;
     }
     .btn-action:hover { background: #f1f5f9; color: #0f172a; border-color: #cbd5e1; }
-    .btn-action.delete:hover { background: #fef2f2; color: #ef4444; border-color: #fee2e2; }
-
     .badge-custom { font-weight: 700; padding: 6px 12px; border-radius: 8px; font-size: 11px; }
 </style>
 
 <div class="container-fluid py-4 px-4">
-    {{-- Notifikasi Error & Success --}}
+    {{-- Notifikasi --}}
     @if(session('success'))
-        <div class="alert alert-success border-0 shadow-sm rounded-4 mb-4 d-flex align-items-center p-3" role="alert">
+        <div class="alert alert-success border-0 shadow-sm rounded-4 mb-4 d-flex align-items-center p-3">
             <i class="bi bi-check-circle-fill fs-4 me-3"></i>
-            <div>
-                <div class="fw-bold">Berhasil!</div>
-                <div class="small">{{ session('success') }}</div>
-            </div>
+            <div><div class="fw-bold">Berhasil!</div><div class="small">{{ session('success') }}</div></div>
             <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
-    @if ($errors->any())
-        <div class="alert alert-danger border-0 shadow-sm rounded-4 mb-4 p-3" role="alert">
-            <div class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill me-2"></i> Ada Kesalahan:</div>
-            <ul class="mb-0 small">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
         </div>
     @endif
 
     {{-- Header --}}
     <div class="row align-items-center mb-5">
         <div class="col-auto">
-            <a href="{{ url('/dashboard') }}" class="btn btn-back shadow-sm rounded-circle">
-                <i class="bi bi-chevron-left"></i>
-            </a>
+            <a href="{{ url('/dashboard') }}" class="btn btn-back shadow-sm rounded-circle"><i class="bi bi-chevron-left"></i></a>
         </div>
         <div class="col">
             <h2 class="page-title mb-0">Database Identitas</h2>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0 small">
                     <li class="breadcrumb-item"><a href="#" class="text-decoration-none text-muted">MIS Project</a></li>
-                    <li class="breadcrumb-item active fw-bold text-success">Master Data</li>
+                    <li class="breadcrumb-item active fw-bold text-success">Master Data Member</li>
                 </ol>
             </nav>
         </div>
         <div class="col-auto d-flex gap-3">
             <div class="search-container">
                 <i class="bi bi-search search-icon"></i>
-                <input type="text" id="liveSearch" class="form-control search-input shadow-sm"
-                       placeholder="Cari nama atau KTP..." value="{{ request('search') }}">
+                <input type="text" id="liveSearch" class="form-control search-input shadow-sm" placeholder="Cari nama atau KTP..." value="{{ request('search') }}">
             </div>
-            <button type="button" class="btn btn-success fw-bold rounded-3 px-4 shadow-sm d-flex align-items-center gap-2"
-                    data-bs-toggle="modal" data-bs-target="#addModal" style="height: 45px;">
+            <button type="button" class="btn btn-success fw-bold rounded-3 px-4 shadow-sm d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#addModal" style="height: 45px;">
                 <i class="bi bi-person-plus"></i> Add New Data
             </button>
         </div>
@@ -127,11 +105,9 @@
         <div class="col-md-3">
             <div class="card card-stat shadow-sm p-4">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="icon-box bg-primary bg-opacity-10 text-primary">
-                        <i class="bi bi-wallet2"></i>
-                    </div>
+                    <div class="icon-box bg-primary bg-opacity-10 text-primary"><i class="bi bi-wallet2"></i></div>
                     <div>
-                        <div class="small fw-bold text-muted text-uppercase mb-1" style="letter-spacing: 0.5px">Saldo Kas</div>
+                        <div class="small fw-bold text-muted text-uppercase mb-1">Saldo Kas</div>
                         <div class="h4 fw-800 mb-0">Rp {{ number_format($saldoKasGlobal, 0, ',', '.') }}</div>
                     </div>
                 </div>
@@ -140,11 +116,9 @@
         <div class="col-md-3">
             <div class="card card-stat shadow-sm p-4">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="icon-box bg-success bg-opacity-10 text-success">
-                        <i class="bi bi-people-fill"></i>
-                    </div>
+                    <div class="icon-box bg-success bg-opacity-10 text-success"><i class="bi bi-people-fill"></i></div>
                     <div>
-                        <div class="small fw-bold text-muted text-uppercase mb-1" style="letter-spacing: 0.5px">Total Anggota</div>
+                        <div class="small fw-bold text-muted text-uppercase mb-1">Total Anggota</div>
                         <div class="h4 fw-800 mb-0">{{ $countAnggota }} <span class="small fw-normal text-muted">Orang</span></div>
                     </div>
                 </div>
@@ -204,7 +178,7 @@
                                 <a href="{{ route('identitas.show', $idnt->id) }}" class="btn-action" title="Detail"><i class="bi bi-eye"></i></a>
                                 <form action="{{ route('identitas.destroy', $idnt->id) }}" method="POST" class="d-inline">
                                     @csrf @method('DELETE')
-                                    <button type="submit" class="btn-action delete" onclick="return confirm('Hapus data ini?')" title="Hapus"><i class="bi bi-trash"></i></button>
+                                    <button type="submit" class="btn-action delete text-danger" onclick="return confirm('Hapus data ini?')" title="Hapus"><i class="bi bi-trash"></i></button>
                                 </form>
                             </div>
                         </td>
@@ -221,9 +195,7 @@
             </table>
         </div>
     </div>
-    <div class="mt-4">
-        {{ $identitas->links() }}
-    </div>
+    <div class="mt-4">{{ $identitas->links() }}</div>
 </div>
 
 {{-- MODAL INPUT --}}
@@ -237,110 +209,112 @@
                         <i class="bi bi-person-plus-fill fs-3"></i>
                         <div>
                             <h5 class="modal-title fw-bold mb-0">Input Identitas Baru</h5>
-                            <small class="opacity-75">Pastikan data sesuai dengan dokumen fisik</small>
+                            <small class="opacity-75">Lengkapi data sesuai dokumen fisik</small>
                         </div>
                     </div>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
 
                 <div class="modal-body p-4 bg-light bg-opacity-50">
-                    <div class="row g-4">
-                        {{-- SEKSI WAJIB --}}
-                        <div class="col-lg-6">
-                            <div class="form-box-wajib h-100 shadow-sm">
-                                <h6 class="text-success fw-bold mb-4 d-flex align-items-center gap-2">
-                                    <i class="bi bi-shield-check"></i> DATA IDENTITAS (WAJIB)
-                                </h6>
-                                <div class="row g-3">
-                                    <div class="col-md-7">
-                                        <label class="form-label">Nomor Identitas (KTP/Lainnya)</label>
-                                        <input type="text" name="nomor_identitas" class="form-control form-control-mis" placeholder="Contoh: 317XXXXXXXXXXXXX" required>
+                    <div class="form-section-card shadow-sm">
+                        <div class="row g-3">
+                            {{-- Baris 1: Identitas Dasar --}}
+                            <div class="col-md-4">
+                                <label class="form-label">Nomor Identitas (KTP)</label>
+                                <input type="text" name="nomor_identitas" class="form-control form-control-mis" placeholder="317XXXXXXXXXXXXX" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Jenis ID</label>
+                                <select name="jenis_identitas" class="form-select form-control-mis">
+                                    <option value="KTP">KTP</option>
+                                    <option value="Paspor">Paspor</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Nama Lengkap (Sesuai KTP)</label>
+                                <input type="text" name="nama_lengkap" class="form-control form-control-mis" placeholder="Nama Tanpa Gelar" required>
+                            </div>
+
+                            {{-- Baris 2: Nama Panggilan & Jenis Kelamin --}}
+                            <div class="col-md-4">
+                                <label class="form-label">Nama Panggilan</label>
+                                <input type="text" name="panggilan" class="form-control form-control-mis" placeholder="Nama Akrab">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Agama / Aliran</label>
+                                <input type="text" name="agama" class="form-control form-control-mis" placeholder="Contoh: Buddha / Theravada">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label d-block">Jenis Kelamin</label>
+                                <div class="mt-2">
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="jenis_kelamin" value="pria" id="pria_add" checked>
+                                        <label class="form-check-label small" for="pria_add">Pria</label>
                                     </div>
-                                    <div class="col-md-5">
-                                        <label class="form-label">Jenis Identitas</label>
-                                        <select name="jenis_identitas" class="form-select form-control-mis">
-                                            <option value="KTP">KTP</option>
-                                            <option value="Paspor">Paspor</option>
-                                            <option value="Lainnya">Lainnya</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-12">
-                                        <label class="form-label">Nama Lengkap (Sesuai KTP)</label>
-                                        <input type="text" name="nama_lengkap" class="form-control form-control-mis" placeholder="Nama Tanpa Gelar" required>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Jenis Kelamin</label>
-                                        <div class="d-flex gap-3 mt-1">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="jenis_kelamin" value="pria" id="pria" checked>
-                                                <label class="form-check-label small" for="pria">Pria</label>
-                                            </div>
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="jenis_kelamin" value="wanita" id="wanita">
-                                                <label class="form-check-label small" for="wanita">Wanita</label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Kategori Anggota</label>
-                                        <select name="jenis_umat" class="form-select form-control-mis" required>
-                                            <option value="Umat">Umat</option>
-                                            <option value="Sangha">Sangha</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-12">
-                                        <label class="form-label">Penempatan Divisi</label>
-                                        <select name="divisi_id" class="form-select form-control-mis" required>
-                                            <option value="">-- Pilih Divisi --</option>
-                                            @foreach($divisi as $div)
-                                                <option value="{{ $div->id }}">{{ $div->nama_divisi }}</option>
-                                            @endforeach
-                                        </select>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="jenis_kelamin" value="wanita" id="wanita_add">
+                                        <label class="form-check-label small" for="wanita_add">Wanita</label>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {{-- SEKSI OPSIONAL --}}
-                        <div class="col-lg-6">
-                            <div class="form-box-opsional h-100 shadow-sm">
-                                <h6 class="text-warning fw-bold mb-4 d-flex align-items-center gap-2">
-                                    <i class="bi bi-geo-alt-fill"></i> KONTAK & ALAMAT (OPSIONAL)
-                                </h6>
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label">Nama Panggilan</label>
-                                        <input type="text" name="panggilan" class="form-control form-control-mis" placeholder="Nama Akrab">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Nomor WhatsApp</label>
-                                        <input type="text" name="nomor_hp_primary" class="form-control form-control-mis" placeholder="Contoh: 0812XXXX" required>
-                                    </div>
-                                    <div class="col-12">
-                                        <label class="form-label">Alamat Domisili</label>
-                                        <textarea name="alamat" class="form-control form-control-mis" rows="2" placeholder="Nama jalan, nomor rumah, RT/RW"></textarea>
-                                    </div>
-                                    <div class="col-md-7">
-                                        <label class="form-label">Kota / Kabupaten</label>
-                                        <input type="text" name="kota" class="form-control form-control-mis">
-                                    </div>
-                                    <div class="col-md-5">
-                                        <label class="form-label">Triyana</label>
-                                        <select name="triyana" class="form-select form-control-mis">
-                                            <option value="">- Pilih -</option>
-                                            <option value="Theravada">Theravada</option>
-                                            <option value="Mahayana">Mahayana</option>
-                                            <option value="Tantrayana">Tantrayana</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-12 mt-4">
+                            {{-- Baris 3: Tempat & Tanggal Lahir --}}
+                            <div class="col-md-4">
+                                <label class="form-label">Tempat Lahir</label>
+                                <input type="text" name="tempat_lahir" class="form-control form-control-mis" placeholder="Kota Lahir">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Tanggal Lahir</label>
+                                <input type="date" name="tanggal_lahir" class="form-control form-control-mis">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Nomor WhatsApp</label>
+                                <input type="text" name="nomor_hp_primary" class="form-control form-control-mis" placeholder="0812XXXXXXXX" required>
+                            </div>
+
+                            {{-- Baris 4: Email & Alamat --}}
+                            <div class="col-md-4">
+                                <label class="form-label">Email</label>
+                                <input type="email" name="email" class="form-control form-control-mis" placeholder="nama@email.com">
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label">Alamat Domisili</label>
+                                <input type="text" name="alamat" class="form-control form-control-mis" placeholder="Nama Jalan, No. Rumah, RT/RW">
+                            </div>
+
+                            {{-- Baris 5: Kategori --}}
+                            <div class="col-md-12 mt-3">
+                                <div class="p-3 rounded-3" style="background: #f0fdf4; border: 1px dashed #10b981;">
+                                    <label class="form-label text-success">Kategori Anggota</label>
+                                    <select name="jenis_umat" id="kategoriAnggotaAdd" class="form-select border-0 shadow-sm" required>
+                                        <option value="Umat">Umat</option>
+                                        <option value="Sangha">Sangha</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {{-- Seksi Khusus Umat --}}
+                            <div id="sectionKhususUmatAdd" class="row g-3 mt-1">
+                                <div class="col-md-12">
+                                    <label class="form-label">Penempatan Divisi</label>
+                                    <select name="divisi_id" class="form-select form-control-mis">
+                                        <option value="">-- Pilih Divisi --</option>
+                                        @foreach($divisi as $div)
+                                            <option value="{{ $div->id }}">{{ $div->nama_divisi }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-12">
+                                    <div class="d-flex gap-4 p-3 rounded bg-white border shadow-sm">
                                         <div class="form-check form-switch">
-                                            <input class="form-check-input" type="checkbox" name="is_agen_purna" id="agen_purna">
-                                            <label class="form-check-label small fw-bold" for="agen_purna">Agen Purna</label>
+                                            <input type="hidden" name="is_agen_purna" value="0">
+                                            <input class="form-check-input" type="checkbox" name="is_agen_purna" value="1" id="switchAgenAdd">
+                                            <label class="form-check-label fw-bold small" for="switchAgenAdd">Agen Purna</label>
                                         </div>
-                                        <div class="form-check form-switch mt-2">
-                                            <input class="form-check-input" type="checkbox" name="is_dharma_patriot" id="dharma_patriot">
-                                            <label class="form-check-label small fw-bold" for="dharma_patriot">Dharma Patriot</label>
+                                        <div class="form-check form-switch">
+                                            <input type="hidden" name="is_dharma_patriot" value="0">
+                                            <input class="form-check-input" type="checkbox" name="is_dharma_patriot" value="1" id="switchPatriotAdd">
+                                            <label class="form-check-label fw-bold small" for="switchPatriotAdd">Dharma Patriot</label>
                                         </div>
                                     </div>
                                 </div>
@@ -361,10 +335,25 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script>
     $(document).ready(function() {
-        // Live Search
         $('#liveSearch').on('keypress', function(e) {
             if(e.which == 13) window.location.href = "{{ route('identitas.index') }}?search=" + $(this).val();
         });
+
+        const kategoriSelect = document.getElementById('kategoriAnggotaAdd');
+        const sectionUmat = document.getElementById('sectionKhususUmatAdd');
+
+        function toggleKategori() {
+            if (kategoriSelect.value === 'Umat') {
+                $(sectionUmat).fadeIn();
+            } else {
+                $(sectionUmat).hide();
+                $(sectionUmat).find('select').val('');
+                $(sectionUmat).find('input[type="checkbox"]').prop('checked', false);
+            }
+        }
+
+        kategoriSelect.addEventListener('change', toggleKategori);
+        toggleKategori();
     });
 </script>
 @endsection

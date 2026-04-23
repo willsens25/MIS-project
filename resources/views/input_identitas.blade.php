@@ -7,7 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background-color: #f8f9fa; }
-        .card { border: none; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .card { border: none; border-radius: 15px; box-shadow: 0 4px 6px rgba(170, 92, 92, 0.1); }
         .btn-primary { border-radius: 10px; padding: 10px 20px; }
     </style>
 </head>
@@ -16,7 +16,7 @@
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-md-10">
-            
+
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="fw-bold text-primary">Form Identitas <span class="text-dark">SAPA-ALL</span></h2>
                 <span class="badge bg-primary text-uppercase p-2">Sistem MIS v1.0</span>

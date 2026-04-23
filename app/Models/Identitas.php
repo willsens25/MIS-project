@@ -12,7 +12,13 @@ class Identitas extends Model
 
     protected $table = 'identitas';
 
-    protected $guarded = [];
+    protected $fillable = [
+    'nomor_identitas', 'no_ktp', 'nama_ktp', 'nama_lengkap', 'panggilan',
+    'nama_panggilan', 'jenis_identitas', 'jenis_kelamin', 'nomor_hp_primary',
+    'email', 'alamat', 'kota', 'triyana', 'jenis_umat', 'is_agen_purna',
+    'is_dharma_patriot', 'divisi_id', 'tempat_lahir', 'tanggal_lahir', 'agama',
+    'status_keamanan', 'kewarganegaraan', 'pekerjaan'
+    ];
 
     protected $attributes = [
         'is_agen_purna' => 0,
@@ -85,12 +91,12 @@ class Identitas extends Model
     }
 
 
-    protected static function booted()
-    {
-        static::creating(function ($model) {
-            if (!$model->created_by && auth()->check()) {
-                $model->created_by = auth()->id();
-            }
-        });
-    }
+    // protected static function booted()
+    // {
+    //     static::creating(function ($model) {
+    //         if (!$model->created_by && auth()->check()) {
+    //             $model->created_by = auth()->id();
+    //         }
+    //     });
+    // }
 }
