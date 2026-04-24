@@ -10,28 +10,34 @@ return new class extends Migration
     {
         Schema::create('identitas', function (Blueprint $table) {
             $table->id();
+
             // Informasi Profil Utama
             $table->string('nama_lengkap');
             $table->string('panggilan')->nullable();
             $table->enum('jenis_identitas', ['KTP', 'Passport', 'Lainnya'])->default('KTP');
             $table->string('nomor_identitas')->unique();
             $table->enum('jenis_kelamin', ['pria', 'wanita'])->nullable();
+            $table->string('kewarganegaraan')->default('WNI'); // Ditambahkan karena ada di seeder
 
             // Kontak & Pekerjaan
             $table->string('nomor_hp_primary');
-            $table->string('email')->nullable(); // Dibuat nullable agar tidak bentrok jika email kosong
+            $table->string('email')->nullable();
             $table->string('pekerjaan')->nullable();
 
             // Lokasi & Jarkom
             $table->string('kategori_jarkom')->nullable();
-            $table->text('alamat')->nullable(); // Pakai text agar bisa muat alamat panjang
+            $table->text('alamat')->nullable();
             $table->string('kota')->nullable();
             $table->string('kode_pos', 10)->nullable();
 
             // Klasifikasi Spiritual & Keamanan
+            $table->string('agama')->default('Buddha'); // Ditambahkan karena ada di seeder
             $table->string('triyana')->nullable();
-            $table->string('status_keamanan')->default('Normal'); // Normal, VIP, Pengawasan, Blacklist
-            $table->enum('jenis_umat', ['Umat', 'Sangha'])->default('Umat');
+            $table->string('status_keamanan')->default('Normal');
+
+            // Sesuaikan enum ini dengan data yang kamu inginkan (tadi ada error truncated di sini)
+            $table->enum('jenis_umat', ['Umat', 'Sangha', 'Simpatisan', 'Anggota', 'Pengurus'])->default('Umat');
+
             $table->enum('bhante_lay', ['Bhante', 'Lay'])->default('Lay');
 
             // Atribut Khusus (Checkbox)

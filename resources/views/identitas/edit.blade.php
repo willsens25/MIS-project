@@ -82,6 +82,33 @@
                     </div>
                 </div>
 
+                {{-- KONTAK & ALAMAT (DITAMBAHKAN) --}}
+                <div class="card card-custom p-4 bg-white mb-4">
+                    <h5 class="fw-800 mb-4"><i class="bi bi-geo-alt me-2 text-danger"></i>Kontak & Domisili</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label-custom">Email</label>
+                            <input type="email" name="email" class="form-control input-custom" value="{{ old('email', $identitas->email) }}" placeholder="contoh@email.com">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label-custom">Nomor HP (Primary)</label>
+                            <input type="text" name="nomor_hp_primary" class="form-control input-custom" value="{{ old('nomor_hp_primary', $identitas->nomor_hp_primary) }}" placeholder="0812xxxx">
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label-custom">Alamat Lengkap</label>
+                            <textarea name="alamat" class="form-control input-custom" rows="3">{{ old('alamat', $identitas->alamat) }}</textarea>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label-custom">Kota</label>
+                            <input type="text" name="kota" class="form-control input-custom" value="{{ old('kota', $identitas->kota) }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label-custom">Kode Pos</label>
+                            <input type="text" name="kode_pos" class="form-control input-custom" value="{{ old('kode_pos', $identitas->kode_pos) }}">
+                        </div>
+                    </div>
+                </div>
+
                 {{-- BIODATA TAMBAHAN --}}
                 <div class="card card-custom p-4 bg-white mb-4">
                     <h5 class="fw-800 mb-4"><i class="bi bi-info-circle me-2 text-info"></i>Biodata & Kewarganegaraan</h5>
@@ -94,14 +121,22 @@
                             <label class="form-label-custom">Tanggal Lahir</label>
                             <input type="date" name="tanggal_lahir" class="form-control input-custom" value="{{ old('tanggal_lahir', $identitas->tanggal_lahir ? (\Illuminate\Support\Carbon::parse($identitas->tanggal_lahir)->format('Y-m-d')) : '') }}">
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label class="form-label-custom">Jenis Kelamin</label>
                             <select name="jenis_kelamin" class="form-select input-custom">
                                 <option value="pria" {{ $identitas->jenis_kelamin == 'pria' ? 'selected' : '' }}>Laki-laki</option>
                                 <option value="wanita" {{ $identitas->jenis_kelamin == 'wanita' ? 'selected' : '' }}>Perempuan</option>
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label-custom">Jenis Umat (Wajib)</label>
+                            <select name="jenis_umat" class="form-select input-custom" required>
+                                <option value="Simpatisan" {{ $identitas->jenis_umat == 'Simpatisan' ? 'selected' : '' }}>Simpatisan</option>
+                                <option value="Anggota" {{ $identitas->jenis_umat == 'Anggota' ? 'selected' : '' }}>Anggota</option>
+                                <option value="Pengurus" {{ $identitas->jenis_umat == 'Pengurus' ? 'selected' : '' }}>Pengurus</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
                             <label class="form-label-custom">Kewarganegaraan</label>
                             <select name="kewarganegaraan" class="form-select input-custom">
                                 <option value="WNI" {{ $identitas->kewarganegaraan == 'WNI' ? 'selected' : '' }}>WNI</option>
@@ -131,6 +166,10 @@
                                 <option value="Blacklist" {{ $identitas->status_keamanan == 'Blacklist' ? 'selected' : '' }}>Blacklist</option>
                             </select>
                         </div>
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label-custom">Kategori Jarkom</label>
+                            <input type="text" name="kategori_jarkom" class="form-control input-custom" value="{{ old('kategori_jarkom', $identitas->kategori_jarkom) }}">
+                        </div>
                         <div class="col-md-12">
                             <div class="p-3 rounded-4 border border-dashed bg-light">
                                 <div class="d-flex gap-4">
@@ -158,6 +197,7 @@
                 </div>
             </div>
 
+            {{-- LIVE PREVIEW CARD --}}
             <div class="col-lg-4">
                 <div class="card card-custom preview-card overflow-hidden">
                     <div class="bg-dark py-2 text-center">

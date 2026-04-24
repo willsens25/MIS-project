@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('identitas_contacts', function (Blueprint $table) {
+        Schema::create('promos', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('identitas_id')->constrained('identitas')->onDelete('cascade');
-            $table->enum('type', ['hp', 'email']);
-            $table->string('value');
-            $table->boolean('is_primary')->default(false);
+            $table->string('nama_promo');
+            $table->decimal('diskon_persen', 5, 2)->default(0);
+            $table->date('tanggal_mulai');
+            $table->date('tanggal_selesai');
             $table->timestamps();
         });
     }
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('identitas_contacts');
+        Schema::dropIfExists('promos');
     }
 };

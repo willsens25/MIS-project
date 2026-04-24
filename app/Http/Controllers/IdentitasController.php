@@ -21,7 +21,7 @@ class IdentitasController extends Controller
                     ->orWhere('nama_panggilan', 'LIKE', "%{$search}%")
                     ->orWhere('no_ktp', 'LIKE', "%{$search}%")
                     ->orWhereHas('divisi', function($sq) use ($search) {
-                    $sq->where('nama_divisi', 'LIKE', "%{$search}%");
+                        $sq->where('nama_divisi', 'LIKE', "%{$search}%");
                     });
                 });
             })
@@ -31,7 +31,7 @@ class IdentitasController extends Controller
 
         $divisi = Divisi::all();
 
-        // Statistik Global menggunakan Query Builder untuk efisiensi
+        // Statistik Global menggunakan Query Builder
         $stats = Transaksi::selectRaw("
             SUM(CASE WHEN jenis = 'DONASI' THEN nominal ELSE 0 END) as total_donasi,
             SUM(CASE WHEN jenis = 'SALUR' THEN nominal ELSE 0 END) as total_salur
@@ -51,42 +51,51 @@ class IdentitasController extends Controller
     }
 
     public function store(Request $request)
-{
-    $request->validate([
-        'nomor_identitas' => 'required|unique:identitas,nomor_identitas',
-        'nama_lengkap'    => 'required',
-    ]);
-
-    try {
-        Identitas::create([
-            'nomor_identitas'   => $request->nomor_identitas,
-            'no_ktp'            => $request->nomor_identitas,
-            'nama_lengkap'      => strtoupper($request->nama_lengkap),
-            'nama_ktp'          => strtoupper($request->nama_lengkap),
-            'panggilan'         => $request->panggilan,
-            'nama_panggilan'    => $request->panggilan,
-            'jenis_identitas'   => $request->jenis_identitas,
-            'jenis_kelamin'     => $request->jenis_kelamin,
-            'agama'             => $request->agama,
-            'email'             => $request->email,
-            'nomor_hp_primary'  => $request->nomor_hp_primary,
-            'jenis_umat'        => $request->jenis_umat,
-            'alamat'            => $request->alamat,
-            'divisi_id'         => $request->divisi_id,
-            'status_keamanan'   => 'Normal',
-            'kewarganegaraan'   => 'WNI',
+    {
+        $request->validate([
+            'nomor_identitas' => 'required|unique:identitas,nomor_identitas',
+            'nama_lengkap'    => 'required',
+            'nomor_hp_primary' => 'required',
         ]);
 
-        return redirect()->back()->with('success', 'Data berhasil disimpan!');
+        try {
+            DB::beginTransaction();
 
-    } catch (\Exception $e) {
-        if ($e->getCode() == 23000) {
-            return redirect()->back()->with('error', 'Nomor Identitas sudah terdaftar!')->withInput();
+            Identitas::create([
+                'nomor_identitas'   => $request->nomor_identitas,
+                'no_ktp'            => $request->nomor_identitas,
+                'nama_lengkap'      => strtoupper($request->nama_lengkap),
+                'nama_ktp'          => strtoupper($request->nama_lengkap),
+                'panggilan'         => $request->panggilan,
+                'nama_panggilan'    => $request->panggilan,
+                'jenis_identitas'   => $request->jenis_identitas,
+                'jenis_kelamin'     => $request->jenis_kelamin,
+                'agama'             => $request->agama,
+                'email'             => $request->email,
+                'nomor_hp_primary'  => $request->nomor_hp_primary,
+                'jenis_umat'        => $request->jenis_umat,
+                'alamat'            => $request->alamat,
+                'divisi_id'         => $request->divisi_id,
+                'tempat_lahir'      => $request->tempat_lahir,
+                'tanggal_lahir'     => $request->tanggal_lahir,
+                'is_agen_purna'     => $request->has('is_agen_purna') ? 1 : 0,
+                'is_dharma_patriot' => $request->has('is_dharma_patriot') ? 1 : 0,
+                'status_keamanan'   => 'Normal',
+                'kewarganegaraan'   => 'WNI',
+            ]);
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Data anggota baru berhasil disimpan!');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            $message = $e->getMessage();
+            if ($e->getCode() == 23000 || str_contains($message, 'Duplicate entry')) {
+                $message = 'Nomor Identitas (' . $request->nomor_identitas . ') sudah terdaftar!';
+            }
+            return redirect()->back()->with('error', 'Gagal Simpan: ' . $message)->withInput();
         }
-
-        return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage())->withInput();
     }
-}
 
     public function show($id)
     {
@@ -107,46 +116,69 @@ class IdentitasController extends Controller
     }
 
     public function update(Request $request, $id)
-    {
-        $identitas = Identitas::findOrFail($id);
+{
+    $identitas = Identitas::findOrFail($id);
 
-        $request->validate([
-            'nomor_identitas' => 'required|unique:identitas,nomor_identitas,'.$id,
-            'nama_lengkap'    => 'required',
+    // 1. Validasi Lengkap
+    $request->validate([
+        'nomor_identitas' => 'required|unique:identitas,nomor_identitas,'.$id,
+        'nama_lengkap'    => 'required',
+        'nomor_hp_primary'=> 'required',
+        'email'           => 'nullable|email',
+    ]);
+
+    try {
+        DB::beginTransaction();
+
+        $valId = $request->input('nomor_identitas');
+
+        // 2. Update Semua Kolom (Sesuai Struktur DB)
+        $identitas->update([
+            // Identitas Dasar
+            'nama_lengkap'      => strtoupper($request->nama_lengkap),
+            'nama_panggilan'    => $request->nama_panggilan,
+            'panggilan'         => $request->nama_panggilan,
+            'gelar_panggilan'   => $request->gelar_panggilan,
+            'no_ktp'            => $valId,
+            'nomor_identitas'   => $valId,
+            'nama_ktp'          => strtoupper($request->nama_ktp ?? $request->nama_lengkap),
+            'divisi_id'         => $request->divisi_id,
+
+            // Kontak & Alamat (Komponen yang tadi kurang)
+            'email'             => $request->email,
+            'nomor_hp_primary'  => $request->nomor_hp_primary,
+            'alamat'            => $request->alamat,
+            'kota'              => $request->kota,
+            'kode_pos'          => $request->kode_pos,
+
+            // Biodata & Latar Belakang
+            'jenis_kelamin'     => $request->jenis_kelamin,
+            'tempat_lahir'      => $request->tempat_lahir,
+            'tanggal_lahir'     => $request->tanggal_lahir,
+            'agama'             => $request->agama,
+            'pekerjaan'         => $request->pekerjaan,
+            'kewarganegaraan'   => $request->kewarganegaraan ?? 'WNI',
+            'jenis_umat'        => $request->jenis_umat,
+
+            // Status Keanggotaan & Kategori (Sesuai Gambar DB)
+            'status_keamanan'   => $request->status_keamanan ?? 'Normal',
+            'is_agen_purna'     => $request->has('is_agen_purna') ? 1 : 0,
+            'is_dharma_patriot' => $request->has('is_dharma_patriot') ? 1 : 0,
+            'triyana'           => $request->triyana,
+            'bhante_lay'        => $request->bhante_lay,
+            'kategori_jarkom'   => $request->kategori_jarkom,
         ]);
 
-        try {
-            DB::beginTransaction();
+        DB::commit();
+        return redirect()->route('identitas.show', $identitas->id)->with('success', 'Data Profil Berhasil Diperbarui!');
 
-            $valId = $request->input('nomor_identitas');
-
-            $identitas->update([
-                'nama_lengkap'      => strtoupper($request->nama_lengkap),
-                'nama_panggilan'    => $request->nama_panggilan,
-                'no_ktp'            => $valId,
-                'nomor_identitas'   => $valId,
-                'nama_ktp'          => $request->nama_ktp ?? $request->nama_lengkap,
-                'divisi_id'         => $request->divisi_id,
-                'status_keamanan'   => $request->status_keamanan,
-                'jenis_kelamin'     => $request->jenis_kelamin,
-                'tempat_lahir'      => $request->tempat_lahir,
-                'tanggal_lahir'     => $request->tanggal_lahir,
-                'pekerjaan'         => $request->pekerjaan,
-                'agama'             => $request->agama,
-                'kewarganegaraan'   => $request->kewarganegaraan,
-                'is_agen_purna'     => $request->has('is_agen_purna') ? 1 : 0,
-                'is_dharma_patriot' => $request->has('is_dharma_patriot') ? 1 : 0,
-            ]);
-
-            DB::commit();
-            return redirect()->route('identitas.show', $identitas->id)->with('success', 'Data berhasil diperbarui!');
-
-        } catch (\Exception $e) {
-            DB::rollback();
-            return redirect()->back()->with('error', 'Gagal Update: ' . $e->getMessage())->withInput();
-        }
+    } catch (\Exception $e) {
+        DB::rollback();
+        return redirect()->back()
+            ->with('error', 'Gagal Update: ' . $e->getMessage())
+            ->withInput();
     }
-
+}
     public function destroy($id)
     {
         $identitas = Identitas::findOrFail($id);
