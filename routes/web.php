@@ -29,7 +29,8 @@ use App\Http\Controllers\{
 */
 Route::get('/', function () { return view('welcome'); });
 
-Route::get('/download-invoice-pdf/{id}', [InvoiceController::class, 'downloadPDF']);
+// Route Global untuk Invoice & Report
+Route::get('/download-invoice-pdf/{id}', [InvoiceController::class, 'downloadPDF'])->name('invoice.download');
 Route::get('/finance/report/{month}/{year}', [InvoiceController::class, 'generateReport']);
 
 Route::middleware('guest')->group(function () {
@@ -48,7 +49,7 @@ Route::match(['get', 'post'], '/logout', [AuthController::class, 'logout'])->nam
 */
 Route::middleware('auth')->group(function () {
 
-    // Dashboard Utama (Traffic Controller)
+    // Dashboard Utama
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Integrasi Global Keuangan
@@ -95,18 +96,22 @@ Route::middleware('auth')->group(function () {
     /* |--- KHUSUS BENDAHARA / FINANCE (Divisi 2) --- */
     Route::middleware(['checkRole:2'])->group(function () {
         Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');
+
+        // Route untuk download REKAP (Filter Bulan/Tahun)
+        Route::get('/finance/download-report', [FinanceController::class, 'downloadReport'])->name('finance.download_report');
+
+        // Route untuk download PER TRANSAKSI (Jika dibutuhkan)
+        Route::get('/finance/download-pdf/{id}', [FinanceController::class, 'downloadPdf'])->name('finance.download_pdf');
+
         Route::prefix('bendahara')->group(function () {
+            // ... route lainnya tetap sama ...
             Route::post('/simpan', [FinanceController::class, 'store_transaction'])->name('finance.store_transaction');
             Route::put('/update/{id}', [FinanceController::class, 'update'])->name('finance.update');
             Route::delete('/hapus/{id}', [FinanceController::class, 'destroy'])->name('finance.destroy');
             Route::post('/confirm-invoice/{id}', [FinanceController::class, 'konfirmasiInvoice'])->name('finance.confirm_invoice');
             Route::post('/konfirmasi-bayar/{id}', [FinanceController::class, 'konfirmasiBayarInvoice'])->name('finance.konfirmasi_pembayaran');
-
             Route::post('/akun/simpan', [FinanceController::class, 'simpanAkun'])->name('finance.simpanAkun');
-            Route::put('/akun/update/{id}', [FinanceController::class, 'updateAccount'])->name('finance.update_account');
-            Route::delete('/akun/hapus/{id}', [FinanceController::class, 'deleteAccount'])->name('finance.delete_account');
         });
-        Route::get('/finance/report', [FinanceController::class, 'report'])->name('finance.report');
     });
 
     /* |--- KHUSUS PENERBITAN (Divisi 3) --- */
@@ -116,16 +121,15 @@ Route::middleware('auth')->group(function () {
             Route::post('/tambah-buku', [PenerbitanController::class, 'tambahBuku'])->name('pnb.tambah-buku');
             Route::post('/update-buku/{id}', [PenerbitanController::class, 'updateBuku'])->name('pnb.update-buku');
             Route::delete('/hapus-buku/{id}', [PenerbitanController::class, 'hapusBuku'])->name('pnb.hapus-buku');
+            Route::delete('/penerbitan/bulk-delete', [PenerbitanController::class, 'bulkDelete'])->name('pnb.bulkDelete');
+            Route::post('/penerbitan/update-harga/{id}', [PenerbitanController::class, 'updateHarga'])->name('penerbitan.updateHarga');
         });
     });
 
     /* |--- KHUSUS MARKETING (Divisi 4) --- */
     Route::middleware(['checkRole:4'])->group(function () {
         Route::prefix('marketing')->group(function () {
-            Route::get('/', [MarketingController::class, 'index'])->name('marketing');
-
-            // FITUR ORDER & MARKETING MIS (Rapi)
-            Route::get('/order/create', [MarketingOrderController::class, 'create'])->name('marketing.order.create');
+            Route::get('/', [MarketingOrderController::class, 'create'])->name('marketing');
             Route::post('/order/store', [MarketingOrderController::class, 'store'])->name('marketing.order.store');
 
             Route::post('/tambah-agen', [MarketingController::class, 'tambahAgen'])->name('mad.tambah-agen');
@@ -134,7 +138,6 @@ Route::middleware('auth')->group(function () {
             Route::post('/kirim-buku', [MarketingController::class, 'kirimBuku'])->name('mad.kirim-buku');
             Route::get('/clear-notif', [MarketingController::class, 'clearNotif'])->name('mad.clear-notif');
 
-            // Invoice Management
             Route::prefix('invoice')->group(function () {
                 Route::get('/bayar/{id}', [MarketingController::class, 'bayarInvoice'])->name('mad.bayar-invoice');
                 Route::get('/cetak/{id}', [MarketingController::class, 'cetakInvoice'])->name('mad.cetak-invoice');

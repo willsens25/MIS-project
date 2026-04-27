@@ -35,45 +35,37 @@ class PenerbitanController extends Controller
             'judul' => $request->judul,
             'penulis' => $request->penulis,
             'harga_jual' => $request->harga_jual,
-            'stok_gudang' => 0 // Default stok 0, nanti diisi orang Produksi/Logistik
+            'stok_gudang' => 0
         ]);
 
         return back()->with('success', 'Buku baru berhasil didaftarkan ke katalog!');
     }
 
     public function updateHarga(Request $request, $id)
-    {
+{
     $request->validate([
-        'harga_jual' => 'required|numeric|min:0'
+        'harga_jual' => 'required|numeric|min:0',
     ]);
 
     $buku = \App\Models\Book::findOrFail($id);
-    
     $buku->update([
         'harga_jual' => $request->harga_jual
     ]);
 
-    return redirect()->back()->with('success', 'Harga buku ' . $buku->judul . ' berhasil diperbarui!');
-    }
+    return redirect()->back()->with('success', 'Harga buku ' . $buku->judul . ' berhasil diupdate!');
+}
 
     public function bulkDelete(Request $request)
 {
-    $ids = $request->ids;
-    if (!$ids) {
-        return back()->with('error', 'Pilih buku yang ingin dihapus!');
+    $ids = $request->input('ids');
+
+    if (!$ids || empty($ids)) {
+        return redirect()->back()->with('error', 'Pilih item yang ingin dihapus terlebih dahulu.');
     }
 
-    try {
-        DB::transaction(function () use ($ids) {
-            \App\Models\LogisticLog::whereIn('buku_id', $ids)->delete();
+    \App\Models\Book::whereIn('id', $ids)->delete();
 
-            \App\Models\Book::whereIn('id', $ids)->delete();
-        });
-
-        return back()->with('success', count($ids) . ' buku dan riwayat terkait berhasil dihapus.');
-    } catch (\Exception $e) {
-        return back()->with('error', 'Gagal menghapus: ' . $e->getMessage());
-    }
+    return redirect()->back()->with('success', count($ids) . ' item berhasil dihapus.');
 }
 
 }

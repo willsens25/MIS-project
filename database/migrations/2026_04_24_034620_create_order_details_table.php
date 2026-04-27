@@ -9,17 +9,16 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
+    public function up()
     {
-        Schema::create('order_details', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('order_id')->constrained('orders')->onDelete('cascade');
-            $table->foreignId('buku_id')->constrained('bukus');
-            $table->integer('jumlah');
-            $table->decimal('harga_satuan', 12, 2);
-            $table->decimal('subtotal', 12, 2);
-            $table->timestamps();
-        });
+    Schema::create('order_details', function (Blueprint $table) {
+        $table->id();
+        $table->foreignId('order_id')->constrained()->onDelete('cascade');
+        $table->foreignId('buku_id')->constrained('bukus');
+        $table->integer('qty');
+        $table->integer('harga_satuan');
+        $table->timestamps();
+    });
     }
 
     /**

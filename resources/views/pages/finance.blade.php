@@ -175,23 +175,23 @@
         <div class="row align-items-center">
             <div class="col-lg-7">
                 <span class="text-uppercase small fw-bold opacity-75">Saldo Saat Ini ({{ $bulan ? $namaBulanIndo[(int)$bulan] : 'Tahunan' }})</span>
-                <h1 class="display-4 fw-bold mt-1 mb-4">Rp {{ number_format($total_saldo, 0, ',', '.') }}</h1>
+                <h1 class="display-4 fw-bold mt-1 mb-4 text-white">Rp {{ number_format($total_saldo, 0, ',', '.') }}</h1>
                 <div class="row g-3">
                     <div class="col-6 col-md-auto pe-md-4">
                         <div class="small opacity-75 text-uppercase">Pemasukan</div>
-                        <div class="h4 fw-bold mb-0">Rp {{ number_format($totalMasuk, 0, ',', '.') }}</div>
+                        <div class="h4 fw-bold mb-0 text-white">Rp {{ number_format($totalMasuk, 0, ',', '.') }}</div>
                     </div>
                     <div class="col-6 col-md-auto border-start border-white border-opacity-25 ps-md-4">
                         <div class="small opacity-75 text-uppercase">Pengeluaran</div>
-                        <div class="h4 fw-bold mb-0">Rp {{ number_format($totalKeluar, 0, ',', '.') }}</div>
+                        <div class="h4 fw-bold mb-0 text-white">Rp {{ number_format($totalKeluar, 0, ',', '.') }}</div>
                     </div>
                 </div>
             </div>
             <div class="col-lg-5 text-lg-end mt-4 mt-lg-0">
-                <a href="{{ route('finance.download_pdf', ['tahun' => $tahun, 'bulan' => $bulan]) }}" class="btn btn-light rounded-pill px-4 fw-bold me-2" target="_blank">
-                    <i class="fas fa-file-pdf me-2 text-danger"></i> PDF
+                <a href="{{ route('finance.download_report', ['tahun' => $tahun ?? date('Y'), 'bulan' => $bulan]) }}" class="btn btn-light rounded-pill px-4 fw-bold me-2" target="_blank">
+                    <i class="fas fa-file-pdf me-2 text-danger"></i> PDF Laporan
                 </a>
-                <button class="btn btn-white bg-white text-primary rounded-pill px-4 fw-bold" data-bs-toggle="modal" data-bs-target="#modalTr">
+                <button class="btn btn-white bg-white text-primary rounded-pill px-4 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalTr">
                     <i class="fas fa-plus-circle me-2"></i> Transaksi
                 </button>
             </div>
@@ -223,7 +223,7 @@
                             <span class="badge-category">{{ $m->category->nama_kategori ?? 'Umum' }}</span>
                         </td>
                         <td>
-                            <div class="fw-semibold">{{ $m->keterangan }}</div>
+                            <div class="fw-semibold text-main">{{ $m->keterangan }}</div>
                             <small class="text-muted">Via: {{ $m->account->nama_akun ?? 'Kas' }}</small>
                         </td>
                         <td class="text-end fw-bold {{ $m->tipe == 'Masuk' ? 'badge-income' : 'badge-expense' }}">
@@ -234,6 +234,8 @@
                                 <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-h text-muted"></i></button>
                                 <ul class="dropdown-menu dropdown-menu-end border-0 shadow">
                                     <li><button class="dropdown-item py-2 small" data-bs-toggle="modal" data-bs-target="#modalEdit{{ $m->id }}"><i class="fas fa-edit me-2 text-primary"></i> Edit</button></li>
+                                    <li><a class="dropdown-item py-2 small" href="{{ route('finance.download_pdf', $m->id) }}" target="_blank"><i class="fas fa-file-pdf me-2 text-danger"></i> PDF Bukti</a></li>
+                                    <li><hr class="dropdown-divider"></li>
                                     <li>
                                         <form action="{{ route('finance.destroy', $m->id) }}" method="POST" onsubmit="return confirm('Hapus transaksi ini?')">
                                             @csrf @method('DELETE')
@@ -458,10 +460,10 @@
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'bottom', labels: { usePointStyle: true, boxSize: 6 } }
+                legend: { position: 'bottom', labels: { usePointStyle: true, boxSize: 6, color: '#888' } }
             },
             scales: {
-                y: { beginAtZero: true, grid: { display: false } },
+                y: { beginAtZero: true, grid: { color: 'rgba(150,150,150,0.1)' } },
                 x: { grid: { display: false } }
             }
         }

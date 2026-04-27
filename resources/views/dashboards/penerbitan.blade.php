@@ -102,6 +102,7 @@
 
     {{-- Main Table Section --}}
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        {{-- Form Hapus Massal Membungkus Tabel --}}
         <form action="{{ route('pnb.bulkDelete') }}" method="POST" id="formBulkDelete">
             @csrf
             @method('DELETE')

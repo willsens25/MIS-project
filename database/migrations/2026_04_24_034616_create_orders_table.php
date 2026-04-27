@@ -9,22 +9,23 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
+    public function up()
     {
-        Schema::create('orders', function (Blueprint $table) {
-            $table->id();
-            $table->date('tanggal_pesan');
-            $table->string('via');
-            $table->string('nama_pembeli');
-            $table->string('nama_penerima');
-            $table->string('alamat_penerima');
-            $table->string('ekspedisi');
-            $table->decimal('ongkir', 12, 2)->default(0);
-            $table->decimal('nominal_donasi', 12, 2)->default(0);
-            $table->text('keterangan_donasi')->nullable();
-            $table->text('catatan_khusus')->nullable();
-            $table->timestamps();
-        });
+    Schema::create('orders', function (Blueprint $table) {
+        $table->id();
+        $table->date('tanggal_pesan');
+        $table->string('via');
+        $table->string('nama_pembeli');
+        $table->string('nama_penerima')->nullable();
+        $table->text('alamat_penerima')->nullable();
+        $table->string('ekspedisi')->nullable();
+        $table->integer('ongkir')->default(0);
+        $table->integer('nominal_donasi')->default(0);
+        $table->string('keterangan_donasi')->nullable();
+        $table->text('catatan_khusus')->nullable();
+        $table->integer('total_tagihan')->default(0);
+        $table->timestamps();
+    });
     }
 
     /**

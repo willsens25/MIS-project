@@ -149,18 +149,39 @@ class FinanceController extends Controller
         return redirect()->route('finance.index')->with('success', 'Pembayaran Berhasil Masuk!');
     }
 
-    public function downloadPDF(Request $request) {
-        $tahun = $request->get('tahun', date('Y'));
-        $bulan = $request->get('bulan');
-        $query = Mutasi::with(['category', 'account'])->whereYear('tanggal', $tahun);
-        if ($bulan) $query->whereMonth('tanggal', $bulan);
+    public function downloadReport(Request $request)
+{
+    $bulan = $request->query('bulan');
+    $tahun = $request->query('tahun', date('Y'));
 
-        $mutasis = $query->orderBy('tanggal', 'asc')->get();
-        $totalMasuk = (clone $query)->where('tipe', 'Masuk')->sum('nominal');
-        $totalKeluar = (clone $query)->where('tipe', 'Keluar')->sum('nominal');
-        $total_saldo = $totalMasuk - $totalKeluar;
+    $query = Mutasi::with(['category', 'account']);
 
-        return Pdf::loadView('pages.finance_pdf', compact('mutasis', 'totalMasuk', 'totalKeluar', 'total_saldo', 'tahun', 'bulan'))
-        ->stream('Laporan_Keuangan_'.$tahun.'.pdf');
+    if ($bulan) {
+        $query->whereMonth('tanggal', $bulan);
     }
+    $query->whereYear('tanggal', $tahun);
+
+    $mutasis = $query->orderBy('tanggal', 'desc')->get();
+
+    // Hitung total untuk summary di PDF
+    $totalMasuk = $mutasis->where('tipe', 'Masuk')->sum('nominal');
+    $totalKeluar = $mutasis->where('tipe', 'Keluar')->sum('nominal');
+    $saldo = $totalMasuk - $totalKeluar;
+
+    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pages.finance_pdf', [
+        'mutasis' => $mutasis,
+        'bulan' => $bulan,
+        'tahun' => $tahun,
+        'totalMasuk' => $totalMasuk,
+        'totalKeluar' => $totalKeluar,
+        'saldo' => $saldo,
+        'namaBulanIndo' => [
+            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni',
+            7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+        ]
+    ]);
+
+    return $pdf->stream("Laporan_Keuangan_{$bulan}_{$tahun}.pdf");
+}
+
 }
