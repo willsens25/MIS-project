@@ -142,8 +142,8 @@ Route::middleware('auth')->group(function () {
                 Route::get('/bayar/{id}', [MarketingController::class, 'bayarInvoice'])->name('mad.bayar-invoice');
                 Route::get('/cetak/{id}', [MarketingController::class, 'cetakInvoice'])->name('mad.cetak-invoice');
                 Route::post('/update/{id}', [MarketingController::class, 'updateInvoice'])->name('mad.update-invoice');
-                Route::post('/lunas/{id}', [MarketingController::class, 'tandaiLunas'])->name('mad.tandai-lunas');
-                Route::delete('/hapus/{id}', [MarketingController::class, 'hapusInvoice'])->name('mad.hapus-invoice');
+                Route::post('/lunas/{id}', [MarketingOrderController::class, 'tandaiLunas'])->name('mad.tandai-lunas');
+                Route::delete('/hapus/{id}', [MarketingOrderController::class, 'hapusInvoice'])->name('mad.hapus-invoice');
             });
         });
     });
@@ -160,6 +160,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/', [LogistikController::class, 'index'])->name('logistik');
             Route::post('/kirim-dari-marketing/{id}', [LogistikController::class, 'kirimDariMarketing'])->name('logistik.kirim-dari-marketing');
             Route::get('/cetak-surat-jalan/{id}', [LogistikController::class, 'cetakSuratJalan'])->name('logistik.cetak');
+            Route::post('/logistik/simpan-keluar', [LogistikController::class, 'simpanKeluar'])->name('logistik.simpan-keluar');
         });
     });
 

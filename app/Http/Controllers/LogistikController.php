@@ -19,12 +19,12 @@ public function index()
                         ->get();
 
     $books = \App\Models\Book::all();
-    
+
     $logs = \App\Models\LogisticLog::with('book')
             ->whereDate('created_at', now()->toDateString())
             ->latest()
             ->get();
-            
+
     $totalHariIni = \App\Models\LogisticLog::whereDate('created_at', now()->toDateString())
                     ->sum('qty_keluar');
 
@@ -34,7 +34,7 @@ public function index()
 public function siapPacking($id)
 {
     $invoice = Invoice::findOrFail($id);
-    
+
     $invoice->update(['status_pengiriman' => 'proses packing']);
 
     \App\Models\Penyaluran::create([
@@ -68,31 +68,29 @@ public function kirimDariMarketing($id)
 }
 
     public function simpanKeluar(Request $request)
-    {
-        $request->validate([
-            'buku_id' => 'required',
-            'jumlah'  => 'required|numeric|min:1',
-            'tujuan'  => 'required'
-        ]);
+{
+    $request->validate([
+        'buku_id' => 'required',
+        'qty_keluar' => 'required|numeric|min:1',
+    ]);
 
-        $buku = Book::findOrFail($request->buku_id);
+    // Contoh logic: Update stok di tabel bukus
+    $buku = \App\Models\Buku::findOrFail($request->buku_id);
 
-        if ($buku->stok_gudang < $request->jumlah) {
-            return back()->with('error', 'Stok tidak cukup!');
-        }
+    if ($buku->stok_gudang < $request->qty_keluar) {
+        return redirect()->back()->with('error', 'Stok tidak mencukupi!');
+    }
 
-        return DB::transaction(function () use ($request, $buku) {
-            $buku->decrement('stok_gudang', $request->jumlah);
+    $buku->decrement('stok_gudang', $request->qty_keluar);
 
-            LogisticLog::create([
-                'buku_id'    => $request->buku_id,
-                'qty_keluar' => $request->jumlah,
-                'tujuan'     => $request->tujuan,
-                'no_invoice' => 'MANUAL-' . time(),
-            ]);
+    // Opsional: Catat ke tabel logistic_logs (sesuai query di stack trace kamu)
+    \App\Models\LogisticLog::create([
+        'buku_id' => $request->buku_id,
+        'qty_keluar' => $request->qty_keluar,
+        'keterangan' => $request->keterangan ?? 'Barang Keluar',
+    ]);
 
-            return back()->with('success', 'Data keluar berhasil dicatat!');
-        });
+    return redirect()->back()->with('success', 'Data pengeluaran berhasil disimpan.');
     }
 
     public function cetakSuratJalan($id)

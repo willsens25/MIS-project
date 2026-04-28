@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Book;
+use App\Models\Book; // Pastikan ini sesuai nama model kamu (Book atau Buku)
 use App\Models\Invoice;
 use App\Models\LogisticLog;
-use App\Models\Transaction;
+use App\Models\Mutasi;
 use App\Models\Penyaluran;
 use App\Models\Identitas;
 use Illuminate\Support\Facades\DB;
@@ -56,7 +56,7 @@ class MarketingController extends Controller
         $buku = Book::findOrFail($request->buku_id);
 
         if (!$buku->harga_jual || $buku->harga_jual <= 0) {
-            return back()->with('error', 'Gagal! Harga jual Rp 0.');
+            return back()->with('error', 'Gagal! Harga jual belum disetting.');
         }
 
         if ($buku->stok_gudang < $request->jumlah) {
@@ -67,6 +67,7 @@ class MarketingController extends Controller
         $noInv = 'INV-' . strtoupper(substr(uniqid(), 7));
 
         DB::transaction(function () use ($request, $buku, $total, $noInv) {
+            // 1. Buat Invoice
             Invoice::create([
                 'no_invoice' => $noInv,
                 'buku_id' => $request->buku_id,
@@ -78,6 +79,7 @@ class MarketingController extends Controller
                 'status_pengiriman' => 'Packing'
             ]);
 
+            // 2. Buat data penyaluran untuk Logistik
             Penyaluran::create([
                 'no_invoice' => $noInv,
                 'buku_id'    => $request->buku_id,
@@ -89,10 +91,45 @@ class MarketingController extends Controller
                 'status_job' => 'S-SALUR',
             ]);
 
+            // 3. Potong stok otomatis
             $buku->decrement('stok_gudang', $request->jumlah);
         });
 
         return back()->with('success', 'Invoice terbit & Stok berhasil dipotong!');
+    }
+
+    public function tandaiLunas($id)
+    {
+        $inv = Invoice::findOrFail($id);
+
+        if ($inv->status == 'Lunas') {
+            return back()->with('error', 'Invoice ini sudah lunas.');
+        }
+
+        try {
+            DB::transaction(function () use ($inv) {
+                // 1. Update status invoice
+                $inv->update([
+                    'status' => 'Lunas',
+                    'tercatat_finance' => 1
+                ]);
+
+                // 2. OTOMATIS: Buat Mutasi Masuk untuk Bendahara
+                Mutasi::create([
+                    'account_id' => 1, // Default Kas Utama
+                    'user_id'    => Auth::id(),
+                    'tipe'       => 'Masuk',
+                    'nominal'    => $inv->total_tagihan,
+                    'keterangan' => 'Pelunasan Otomatis: ' . $inv->no_invoice . ' (' . $inv->nama_agen . ')',
+                    'tanggal'    => now(),
+                    'jenis'      => 'INVOICE',
+                ]);
+            });
+
+            return back()->with('success', 'Pembayaran Lunas & Saldo Bendahara otomatis bertambah!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal memproses pelunasan: ' . $e->getMessage());
+        }
     }
 
     public function hapusInvoice($id)
@@ -102,69 +139,36 @@ class MarketingController extends Controller
         DB::transaction(function () use ($inv) {
             $buku = Book::find($inv->buku_id);
 
+            // Hapus penyaluran & Kembalikan stok
             Penyaluran::where('no_invoice', $inv->no_invoice)->delete();
             if ($buku) {
                 $buku->increment('stok_gudang', $inv->jumlah);
             }
 
+            // Hapus log logistik terkait
             LogisticLog::where('buku_id', $inv->buku_id)
                 ->where('tujuan', $inv->nama_agen)
                 ->delete();
 
+            // Jika statusnya lunas, kita tidak menghapus mutasi (opsional, tergantung kebijakanmu)
+            // Tapi invoice tetap dihapus
             $inv->delete();
         });
 
         return back()->with('success', 'Pesanan dibatalkan & stok dikembalikan.');
     }
 
-    public function tandaiLunas($id)
-{
-    $inv = Invoice::findOrFail($id);
-    if ($inv->total_tagihan <= 0) return back()->with('error', 'Tagihan Rp 0.');
-    if ($inv->status == 'Lunas') return back()->with('error', 'Sudah lunas.');
-
-    DB::transaction(function () use ($inv) {
-        // 1. Update status invoice dan tandai tercatat_finance
-        $inv->update([
-            'status' => 'Lunas',
-            'tercatat_finance' => 1 // Pastikan kolom ini sudah ada di model & DB
-        ]);
-
-        // 2. Buat riwayat transaksi otomatis ke tabel Mutasi
-        \App\Models\Mutasi::create([
-            'account_id' => 1, // ID akun kas utama (BCA/Mandiri/Kas Besar)
-            'user_id'    => Auth::id(),
-            'tipe'       => 'Masuk',
-            'nominal'    => $inv->total_tagihan,
-            'keterangan' => 'Pelunasan Otomatis: ' . $inv->no_invoice . ' (' . $inv->nama_agen . ')',
-            'tanggal'    => now(),
-            'jenis'      => 'INVOICE',
-        ]);
-
-        // Jika kamu masih pakai tabel Transaction (opsional), biarkan kode di bawah ini
-        // Jika tidak pakai lagi, kode Transaction::create bisa dihapus agar tidak double
-        /*
-        Transaction::create([
-            'account_id' => 1,
-            'nominal'    => $inv->total_tagihan,
-            'tipe'       => 'Masuk',
-            'tanggal'    => now(),
-            'keterangan' => 'Pelunasan: ' . $inv->no_invoice,
-            'saldo_akhir' => 0
-        ]);
-        */
-    });
-
-    return back()->with('success', 'Pembayaran Lunas & Transaksi otomatis tercatat di Finance!');
-}
-
     public function updateInvoice(Request $request, $id)
     {
         $inv = Invoice::findOrFail($id);
         $request->validate(['jumlah' => 'required|integer|min:1']);
 
+        if ($inv->status == 'Lunas') {
+            return back()->with('error', 'Invoice yang sudah lunas tidak bisa diedit jumlahnya.');
+        }
+
         DB::transaction(function () use ($inv, $request) {
-            $buku = Book::find($inv->buku_id);
+            $buku = Book::findOrFail($inv->buku_id);
 
             $selisih = $request->jumlah - $inv->jumlah;
             if ($buku->stok_gudang < $selisih) {

@@ -10,12 +10,15 @@
     </div>
 
     @if(session('success'))
-        <div class="alert alert-success border-0 shadow-sm">{{ session('success') }}</div>
+        <div class="alert alert-success border-0 shadow-sm alert-dismissible fade show">
+            <i class="fas fa-check-circle mr-2"></i> {{ session('success') }}
+            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+        </div>
     @endif
 
     <div class="row">
         <div class="col-lg-8">
-            <form action="{{ route('marketing.order.store') }}" method="POST">
+            <form action="{{ route('mad.kirim-buku') }}" method="POST">
                 @csrf
                 <div class="card shadow-sm border-0 rounded-lg mb-4">
                     <div class="card-header bg-white py-3">
@@ -25,24 +28,24 @@
                         <div class="row mb-3">
                             <div class="col-md-4">
                                 <label class="small font-weight-bold">Tanggal Pesan</label>
-                                <input type="date" name="tanggal_pesan" class="form-control rounded-pill" value="{{ date('Y-m-d') }}" required>
+                                <input type="date" name="tanggal_pesan" class="form-control rounded-pill shadow-sm" value="{{ date('Y-m-d') }}" required>
                             </div>
                             <div class="col-md-4">
                                 <label class="small font-weight-bold">Via (Channel)</label>
-                                <input type="text" name="via" class="form-control rounded-pill" list="viaList" placeholder="Tokopedia/Shopee/WA...">
+                                <input type="text" name="via" class="form-control rounded-pill shadow-sm" list="viaList" placeholder="Tokopedia/WA...">
                                 <datalist id="viaList">
                                     <option value="Tokopedia"><option value="Shopee"><option value="WhatsApp"><option value="Event">
                                 </datalist>
                             </div>
                             <div class="col-md-4">
                                 <label class="small font-weight-bold text-danger">Kode Promo</label>
-                                <input type="text" name="promo_code" class="form-control rounded-pill" placeholder="DISKON10">
+                                <input type="text" name="promo_code" class="form-control rounded-pill shadow-sm" placeholder="DISKON10">
                             </div>
                         </div>
 
                         <div class="mb-4">
                             <label class="small font-weight-bold text-primary">Nama Pembeli (Agen/Member)</label>
-                            <select name="nama_pembeli" id="select_pembeli" class="form-control" required>
+                            <select name="nama_agen" id="select_pembeli" class="form-control shadow-sm" required>
                                 <option value="">-- Cari Nama --</option>
                                 @foreach($identitas as $idnt)
                                     <option value="{{ $idnt->nama_lengkap }}">{{ $idnt->nama_lengkap }}</option>
@@ -75,10 +78,12 @@
                                             </select>
                                         </td>
                                         <td width="100">
-                                            <input type="number" :name="'qty['+index+']'" class="form-control text-center shadow-sm" min="1" value="1">
+                                            <input type="number" :name="'qty['+index+']'" class="form-control text-center shadow-sm" min="1" x-model="item.qty">
                                         </td>
                                         <td width="50">
-                                            <button type="button" @click="removeItem(index)" class="btn btn-sm text-danger"><i class="fas fa-minus-circle"></i></button>
+                                            <button type="button" @click="removeItem(index)" class="btn btn-sm text-danger" x-show="items.length > 1">
+                                                <i class="fas fa-minus-circle"></i>
+                                            </button>
                                         </td>
                                     </tr>
                                 </template>
@@ -90,20 +95,12 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="small font-weight-bold">Ekspedisi</label>
-                                <input type="text" name="ekspedisi" class="form-control rounded-pill" list="expList">
+                                <input type="text" name="ekspedisi" class="form-control rounded-pill shadow-sm" list="expList">
                                 <datalist id="expList"><option value="JNE"><option value="J&T"><option value="SiCepat"></datalist>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="small font-weight-bold">Ongkir</label>
-                                <input type="number" name="ongkir" class="form-control rounded-pill" value="0">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="small font-weight-bold">Donasi</label>
-                                <input type="number" name="nominal_donasi" class="form-control rounded-pill" value="0">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="small font-weight-bold">Keterangan</label>
-                                <input type="text" name="catatan_khusus" class="form-control rounded-pill" placeholder="Request khusus...">
+                                <input type="number" name="ongkir" class="form-control rounded-pill shadow-sm" value="0">
                             </div>
                         </div>
 
@@ -122,19 +119,45 @@
                     <table class="table table-hover mb-0">
                         <thead class="bg-light small">
                             <tr>
-                                <th class="px-3">Customer</th>
-                                <th class="text-right px-3">Total</th>
+                                <th class="px-3 border-0 py-3">Customer</th>
+                                <th class="text-right px-3 border-0 py-3">Total & Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($invoices as $inv)
                                 <tr>
-                                    <td class="px-3">
-                                        <div class="font-weight-bold text-dark text-truncate" style="max-width: 150px;">{{ $inv->nama_pembeli }}</div>
-                                        <small class="text-muted">#{{ $inv->id }} - {{ $inv->tanggal_pesan }}</small>
+                                    <td class="px-3 border-0 py-3">
+                                        <div class="font-weight-bold text-dark text-truncate" style="max-width: 130px;">
+                                            {{-- Perbaikan panggil nama: sesuaikan dengan field di DB --}}
+                                            {{ $inv->nama_agen ?? $inv->nama_pembeli ?? 'Unknown Customer' }}
+                                        </div>
+                                        <small class="text-muted d-block">#{{ $inv->no_invoice }}</small>
+                                        @if($inv->status == 'Lunas')
+                                            <span class="badge badge-success px-2" style="font-size: 8px;">LUNAS</span>
+                                        @else
+                                            <span class="badge badge-warning px-2" style="font-size: 8px;">PENDING</span>
+                                        @endif
                                     </td>
-                                    <td class="text-right px-3 align-middle">
-                                        <span class="text-primary font-weight-bold">Rp{{ number_format($inv->total_tagihan, 0, ',', '.') }}</span>
+                                    <td class="text-right px-3 align-middle border-0 py-3">
+                                        <div class="font-weight-bold text-primary mb-2">Rp{{ number_format($inv->total_tagihan, 0, ',', '.') }}</div>
+
+                                        <div class="d-flex justify-content-end align-items-center">
+                                            @if($inv->status != 'Lunas')
+                                            <form action="{{ route('mad.tandai-lunas', $inv->id) }}" method="POST" class="mb-0 mr-1">
+                                                @csrf
+                                                <button type="submit" class="btn btn-success btn-action" onclick="return confirm('Tandai Lunas?')">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                            </form>
+                                            @endif
+
+                                            <form action="{{ route('mad.hapus-invoice', $inv->id) }}" method="POST" class="mb-0">
+                                                @csrf @method('DELETE')
+                                                <button type="submit" class="btn btn-outline-danger btn-action" onclick="return confirm('Hapus?')">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             @empty
@@ -152,8 +175,8 @@
     document.addEventListener('alpine:init', () => {
         Alpine.data('orderSystem', () => ({
             samaPenerima: true,
-            items: [{ buku_id: '', qty: 1 }],
-            addItem() { this.items.push({ buku_id: '', qty: 1 }); },
+            items: [{ id: Date.now(), qty: 1 }],
+            addItem() { this.items.push({ id: Date.now(), qty: 1 }); },
             removeItem(index) { if(this.items.length > 1) this.items.splice(index, 1); }
         }));
     });
@@ -167,5 +190,25 @@
     .bg-gradient-primary { background: linear-gradient(180deg, #4e73df 10%, #224abe 100%); }
     .rounded-lg { border-radius: 1rem !important; }
     .borderless td, .borderless th { border: none; }
+
+    /* CSS Utama Perbaikan Tombol agar Tidak Melar */
+    .btn-action {
+        width: 28px !important;
+        height: 28px !important;
+        padding: 0 !important;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px !important;
+        font-size: 11px !important;
+        transition: all 0.2s;
+    }
+
+    .btn-success { background-color: #28a745; border: none; color: white; }
+    .btn-outline-danger { border: 1px solid #dc3545; color: #dc3545; background: transparent; }
+    .btn-outline-danger:hover { background: #dc3545; color: #fff; }
+
+    /* Hover effect */
+    .btn-action:hover { transform: scale(1.1); }
 </style>
 @endsection

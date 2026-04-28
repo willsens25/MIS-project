@@ -15,32 +15,28 @@ class MarketingOrderController extends Controller
      * Menampilkan Form Input Pesanan & Daftar Invoice
      */
     public function create()
-    {
-        // Hanya ambil buku yang stoknya masih ada
-        $allBuku = Book::where('stok_gudang', '>', 0)->get();
+{
+    $allBuku = Book::where('stok_gudang', '>', 0)->get();
 
-        // Ambil data identitas untuk pencarian nama agen di Select2
-        $identitas = Identitas::all();
+    $identitas = Identitas::all();
 
-        // Ambil 10 invoice terbaru untuk ditampilkan di tabel daftar
-        $invoices = Order::latest()->take(10)->get();
+    $invoices = Order::latest()->take(10)->get();
 
-        return view('marketing.create_order', [
-            'books' => $allBuku,
-            'identitas' => $identitas,
-            'invoices' => $invoices
-        ]);
-    }
+    return view('marketing.create_order', [
+        'books' => $allBuku,
+        'identitas' => $identitas,
+        'invoices' => $invoices
+    ]);
+}
 
     /**
      * Menyimpan Data Pesanan ke Database
      */
     public function store(Request $request)
     {
-        // Validasi input
-        $request->validate([
+            $request->validate([
             'tanggal_pesan' => 'required|date',
-            'nama_pembeli'  => 'required|string',
+            'nama_agen'     => 'required|string',
             'buku_id'       => 'required|array',
             'qty'           => 'required|array',
         ]);
@@ -51,26 +47,24 @@ class MarketingOrderController extends Controller
                 $order = Order::create([
                     'tanggal_pesan'     => $request->tanggal_pesan,
                     'via'               => $request->via,
-                    'nama_pembeli'      => $request->nama_pembeli,
-                    // Logika Nama & Alamat: Cek apakah kirim ke diri sendiri (Agen) atau orang lain
-                    'nama_penerima'     => $request->has('samaPenerima') ? $request->nama_pembeli : ($request->nama_penerima ?? $request->nama_pembeli),
+                    'nama_pembeli'      => $request->nama_agen,
+                    'nama_penerima'     => $request->has('samaPenerima') ? $request->nama_agen : ($request->nama_penerima ?? $request->nama_agen),
                     'alamat_penerima'   => $request->has('samaPenerima') ? 'Alamat Sesuai Identitas' : ($request->alamat_penerima ?? 'Alamat Sesuai Identitas'),
                     'ekspedisi'         => $request->ekspedisi,
                     'ongkir'            => $request->ongkir ?? 0,
-                    'total_tagihan'     => 0, // Akan diupdate setelah loop selesai
+                    'status'            => 'Pending',
+                    'total_tagihan'     => 0,
                 ]);
 
                 $totalSemuaBuku = 0;
 
-                // 2. Simpan Detail Item (Looping buku yang dipilih)
+                // 2. Simpan Detail Item
                 foreach ($request->buku_id as $key => $idBuku) {
-                    if (!$idBuku) continue; // Skip jika ada baris yang belum dipilih bukunya
+                    if (!$idBuku) continue;
 
                     $book = Book::findOrFail($idBuku);
                     $jumlahPesanan = $request->qty[$key] ?? 1;
                     $hargaSatuan = $book->harga_jual ?? 0;
-
-                    // HITUNG SUB-TOTAL UNTUK TIAP BARIS
                     $subtotal = $hargaSatuan * $jumlahPesanan;
 
                     OrderDetail::create([
@@ -78,26 +72,58 @@ class MarketingOrderController extends Controller
                         'buku_id'      => $idBuku,
                         'jumlah'       => $jumlahPesanan,
                         'harga_satuan' => $hargaSatuan,
-                        'subtotal'     => $subtotal, // MENGISI KOLOM SUB-TOTAL AGAR TIDAK ERROR
+                        'subtotal'     => $subtotal,
                     ]);
 
-                    // Potong stok gudang secara otomatis
                     $book->decrement('stok_gudang', $jumlahPesanan);
-
-                    // Akumulasi total tagihan
                     $totalSemuaBuku += $subtotal;
                 }
 
-                // 3. Update Total Akhir pada Tabel Orders (Total Buku + Ongkir)
+                // 3. Update Total Akhir
                 $order->update([
                     'total_tagihan' => $totalSemuaBuku + ($request->ongkir ?? 0)
                 ]);
 
-                return redirect()->route('marketing')->with('success', 'Invoice #' . $order->id . ' Berhasil Diterbitkan!');
+                return redirect()->route('mad.index')->with('success', 'Invoice #' . $order->id . ' Berhasil Diterbitkan!');
             });
         } catch (\Exception $e) {
-            // Jika gagal, kembalikan inputan user agar tidak mengetik ulang
             return redirect()->back()->withInput()->with('error', 'Gagal Simpan: ' . $e->getMessage());
         }
+    }
+
+    public function tandaiLunas($id)
+{
+    $order = Order::findOrFail($id);
+
+    $order->update([
+        'status' => 'Lunas'
+    ]);
+
+    $pemasukanCategory = \App\Models\Category::where('nama_kategori', 'like', '%Penjualan%')
+                            ->orWhere('nama_kategori', 'like', '%Invoice%')
+                            ->first();
+    $defaultAccountId = 1;
+
+    \App\Models\Mutasi::create([
+        'account_id'  => $defaultAccountId,
+        'category_id' => $pemasukanCategory->id ?? null,
+        'user_id'     => auth()->id(),
+        'tipe'        => 'Masuk',
+        'nominal'     => $order->total_tagihan,
+        'keterangan'  => 'Pelunasan Otomatis Order #' . $order->id . ' - ' . $order->nama_pembeli,
+        'tanggal'     => now(),
+        'jenis'       => 'INVOICE'
+    ]);
+
+    return redirect()->back()->with('success', 'Order #' . $order->id . ' Lunas & Tercatat di Finance!');
+}
+
+    public function hapusInvoice($id)
+    {
+        // PERBAIKAN: Gunakan Model Order
+        $order = Order::findOrFail($id);
+        $order->delete();
+
+        return redirect()->back()->with('success', 'Pesanan berhasil dihapus!');
     }
 }

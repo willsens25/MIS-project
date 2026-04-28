@@ -70,42 +70,42 @@ class FinanceController extends Controller
 
     // CREATE - Simpan Transaksi Baru
     public function store_transaction(Request $request) {
-    $nominalBersih = preg_replace('/[^0-9]/', '', $request->nominal);
+        $nominalBersih = preg_replace('/[^0-9]/', '', $request->nominal);
 
-    Mutasi::create([
-        'account_id'  => $request->account_id,
-        'category_id' => $request->category_id,
-        'user_id'     => auth()->id(),
-        'tipe'        => $request->tipe,
-        'nominal'     => $nominalBersih,
-        'keterangan'  => $request->keterangan,
-        'tanggal'     => $request->tanggal ?? now(),
-        'jenis'       => 'MANUAL',
-    ]);
+        Mutasi::create([
+            'account_id'  => $request->account_id,
+            'category_id' => $request->category_id,
+            'user_id'     => auth()->id(),
+            'tipe'        => $request->tipe,
+            'nominal'     => $nominalBersih,
+            'keterangan'  => $request->keterangan,
+            'tanggal'     => $request->tanggal ?? now(),
+            'jenis'       => 'MANUAL',
+        ]);
 
-    return redirect()->back()->with('success', 'Transaksi berhasil disimpan!');
-}
+        return redirect()->back()->with('success', 'Transaksi berhasil disimpan!');
+    }
 
     public function update(Request $request, $id) {
-    $request->validate([
-        'category_id' => 'required',
-        'tipe'        => 'required',
-        'nominal'     => 'required',
-        'keterangan'  => 'required'
-    ]);
+        $request->validate([
+            'category_id' => 'required',
+            'tipe'        => 'required',
+            'nominal'     => 'required',
+            'keterangan'  => 'required'
+        ]);
 
-    $nominalBersih = preg_replace('/[^0-9]/', '', $request->nominal);
+        $nominalBersih = preg_replace('/[^0-9]/', '', $request->nominal);
 
-    $mutasi = Mutasi::findOrFail($id);
-    $mutasi->update([
-        'category_id' => $request->category_id,
-        'tipe'        => $request->tipe,
-        'nominal'     => $nominalBersih,
-        'keterangan'  => $request->keterangan,
-    ]);
+        $mutasi = Mutasi::findOrFail($id);
+        $mutasi->update([
+            'category_id' => $request->category_id,
+            'tipe'        => $request->tipe,
+            'nominal'     => $nominalBersih,
+            'keterangan'  => $request->keterangan,
+        ]);
 
-    return back()->with('success', 'Transaksi berhasil diperbarui!');
-}
+        return back()->with('success', 'Transaksi berhasil diperbarui!');
+    }
 
     // DELETE - Hapus Transaksi
     public function destroy($id) {
@@ -149,39 +149,48 @@ class FinanceController extends Controller
         return redirect()->route('finance.index')->with('success', 'Pembayaran Berhasil Masuk!');
     }
 
-    public function downloadReport(Request $request)
-{
-    $bulan = $request->query('bulan');
-    $tahun = $request->query('tahun', date('Y'));
-
-    $query = Mutasi::with(['category', 'account']);
-
-    if ($bulan) {
-        $query->whereMonth('tanggal', $bulan);
+    /**
+     * Fix Error: Menambahkan method downloadPdf yang dipanggil oleh Route
+     */
+    public function downloadPdf(Request $request, $id = null)
+    {
+        // Jika route memanggil /finance/download-pdf/{id}, kita arahkan ke downloadReport
+        // agar tetap menggunakan logika laporan yang sudah kamu buat.
+        return $this->downloadReport($request);
     }
-    $query->whereYear('tanggal', $tahun);
 
-    $mutasis = $query->orderBy('tanggal', 'desc')->get();
+    public function downloadReport(Request $request)
+    {
+        $bulan = $request->query('bulan');
+        $tahun = $request->query('tahun', date('Y'));
 
-    // Hitung total untuk summary di PDF
-    $totalMasuk = $mutasis->where('tipe', 'Masuk')->sum('nominal');
-    $totalKeluar = $mutasis->where('tipe', 'Keluar')->sum('nominal');
-    $saldo = $totalMasuk - $totalKeluar;
+        $query = Mutasi::with(['category', 'account']);
 
-    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pages.finance_pdf', [
-        'mutasis' => $mutasis,
-        'bulan' => $bulan,
-        'tahun' => $tahun,
-        'totalMasuk' => $totalMasuk,
-        'totalKeluar' => $totalKeluar,
-        'saldo' => $saldo,
-        'namaBulanIndo' => [
-            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni',
-            7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
-        ]
-    ]);
+        if ($bulan) {
+            $query->whereMonth('tanggal', $bulan);
+        }
+        $query->whereYear('tanggal', $tahun);
 
-    return $pdf->stream("Laporan_Keuangan_{$bulan}_{$tahun}.pdf");
-}
+        $mutasis = $query->orderBy('tanggal', 'desc')->get();
 
+        // Hitung total untuk summary di PDF
+        $totalMasuk = $mutasis->where('tipe', 'Masuk')->sum('nominal');
+        $totalKeluar = $mutasis->where('tipe', 'Keluar')->sum('nominal');
+        $saldo = $totalMasuk - $totalKeluar;
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pages.finance_pdf', [
+            'mutasis' => $mutasis,
+            'bulan' => $bulan,
+            'tahun' => $tahun,
+            'totalMasuk' => $totalMasuk,
+            'totalKeluar' => $totalKeluar,
+            'saldo' => $saldo,
+            'namaBulanIndo' => [
+                1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni',
+                7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+            ]
+        ]);
+
+        return $pdf->stream("Laporan_Keuangan_{$bulan}_{$tahun}.pdf");
+    }
 }
