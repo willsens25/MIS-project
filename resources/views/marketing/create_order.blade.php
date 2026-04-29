@@ -17,12 +17,13 @@
     @endif
 
     <div class="row">
+        {{-- KIRI: FORM INPUT PESANAN BARU --}}
         <div class="col-lg-8">
             <form action="{{ route('mad.kirim-buku') }}" method="POST">
                 @csrf
                 <div class="card shadow-sm border-0 rounded-lg mb-4">
                     <div class="card-header bg-white py-3">
-                        <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-shopping-basket mr-2"></i>Informasi Pesanan</h6>
+                        <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-shopping-basket mr-2"></i>Informasi Pesanan Baru</h6>
                     </div>
                     <div class="card-body">
                         <div class="row mb-3">
@@ -34,7 +35,7 @@
                                 <label class="small font-weight-bold">Via (Channel)</label>
                                 <input type="text" name="via" class="form-control rounded-pill shadow-sm" list="viaList" placeholder="Tokopedia/WA...">
                                 <datalist id="viaList">
-                                    <option value="Tokopedia"><option value="Shopee"><option value="WhatsApp"><option value="Event">
+                                    <option value="Tokopedia"><option value="Shopee"><option value="WhatsApp">
                                 </datalist>
                             </div>
                             <div class="col-md-4">
@@ -55,7 +56,7 @@
 
                         <div class="bg-light p-3 rounded-lg mb-4 border shadow-sm">
                             <div class="custom-control custom-switch">
-                                <input type="checkbox" class="custom-control-input" id="samaPenerima" name="samaPenerima" x-model="samaPenerima" checked>
+                                <input type="checkbox" class="custom-control-input" id="samaPenerima" x-model="samaPenerima">
                                 <label class="custom-control-label font-weight-bold" for="samaPenerima">Penerima sama dengan pembeli</label>
                             </div>
                             <div x-show="!samaPenerima" x-transition class="mt-3">
@@ -67,7 +68,8 @@
                         <h6 class="font-weight-bold text-dark mb-3"><i class="fas fa-book mr-2"></i>Daftar Buku</h6>
                         <table class="table table-sm borderless">
                             <tbody>
-                                <template x-for="(item, index) in items" :key="index">
+                                {{-- Alpine.js Loop untuk Baris Input --}}
+                                <template x-for="(item, index) in items" :key="item.id">
                                     <tr>
                                         <td>
                                             <select :name="'buku_id['+index+']'" class="form-control border-0 shadow-sm" required>
@@ -96,7 +98,6 @@
                             <div class="col-md-6 mb-3">
                                 <label class="small font-weight-bold">Ekspedisi</label>
                                 <input type="text" name="ekspedisi" class="form-control rounded-pill shadow-sm" list="expList">
-                                <datalist id="expList"><option value="JNE"><option value="J&T"><option value="SiCepat"></datalist>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="small font-weight-bold">Ongkir</label>
@@ -110,58 +111,48 @@
             </form>
         </div>
 
+        {{-- KANAN: DAFTAR INVOICE BELUM LUNAS --}}
         <div class="col-lg-4">
             <div class="card shadow-sm border-0 rounded-lg overflow-hidden">
                 <div class="card-header bg-gradient-primary py-3">
-                    <h6 class="m-0 font-weight-bold text-white"><i class="fas fa-history mr-2"></i>Invoice Terakhir</h6>
+                    <h6 class="m-0 font-weight-bold text-white"><i class="fas fa-history mr-2"></i>Invoice Belum Lunas</h6>
                 </div>
                 <div class="card-body p-0">
                     <table class="table table-hover mb-0">
                         <thead class="bg-light small">
                             <tr>
-                                <th class="px-3 border-0 py-3">Customer</th>
-                                <th class="text-right px-3 border-0 py-3">Total & Aksi</th>
+                                <th class="px-3 py-3 border-0">Customer</th>
+                                <th class="text-right px-3 py-3 border-0">Total & Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($invoices as $inv)
+                                {{-- Filter Blade Anti Lunas --}}
+                                @if(trim(strtolower($inv->status)) == 'lunas') @continue @endif
+
                                 <tr>
-                                    <td class="px-3 border-0 py-3">
-                                        <div class="font-weight-bold text-dark text-truncate" style="max-width: 130px;">
-                                            {{-- Perbaikan panggil nama: sesuaikan dengan field di DB --}}
-                                            {{ $inv->nama_agen ?? $inv->nama_pembeli ?? 'Unknown Customer' }}
+                                    <td class="px-3 py-3 border-0">
+                                        <div class="font-weight-bold text-dark text-truncate" style="max-width: 120px;">
+                                            {{ $inv->nama_agen ?? $inv->nama_pembeli ?? 'No Name' }}
                                         </div>
-                                        <small class="text-muted d-block">#{{ $inv->no_invoice }}</small>
-                                        @if($inv->status == 'Lunas')
-                                            <span class="badge badge-success px-2" style="font-size: 8px;">LUNAS</span>
-                                        @else
-                                            <span class="badge badge-warning px-2" style="font-size: 8px;">PENDING</span>
-                                        @endif
+                                        <small class="text-muted">#{{ $inv->no_invoice }}</small>
                                     </td>
-                                    <td class="text-right px-3 align-middle border-0 py-3">
+                                    <td class="text-right px-3 py-3 border-0 align-middle">
                                         <div class="font-weight-bold text-primary mb-2">Rp{{ number_format($inv->total_tagihan, 0, ',', '.') }}</div>
-
-                                        <div class="d-flex justify-content-end align-items-center">
-                                            @if($inv->status != 'Lunas')
-                                            <form action="{{ route('mad.tandai-lunas', $inv->id) }}" method="POST" class="mb-0 mr-1">
+                                        <div class="d-flex justify-content-end">
+                                            <form action="{{ route('mad.tandai-lunas', $inv->id) }}" method="POST" class="mr-1">
                                                 @csrf
-                                                <button type="submit" class="btn btn-success btn-action" onclick="return confirm('Tandai Lunas?')">
-                                                    <i class="fas fa-check"></i>
-                                                </button>
+                                                <button type="submit" class="btn btn-success btn-action"><i class="fas fa-check"></i></button>
                                             </form>
-                                            @endif
-
-                                            <form action="{{ route('mad.hapus-invoice', $inv->id) }}" method="POST" class="mb-0">
+                                            <form action="{{ route('mad.hapus-invoice', $inv->id) }}" method="POST">
                                                 @csrf @method('DELETE')
-                                                <button type="submit" class="btn btn-outline-danger btn-action" onclick="return confirm('Hapus?')">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
+                                                <button type="submit" class="btn btn-outline-danger btn-action" onclick="return confirm('Hapus?')"><i class="fas fa-trash"></i></button>
                                             </form>
                                         </div>
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="2" class="text-center py-4 text-muted">Belum ada data</td></tr>
+                                <tr><td colspan="2" class="text-center py-4 text-muted">Semua sudah lunas!</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -180,35 +171,12 @@
             removeItem(index) { if(this.items.length > 1) this.items.splice(index, 1); }
         }));
     });
-
-    $(document).ready(function() {
-        $('#select_pembeli').select2({ theme: 'bootstrap4' });
-    });
+    $(document).ready(function() { $('#select_pembeli').select2({ theme: 'bootstrap4' }); });
 </script>
 
 <style>
     .bg-gradient-primary { background: linear-gradient(180deg, #4e73df 10%, #224abe 100%); }
-    .rounded-lg { border-radius: 1rem !important; }
     .borderless td, .borderless th { border: none; }
-
-    /* CSS Utama Perbaikan Tombol agar Tidak Melar */
-    .btn-action {
-        width: 28px !important;
-        height: 28px !important;
-        padding: 0 !important;
-        display: inline-flex !important;
-        align-items: center;
-        justify-content: center;
-        border-radius: 6px !important;
-        font-size: 11px !important;
-        transition: all 0.2s;
-    }
-
-    .btn-success { background-color: #28a745; border: none; color: white; }
-    .btn-outline-danger { border: 1px solid #dc3545; color: #dc3545; background: transparent; }
-    .btn-outline-danger:hover { background: #dc3545; color: #fff; }
-
-    /* Hover effect */
-    .btn-action:hover { transform: scale(1.1); }
+    .btn-action { width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 11px; }
 </style>
 @endsection

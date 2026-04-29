@@ -16,17 +16,19 @@ class MarketingOrderController extends Controller
      */
     public function create()
 {
-    $allBuku = Book::where('stok_gudang', '>', 0)->get();
-
+    // 1. Ambil data untuk pilihan (Dropdown)
     $identitas = Identitas::all();
+    $books = Book::all();
 
-    $invoices = Order::latest()->take(10)->get();
+    // 2. AMBIL INVOICE YANG BENAR-BENAR BELUM LUNAS SAJA
+    // Kita filter di sini supaya Blade tidak kerja berat
+    $invoices = Order::where('status', '!=', 'Lunas')
+                    ->orWhereNull('status')
+                    ->latest()
+                    ->take(10)
+                    ->get();
 
-    return view('marketing.create_order', [
-        'books' => $allBuku,
-        'identitas' => $identitas,
-        'invoices' => $invoices
-    ]);
+    return view('marketing.create_order', compact('identitas', 'books', 'invoices'));
 }
 
     /**
@@ -34,7 +36,7 @@ class MarketingOrderController extends Controller
      */
     public function store(Request $request)
     {
-            $request->validate([
+        $request->validate([
             'tanggal_pesan' => 'required|date',
             'nama_agen'     => 'required|string',
             'buku_id'       => 'required|array',
@@ -84,43 +86,27 @@ class MarketingOrderController extends Controller
                     'total_tagihan' => $totalSemuaBuku + ($request->ongkir ?? 0)
                 ]);
 
-                return redirect()->route('mad.index')->with('success', 'Invoice #' . $order->id . ' Berhasil Diterbitkan!');
+                return redirect()->route('marketing')->with('success', 'Invoice #' . $order->id . ' Berhasil Diterbitkan!');
             });
         } catch (\Exception $e) {
             return redirect()->back()->withInput()->with('error', 'Gagal Simpan: ' . $e->getMessage());
         }
     }
 
+    /**
+     * Fungsi Tombol Hijau (Lunas)
+     */
     public function tandaiLunas($id)
 {
     $order = Order::findOrFail($id);
+    $order->status = 'Lunas'; // Pastikan tulisannya "Lunas" (huruf L kapital sesuai filter Blade)
+    $order->save();
 
-    $order->update([
-        'status' => 'Lunas'
-    ]);
-
-    $pemasukanCategory = \App\Models\Category::where('nama_kategori', 'like', '%Penjualan%')
-                            ->orWhere('nama_kategori', 'like', '%Invoice%')
-                            ->first();
-    $defaultAccountId = 1;
-
-    \App\Models\Mutasi::create([
-        'account_id'  => $defaultAccountId,
-        'category_id' => $pemasukanCategory->id ?? null,
-        'user_id'     => auth()->id(),
-        'tipe'        => 'Masuk',
-        'nominal'     => $order->total_tagihan,
-        'keterangan'  => 'Pelunasan Otomatis Order #' . $order->id . ' - ' . $order->nama_pembeli,
-        'tanggal'     => now(),
-        'jenis'       => 'INVOICE'
-    ]);
-
-    return redirect()->back()->with('success', 'Order #' . $order->id . ' Lunas & Tercatat di Finance!');
+    return redirect()->back()->with('success', 'Invoice #' . $order->no_invoice . ' berhasil dilunaskan!');
 }
 
     public function hapusInvoice($id)
     {
-        // PERBAIKAN: Gunakan Model Order
         $order = Order::findOrFail($id);
         $order->delete();
 

@@ -95,7 +95,7 @@ class MarketingController extends Controller
             $buku->decrement('stok_gudang', $request->jumlah);
         });
 
-        return back()->with('success', 'Invoice terbit & Stok berhasil dipotong!');
+        return redirect()->route('mad.create')->with('success', 'Pesanan berhasil disimpan!');
     }
 
     public function tandaiLunas($id)

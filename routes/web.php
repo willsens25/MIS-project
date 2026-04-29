@@ -145,6 +145,8 @@ Route::middleware('auth')->group(function () {
                 Route::post('/lunas/{id}', [MarketingOrderController::class, 'tandaiLunas'])->name('mad.tandai-lunas');
                 Route::delete('/hapus/{id}', [MarketingOrderController::class, 'hapusInvoice'])->name('mad.hapus-invoice');
             });
+
+            Route::get('/marketing-order', [MarketingOrderController::class, 'create'])->name('mad.create');
         });
     });
 
