@@ -13,7 +13,7 @@ class Order extends Model
 
     protected $fillable = [
     'tanggal_pesan', 'via', 'nama_pembeli', 'nama_penerima',
-    'alamat_penerima', 'ekspedisi', 'ongkir', 'total_tagihan'
+    'alamat_penerima', 'ekspedisi', 'ongkir', 'total_tagihan','status','tercatat_finance'
     ];
 
     public function details()

@@ -135,7 +135,6 @@ Route::middleware('auth')->group(function () {
             Route::post('/tambah-agen', [MarketingController::class, 'tambahAgen'])->name('mad.tambah-agen');
             Route::post('/update-agen/{id}', [MarketingController::class, 'updateAgen'])->name('mad.update-agen');
             Route::delete('/hapus-agen/{id}', [MarketingController::class, 'hapusAgen'])->name('mad.hapus-agen');
-            Route::post('/kirim-buku', [MarketingController::class, 'kirimBuku'])->name('mad.kirim-buku');
             Route::get('/clear-notif', [MarketingController::class, 'clearNotif'])->name('mad.clear-notif');
 
             Route::prefix('invoice')->group(function () {
