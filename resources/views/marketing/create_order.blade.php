@@ -11,16 +11,20 @@
 
     {{-- Notifikasi --}}
     @if(session('success'))
-        <div class="alert alert-success border-0 shadow-sm alert-dismissible fade show">
+        <div class="alert alert-success border-0 shadow-sm alert-dismissible fade show custom-alert" role="alert">
             <i class="fas fa-check-circle mr-2"></i> {{ session('success') }}
-            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close" style="outline: none;">
+                <span aria-hidden="true">&times;</span>
+            </button>
         </div>
     @endif
 
     @if(session('error'))
-        <div class="alert alert-danger border-0 shadow-sm alert-dismissible fade show">
+        <div class="alert alert-danger border-0 shadow-sm alert-dismissible fade show custom-alert" role="alert">
             <i class="fas fa-exclamation-triangle mr-2"></i> {{ session('error') }}
-            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close" style="outline: none;">
+                <span aria-hidden="true">&times;</span>
+            </button>
         </div>
     @endif
 
@@ -186,27 +190,32 @@
                     <h6 class="m-0 font-weight-bold text-white"><i class="fas fa-history mr-2"></i>Invoice Belum Lunas</h6>
                 </div>
                 <div class="card-body p-0">
-                    <div class="table-responsive">
+                    <div class="table-responsive" style="max-height: 650px; overflow-y: auto;">
                         <table class="table table-hover mb-0">
                             <thead class="bg-light small">
                                 <tr>
-                                    <th class="px-3 py-3 border-0">Customer</th>
+                                    <th class="px-3 py-3 border-0">Detail Pesanan</th>
                                     <th class="text-right px-3 py-3 border-0">Total & Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse($invoices as $inv)
-                                    @if(trim(strtolower($inv->status)) == 'lunas')
-                                        @continue
-                                    @endif
-
                                     <tr>
                                         <td class="px-3 py-3 border-0">
-                                            <div class="font-weight-bold text-dark text-truncate" style="max-width: 130px;">
-                                                {{ $inv->nama_pembeli ?? $inv->nama_agen ?? 'Pembeli' }}
+                                            <div class="mb-1 d-flex align-items-center">
+                                                <small class="text-muted mr-2" style="font-size: 11px;">
+                                                    <i class="far fa-calendar-alt mr-1"></i>{{ date('d/m/y', strtotime($inv->tanggal_pesan)) }}
+                                                </small>
+                                                <span class="badge badge-light border text-primary" style="font-size: 9px; font-weight: 600;">
+                                                    {{ $inv->via }}
+                                                </span>
                                             </div>
-                                            <small class="text-muted">#{{ $inv->no_invoice }}</small>
-                                            <div class="small text-danger">Status: {{ $inv->status ?? 'NULL' }}</div>
+                                            <div class="font-weight-bold text-dark text-truncate mb-1" style="max-width: 150px;" title="{{ $inv->nama_pembeli }}">
+                                                {{ $inv->nama_pembeli }}
+                                            </div>
+                                            <span class="badge badge-warning text-dark shadow-sm" style="font-size: 10px; font-weight: 800; letter-spacing: 0.5px;">
+                                                {{ strtoupper($inv->status ?? 'PENDING') }}
+                                            </span>
                                         </td>
                                         <td class="text-right px-3 py-3 border-0 align-middle">
                                             <div class="font-weight-bold text-primary mb-2">
@@ -231,7 +240,10 @@
                                 @empty
                                     <tr>
                                         <td colspan="2" class="text-center py-5">
-                                            <p class="text-muted small">Semua invoice sudah lunas!</p>
+                                            <div class="text-muted">
+                                                <i class="fas fa-check-circle text-success mb-2" style="font-size: 2rem;"></i>
+                                                <p class="small mb-0">Semua invoice sudah lunas!</p>
+                                            </div>
                                         </td>
                                     </tr>
                                 @endforelse
@@ -249,7 +261,6 @@
         Alpine.data('orderSystem', () => ({
             samaPenerima: true,
             ongkir: 0,
-            // Mapping data dari PHP ke JS
             prices: {
                 @foreach($books as $b)
                     "{{ $b->id }}": {{ $b->harga_jual ?? 0 }},
@@ -261,31 +272,28 @@
                 @endforeach
             },
             items: [{ id: Date.now(), buku_id: '', qty: 1 }],
-
-            addItem() {
-                this.items.push({ id: Date.now(), buku_id: '', qty: 1 });
-            },
-            removeItem(index) {
-                if(this.items.length > 1) this.items.splice(index, 1);
-            },
-            getItemSubtotal(item) {
-                return (this.prices[item.buku_id] || 0) * (item.qty || 0);
-            },
-            calculateTotalBuku() {
-                return this.items.reduce((total, item) => total + this.getItemSubtotal(item), 0);
-            },
-            calculateTotalQty() {
-                return this.items.reduce((total, item) => total + (parseInt(item.qty) || 0), 0);
-            }
+            addItem() { this.items.push({ id: Date.now(), buku_id: '', qty: 1 }); },
+            removeItem(index) { if(this.items.length > 1) this.items.splice(index, 1); },
+            getItemSubtotal(item) { return (this.prices[item.buku_id] || 0) * (item.qty || 0); },
+            calculateTotalBuku() { return this.items.reduce((total, item) => total + this.getItemSubtotal(item), 0); },
+            calculateTotalQty() { return this.items.reduce((total, item) => total + (parseInt(item.qty) || 0), 0); }
         }));
     });
 
     $(document).ready(function() {
+        // Inisialisasi Select2
         $('#select_pembeli').select2({
             theme: 'bootstrap4',
             placeholder: '-- Cari Nama --',
             allowClear: true
         });
+
+        // Auto-hide notifikasi setelah 5 detik
+        setTimeout(function() {
+            $(".custom-alert").fadeTo(500, 0).slideUp(500, function(){
+                $(this).remove();
+            });
+        }, 5000);
     });
 </script>
 
@@ -293,16 +301,26 @@
     .bg-gradient-primary { background: linear-gradient(180deg, #4e73df 10%, #224abe 100%); }
     .borderless td, .borderless th { border: none !important; }
     .btn-action {
-        width: 32px;
-        height: 32px;
-        padding: 0;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 8px;
-        transition: all 0.2s;
+        width: 32px; height: 32px; padding: 0;
+        display: inline-flex; align-items: center; justify-content: center;
+        border-radius: 8px; transition: all 0.2s;
     }
     .btn-action:hover { transform: translateY(-2px); }
     .table-hover tbody tr:hover { background-color: rgba(78, 115, 223, 0.05); }
+
+    /* Perbaikan posisi tombol X di alert agar tidak tertumpuk elemen lain */
+    .custom-alert {
+        position: relative;
+        z-index: 1050;
+    }
+    .custom-alert .close {
+        padding: 0.75rem 1.25rem;
+        opacity: 0.8;
+    }
+    .custom-alert .close:hover { opacity: 1; }
+
+    .table-responsive::-webkit-scrollbar { width: 5px; }
+    .table-responsive::-webkit-scrollbar-track { background: #f1f1f1; }
+    .table-responsive::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
 </style>
 @endsection
