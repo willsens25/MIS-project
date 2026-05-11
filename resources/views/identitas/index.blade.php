@@ -69,7 +69,7 @@
 </style>
 
 <div class="container-fluid py-4 px-4">
-    {{-- Notifikasi Berhasil --}}
+    {{-- Notifikasi --}}
     @if(session('success'))
         <div class="alert alert-success alert-custom shadow-sm mb-4 d-flex align-items-center">
             <i class="bi bi-check-circle-fill fs-4 me-3"></i>
@@ -81,7 +81,6 @@
         </div>
     @endif
 
-    {{-- Notifikasi Gagal (Database/Custom Error) --}}
     @if(session('error'))
         <div class="alert alert-danger alert-custom shadow-sm mb-4 d-flex align-items-center">
             <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
@@ -93,7 +92,6 @@
         </div>
     @endif
 
-    {{-- Notifikasi Error Validasi --}}
     @if($errors->any())
         <div class="alert alert-warning alert-custom shadow-sm mb-4 d-flex align-items-start">
             <i class="bi bi-info-circle-fill fs-4 me-3 mt-1"></i>
@@ -252,7 +250,6 @@
                 <div class="modal-body p-4 bg-light bg-opacity-50">
                     <div class="form-section-card shadow-sm">
                         <div class="row g-3">
-                            {{-- Baris 1: Identitas Dasar --}}
                             <div class="col-md-4">
                                 <label class="form-label">Nomor Identitas (KTP)</label>
                                 <input type="text" name="nomor_identitas" class="form-control form-control-mis" placeholder="317XXXXXXXXXXXXX" value="{{ old('nomor_identitas') }}" required>
@@ -269,7 +266,6 @@
                                 <input type="text" name="nama_lengkap" class="form-control form-control-mis" placeholder="Nama Tanpa Gelar" value="{{ old('nama_lengkap') }}" required>
                             </div>
 
-                            {{-- Baris 2: Nama Panggilan & Jenis Kelamin --}}
                             <div class="col-md-4">
                                 <label class="form-label">Nama Panggilan</label>
                                 <input type="text" name="panggilan" class="form-control form-control-mis" placeholder="Nama Akrab" value="{{ old('panggilan') }}">
@@ -292,31 +288,15 @@
                                 </div>
                             </div>
 
-                            {{-- Baris 3: Tempat & Tanggal Lahir --}}
-                            <div class="col-md-4">
-                                <label class="form-label">Tempat Lahir</label>
-                                <input type="text" name="tempat_lahir" class="form-control form-control-mis" placeholder="Kota Lahir" value="{{ old('tempat_lahir') }}">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Tanggal Lahir</label>
-                                <input type="date" name="tanggal_lahir" class="form-control form-control-mis" value="{{ old('tanggal_lahir') }}">
-                            </div>
                             <div class="col-md-4">
                                 <label class="form-label">Nomor WhatsApp</label>
                                 <input type="text" name="nomor_hp_primary" class="form-control form-control-mis" placeholder="0812XXXXXXXX" value="{{ old('nomor_hp_primary') }}" required>
-                            </div>
-
-                            {{-- Baris 4: Email & Alamat --}}
-                            <div class="col-md-4">
-                                <label class="form-label">Email</label>
-                                <input type="email" name="email" class="form-control form-control-mis" placeholder="nama@email.com" value="{{ old('email') }}">
                             </div>
                             <div class="col-md-8">
                                 <label class="form-label">Alamat Domisili</label>
                                 <input type="text" name="alamat" class="form-control form-control-mis" placeholder="Nama Jalan, No. Rumah, RT/RW" value="{{ old('alamat') }}">
                             </div>
 
-                            {{-- Baris 5: Kategori --}}
                             <div class="col-md-12 mt-3">
                                 <div class="p-3 rounded-3" style="background: #f0fdf4; border: 1px dashed #10b981;">
                                     <label class="form-label text-success">Kategori Anggota</label>
@@ -327,29 +307,28 @@
                                 </div>
                             </div>
 
-                            {{-- Seksi Khusus Umat --}}
-                            <div id="sectionKhususUmatAdd" class="row g-3 mt-1">
-                                <div class="col-md-12">
-                                    <label class="form-label">Penempatan Divisi</label>
-                                    <select name="divisi_id" class="form-select form-control-mis">
-                                        <option value="">-- Pilih Divisi --</option>
-                                        @foreach($divisi as $div)
-                                            <option value="{{ $div->id }}" {{ old('divisi_id') == $div->id ? 'selected' : '' }}>{{ $div->nama_divisi }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-12">
-                                    <div class="d-flex gap-4 p-3 rounded bg-white border shadow-sm">
-                                        <div class="form-check form-switch">
-                                            <input type="hidden" name="is_agen_purna" value="0">
-                                            <input class="form-check-input" type="checkbox" name="is_agen_purna" value="1" id="switchAgenAdd" {{ old('is_agen_purna') == '1' ? 'checked' : '' }}>
-                                            <label class="form-check-label fw-bold small" for="switchAgenAdd">Agen Purna</label>
-                                        </div>
-                                        <div class="form-check form-switch">
-                                            <input type="hidden" name="is_dharma_patriot" value="0">
-                                            <input class="form-check-input" type="checkbox" name="is_dharma_patriot" value="1" id="switchPatriotAdd" {{ old('is_dharma_patriot') == '1' ? 'checked' : '' }}>
-                                            <label class="form-check-label fw-bold small" for="switchPatriotAdd">Dharma Patriot</label>
-                                        </div>
+                            {{-- Penempatan Divisi: Sekarang ID-nya diletakkan di luar agar mudah dikendalikan JS --}}
+                            <div class="col-md-12" id="divDivisiAdd">
+                                <label class="form-label">Penempatan Divisi <span class="text-danger">*</span></label>
+                                <select name="divisi_id" id="selectDivisi" class="form-select form-control-mis" required>
+                                    <option value="">-- Pilih Divisi --</option>
+                                    @foreach($divisi as $div)
+                                        <option value="{{ $div->id }}" {{ old('divisi_id') == $div->id ? 'selected' : '' }}>{{ $div->nama_divisi }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div id="sectionKhususUmatAdd" class="col-md-12">
+                                <div class="d-flex gap-4 p-3 rounded bg-white border shadow-sm mt-2">
+                                    <div class="form-check form-switch">
+                                        <input type="hidden" name="is_agen_purna" value="0">
+                                        <input class="form-check-input" type="checkbox" name="is_agen_purna" value="1" id="switchAgenAdd" {{ old('is_agen_purna') == '1' ? 'checked' : '' }}>
+                                        <label class="form-check-label fw-bold small" for="switchAgenAdd">Agen Purna</label>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input type="hidden" name="is_dharma_patriot" value="0">
+                                        <input class="form-check-input" type="checkbox" name="is_dharma_patriot" value="1" id="switchPatriotAdd" {{ old('is_dharma_patriot') == '1' ? 'checked' : '' }}>
+                                        <label class="form-check-label fw-bold small" for="switchPatriotAdd">Dharma Patriot</label>
                                     </div>
                                 </div>
                             </div>
@@ -375,21 +354,27 @@
         });
 
         // Toggle Kategori
-        const kategoriSelect = document.getElementById('kategoriAnggotaAdd');
-        const sectionUmat = document.getElementById('sectionKhususUmatAdd');
+        const kategoriSelect = $('#kategoriAnggotaAdd');
+        const sectionUmat = $('#sectionKhususUmatAdd');
+        const divDivisi = $('#divDivisiAdd');
+        const selectDivisi = $('#selectDivisi');
 
         function toggleKategori() {
-            if (kategoriSelect.value === 'Umat') {
-                $(sectionUmat).fadeIn();
+            if (kategoriSelect.val() === 'Umat') {
+                sectionUmat.show();
+                divDivisi.show();
+                selectDivisi.attr('required', true); // Divisi Wajib diisi jika Umat
             } else {
-                $(sectionUmat).hide();
+                sectionUmat.hide();
+                divDivisi.hide();
+                selectDivisi.attr('required', false); // Divisi tidak wajib jika Sangha
+                selectDivisi.val(''); // Reset nilai jika Sangha agar tidak bentrok
             }
         }
 
-        kategoriSelect.addEventListener('change', toggleKategori);
-        toggleKategori();
+        kategoriSelect.on('change', toggleKategori);
+        toggleKategori(); // Run on load
 
-        // Otomatis buka modal jika ada error validasi
         @if($errors->any())
             var myModal = new bootstrap.Modal(document.getElementById('addModal'));
             myModal.show();

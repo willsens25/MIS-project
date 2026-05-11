@@ -18,8 +18,8 @@ class IdentitasController extends Controller
             ->when($search, function($query) use ($search) {
                 $query->where(function($q) use ($search) {
                     $q->where('nama_lengkap', 'LIKE', "%{$search}%")
-                    ->orWhere('nama_panggilan', 'LIKE', "%{$search}%")
-                    ->orWhere('no_ktp', 'LIKE', "%{$search}%")
+                    ->orWhere('panggilan', 'LIKE', "%{$search}%")
+                    ->orWhere('nomor_identitas', 'LIKE', "%{$search}%")
                     ->orWhereHas('divisi', function($sq) use ($search) {
                         $sq->where('nama_divisi', 'LIKE', "%{$search}%");
                     });
@@ -31,7 +31,6 @@ class IdentitasController extends Controller
 
         $divisi = Divisi::all();
 
-        // Statistik Global menggunakan Query Builder
         $stats = Transaksi::selectRaw("
             SUM(CASE WHEN jenis = 'DONASI' THEN nominal ELSE 0 END) as total_donasi,
             SUM(CASE WHEN jenis = 'SALUR' THEN nominal ELSE 0 END) as total_salur
@@ -53,7 +52,7 @@ class IdentitasController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nomor_identitas' => 'required|unique:identitas,nomor_identitas',
+            'nomor_identitas' => 'required',
             'nama_lengkap'    => 'required',
             'nomor_hp_primary' => 'required',
         ]);
@@ -62,26 +61,24 @@ class IdentitasController extends Controller
             DB::beginTransaction();
 
             Identitas::create([
-                'nomor_identitas'   => $request->nomor_identitas,
-                'no_ktp'            => $request->nomor_identitas,
                 'nama_lengkap'      => strtoupper($request->nama_lengkap),
-                'nama_ktp'          => strtoupper($request->nama_lengkap),
                 'panggilan'         => $request->panggilan,
-                'nama_panggilan'    => $request->panggilan,
                 'jenis_identitas'   => $request->jenis_identitas,
+                'nomor_identitas'   => $request->nomor_identitas,
                 'jenis_kelamin'     => $request->jenis_kelamin,
-                'agama'             => $request->agama,
-                'email'             => $request->email,
+                'kewarganegaraan'   => 'WNI',
                 'nomor_hp_primary'  => $request->nomor_hp_primary,
-                'jenis_umat'        => $request->jenis_umat,
+                'email'             => $request->email,
+                'pekerjaan'         => $request->pekerjaan,
                 'alamat'            => $request->alamat,
-                'divisi_id'         => $request->divisi_id,
-                'tempat_lahir'      => $request->tempat_lahir,
-                'tanggal_lahir'     => $request->tanggal_lahir,
+                'kota'              => $request->kota,
+                'kode_pos'          => $request->kode_pos,
+                'agama'             => $request->agama,
+                'status_keamanan'   => 'Normal',
+                'jenis_umat'        => $request->jenis_umat,
                 'is_agen_purna'     => $request->has('is_agen_purna') ? 1 : 0,
                 'is_dharma_patriot' => $request->has('is_dharma_patriot') ? 1 : 0,
-                'status_keamanan'   => 'Normal',
-                'kewarganegaraan'   => 'WNI',
+                'divisi_id'         => $request->divisi_id ?: null,
             ]);
 
             DB::commit();
@@ -90,21 +87,71 @@ class IdentitasController extends Controller
         } catch (\Exception $e) {
             DB::rollback();
             $message = $e->getMessage();
-            if ($e->getCode() == 23000 || str_contains($message, 'Duplicate entry')) {
-                $message = 'Nomor Identitas (' . $request->nomor_identitas . ') sudah terdaftar!';
+
+            // Deteksi apakah benar-benar duplikat atau ada kolom kosong yang wajib diisi (NOT NULL)
+            if (str_contains($message, 'Duplicate entry')) {
+                $finalMessage = "Nomor Identitas ({$request->nomor_identitas}) sudah terdaftar di sistem!";
+            } elseif (str_contains($message, 'cannot be null') || $e->getCode() == 23000) {
+                $finalMessage = "Gagal Simpan: Ada kolom wajib di database yang belum terisi. Detail: " . $message;
+            } else {
+                $finalMessage = "Gagal Simpan: " . $message;
             }
-            return redirect()->back()->with('error', 'Gagal Simpan: ' . $message)->withInput();
+
+            return redirect()->back()->with('error', $finalMessage)->withInput();
+        }
+    }
+
+    public function update(Request $request, $id)
+    {
+        $identitas = Identitas::findOrFail($id);
+
+        $request->validate([
+            'nomor_identitas' => 'required|unique:identitas,nomor_identitas,'.$id,
+            'nama_lengkap'    => 'required',
+            'nomor_hp_primary'=> 'required',
+            'email'           => 'nullable|email',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $identitas->update([
+                'nama_lengkap'      => strtoupper($request->nama_lengkap),
+                'panggilan'         => $request->panggilan,
+                'jenis_identitas'   => $request->jenis_identitas,
+                'nomor_identitas'   => $request->nomor_identitas,
+                'jenis_kelamin'     => $request->jenis_kelamin,
+                'nomor_hp_primary'  => $request->nomor_hp_primary,
+                'email'             => $request->email,
+                'pekerjaan'         => $request->pekerjaan,
+                'alamat'            => $request->alamat,
+                'kota'              => $request->kota,
+                'kode_pos'          => $request->kode_pos,
+                'agama'             => $request->agama,
+                'triyana'           => $request->triyana,
+                'status_keamanan'   => $request->status_keamanan ?? 'Normal',
+                'jenis_umat'        => $request->jenis_umat,
+                'bhante_lay'        => $request->bhante_lay,
+                'kategori_jarkom'   => $request->kategori_jarkom,
+                'is_agen_purna'     => $request->has('is_agen_purna') ? 1 : 0,
+                'is_dharma_patriot' => $request->has('is_dharma_patriot') ? 1 : 0,
+                'divisi_id'         => $request->divisi_id,
+            ]);
+
+            DB::commit();
+            return redirect()->route('identitas.show', $identitas->id)->with('success', 'Data Profil Berhasil Diperbarui!');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->back()->with('error', 'Gagal Update: ' . $e->getMessage())->withInput();
         }
     }
 
     public function show($id)
     {
         $identitas = Identitas::with(['divisi'])->findOrFail($id);
-
-        // Hitung total donasi & salur spesifik anggota
         $totalDonasi = Transaksi::where('identitas_id', $id)->where('jenis', 'DONASI')->sum('nominal');
         $totalSalur = Transaksi::where('identitas_id', $id)->where('jenis', 'SALUR')->sum('nominal');
-
         return view('identitas.show', compact('identitas', 'totalDonasi', 'totalSalur'));
     }
 
@@ -115,70 +162,6 @@ class IdentitasController extends Controller
         return view('identitas.edit', compact('identitas', 'divisi'));
     }
 
-    public function update(Request $request, $id)
-{
-    $identitas = Identitas::findOrFail($id);
-
-    // 1. Validasi Lengkap
-    $request->validate([
-        'nomor_identitas' => 'required|unique:identitas,nomor_identitas,'.$id,
-        'nama_lengkap'    => 'required',
-        'nomor_hp_primary'=> 'required',
-        'email'           => 'nullable|email',
-    ]);
-
-    try {
-        DB::beginTransaction();
-
-        $valId = $request->input('nomor_identitas');
-
-        // 2. Update Semua Kolom (Sesuai Struktur DB)
-        $identitas->update([
-            // Identitas Dasar
-            'nama_lengkap'      => strtoupper($request->nama_lengkap),
-            'nama_panggilan'    => $request->nama_panggilan,
-            'panggilan'         => $request->nama_panggilan,
-            'gelar_panggilan'   => $request->gelar_panggilan,
-            'no_ktp'            => $valId,
-            'nomor_identitas'   => $valId,
-            'nama_ktp'          => strtoupper($request->nama_ktp ?? $request->nama_lengkap),
-            'divisi_id'         => $request->divisi_id,
-
-            // Kontak & Alamat (Komponen yang tadi kurang)
-            'email'             => $request->email,
-            'nomor_hp_primary'  => $request->nomor_hp_primary,
-            'alamat'            => $request->alamat,
-            'kota'              => $request->kota,
-            'kode_pos'          => $request->kode_pos,
-
-            // Biodata & Latar Belakang
-            'jenis_kelamin'     => $request->jenis_kelamin,
-            'tempat_lahir'      => $request->tempat_lahir,
-            'tanggal_lahir'     => $request->tanggal_lahir,
-            'agama'             => $request->agama,
-            'pekerjaan'         => $request->pekerjaan,
-            'kewarganegaraan'   => $request->kewarganegaraan ?? 'WNI',
-            'jenis_umat'        => $request->jenis_umat,
-
-            // Status Keanggotaan & Kategori (Sesuai Gambar DB)
-            'status_keamanan'   => $request->status_keamanan ?? 'Normal',
-            'is_agen_purna'     => $request->has('is_agen_purna') ? 1 : 0,
-            'is_dharma_patriot' => $request->has('is_dharma_patriot') ? 1 : 0,
-            'triyana'           => $request->triyana,
-            'bhante_lay'        => $request->bhante_lay,
-            'kategori_jarkom'   => $request->kategori_jarkom,
-        ]);
-
-        DB::commit();
-        return redirect()->route('identitas.show', $identitas->id)->with('success', 'Data Profil Berhasil Diperbarui!');
-
-    } catch (\Exception $e) {
-        DB::rollback();
-        return redirect()->back()
-            ->with('error', 'Gagal Update: ' . $e->getMessage())
-            ->withInput();
-    }
-}
     public function destroy($id)
     {
         $identitas = Identitas::findOrFail($id);

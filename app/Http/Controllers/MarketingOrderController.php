@@ -23,7 +23,6 @@ class MarketingOrderController extends Controller
         $identitas = Identitas::orderBy('nama_lengkap', 'asc')->get();
         $books = Book::orderBy('judul', 'asc')->get();
 
-        // Ambil invoice yang statusnya BUKAN Lunas
         $invoices = Order::where(function($q) {
                 $q->where('status', '!=', 'Lunas')
                   ->where('status', '!=', 'lunas')
@@ -40,29 +39,39 @@ class MarketingOrderController extends Controller
      */
     public function store(Request $request)
     {
-        // 1. Validasi Input
+        // 1. Validasi Input Super Ketat
         $request->validate([
             'tanggal_pesan' => 'required|date',
-            'nama_agen'     => 'required|string',
-            'buku_id'       => 'required|array',
-            'qty'           => 'required|array',
-            'ekspedisi'     => 'required',
-            'ongkir'        => 'required|numeric',
-            'via'           => 'required',
+            'nama_agen'     => 'required|string|exists:identitas,nama_lengkap', // Pastikan agen ada di DB
+            'via'           => 'required|string',
+            'ekspedisi'     => 'required|string',
+            'ongkir'        => 'required|numeric|min:0',
+            'buku_id'       => 'required|array|min:1',
+            'buku_id.*' => [
+                'required',
+                \Illuminate\Validation\Rule::exists(\App\Models\Book::class, 'id'),
+            ],
+            'qty'           => 'required|array|min:1',
+            'qty.*'         => 'required|integer|min:1', // QTY MINIMAL 1 (Poin Penting!)
+        ], [
+            'nama_agen.exists'      => 'Nama agen/pembeli tidak ditemukan di sistem.',
+            'via.required'          => 'Pilih sumber pesanan (WA/Shopee/dll).',
+            'qty.*.min'             => 'Jumlah pesanan (QTY) minimal harus 1.',
+            'buku_id.required'      => 'Minimal pilih satu buku.',
+            'ongkir.numeric'        => 'Ongkir harus berupa angka.',
         ]);
 
         try {
             return DB::transaction(function () use ($request) {
-                // 2. Generate Nomor Invoice (Format: INV-YYYYMMDD-XXXX)
+                // 2. Generate Nomor Invoice
                 $tanggal = date('Ymd');
                 $count = Order::whereDate('created_at', today())->count();
                 $noInvoice = "INV-{$tanggal}-" . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
 
-                // 3. Logika Penentuan Alamat & Penerima
+                // 3. Logika Penentuan Alamat
                 $isSama = $request->has('sama_penerima');
                 $namaPenerima = $isSama ? $request->nama_agen : ($request->nama_penerima ?? $request->nama_agen);
 
-                // Jika sama dengan pembeli, tarik alamat asli dari tabel Identitas
                 $alamatFinal = $request->alamat_penerima;
                 if ($isSama) {
                     $pembeli = Identitas::where('nama_lengkap', $request->nama_agen)->first();
@@ -85,7 +94,7 @@ class MarketingOrderController extends Controller
 
                 $totalSemuaBuku = 0;
 
-                // 5. Simpan Detail Item (Looping array buku)
+                // 5. Simpan Detail Item
                 foreach ($request->buku_id as $key => $idBuku) {
                     if (!$idBuku) continue;
 
@@ -104,13 +113,10 @@ class MarketingOrderController extends Controller
                         'subtotal'     => $subtotal,
                     ]);
 
-                    // Opsional: Jika ingin stok langsung berkurang saat order dibuat
-                    // $book->decrement('stok_gudang', $jumlahPesanan);
-
                     $totalSemuaBuku += $subtotal;
                 }
 
-                // 6. Update Total Akhir (Total Buku + Ongkir)
+                // 6. Update Total Akhir
                 $order->update([
                     'total_tagihan' => $totalSemuaBuku + ($request->ongkir ?? 0)
                 ]);
@@ -131,25 +137,21 @@ class MarketingOrderController extends Controller
             return DB::transaction(function () use ($id) {
                 $order = Order::findOrFail($id);
 
-                // 1. Update Status Order
                 $order->update([
                     'status' => 'Lunas',
                     'tercatat_finance' => 1
                 ]);
 
-                // 2. Cari Kategori Pemasukan
                 $category = Category::where('nama_kategori', 'like', '%Penjualan%')
                             ->orWhere('nama_kategori', 'like', '%Invoice%')
                             ->first();
 
-                // 3. Ambil Akun Kas (Cari yang namanya ada 'Kas', jika tidak ada ambil yang pertama)
                 $account = Account::where('nama_akun', 'like', '%Kas%')->first() ?? Account::first();
 
                 if (!$account) {
                     throw new \Exception("Akun Kas/Bank belum diatur di sistem Finance.");
                 }
 
-                // 4. Buat Mutasi Masuk ke Tabel Finance
                 Mutasi::create([
                     'account_id'  => $account->id,
                     'category_id' => $category->id ?? null,
@@ -168,17 +170,11 @@ class MarketingOrderController extends Controller
         }
     }
 
-    /**
-     * Menghapus Invoice
-     */
     public function hapusInvoice($id)
     {
         try {
             $order = Order::findOrFail($id);
-            // Detail order biasanya otomatis terhapus jika kamu pakai 'onDelete cascade' di database
-            // Jika tidak, hapus manual: $order->details()->delete();
             $order->delete();
-
             return redirect()->back()->with('success', 'Invoice berhasil dihapus!');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Gagal menghapus: ' . $e->getMessage());

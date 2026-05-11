@@ -94,8 +94,8 @@ class DatabaseSeeder extends Seeder
                 'alamat'            => $faker->streetAddress,
                 'kota'              => $faker->city,
                 'pekerjaan'         => $faker->jobTitle,
-                'agama'             => 'Buddha',
-
+                'agama'             => $faker->randomElement(['Buddha', 'Hindu', 'Islam', 'Kristen', 'Katolik', 'Konghucu']),
+                
                 'is_agen_purna'     => $faker->boolean(20),
                 'is_dharma_patriot' => $faker->boolean(15),
                 'created_by'        => 1,
