@@ -35,14 +35,14 @@ class MarketingOrderController extends Controller
     }
 
     /**
-     * Menyimpan Data Pesanan Baru
+     * Menyimpan Data Pesanan Baru & Potong Stok Otomatis
      */
     public function store(Request $request)
     {
         // 1. Validasi Input Super Ketat
         $request->validate([
             'tanggal_pesan' => 'required|date',
-            'nama_agen'     => 'required|string|exists:identitas,nama_lengkap', // Pastikan agen ada di DB
+            'nama_agen'     => 'required|string|exists:identitas,nama_lengkap',
             'via'           => 'required|string',
             'ekspedisi'     => 'required|string',
             'ongkir'        => 'required|numeric|min:0',
@@ -52,7 +52,7 @@ class MarketingOrderController extends Controller
                 \Illuminate\Validation\Rule::exists(\App\Models\Book::class, 'id'),
             ],
             'qty'           => 'required|array|min:1',
-            'qty.*'         => 'required|integer|min:1', // QTY MINIMAL 1 (Poin Penting!)
+            'qty.*'         => 'required|integer|min:1',
         ], [
             'nama_agen.exists'      => 'Nama agen/pembeli tidak ditemukan di sistem.',
             'via.required'          => 'Pilih sumber pesanan (WA/Shopee/dll).',
@@ -94,7 +94,7 @@ class MarketingOrderController extends Controller
 
                 $totalSemuaBuku = 0;
 
-                // 5. Simpan Detail Item
+                // 5. Simpan Detail Item & Potong Stok
                 foreach ($request->buku_id as $key => $idBuku) {
                     if (!$idBuku) continue;
 
@@ -102,6 +102,14 @@ class MarketingOrderController extends Controller
                     if (!$book) continue;
 
                     $jumlahPesanan = $request->qty[$key] ?? 1;
+
+                    // --- LOGIKA CEK & POTONG STOK ---
+                    if ($book->stok_gudang < $jumlahPesanan) {
+                        throw new \Exception("Stok buku '{$book->judul}' tidak mencukupi. Sisa stok: {$book->stok_gudang}");
+                    }
+                    $book->decrement('stok_gudang', $jumlahPesanan);
+                    // --------------------------------
+
                     $hargaSatuan = $book->harga_jual ?? 0;
                     $subtotal = $hargaSatuan * $jumlahPesanan;
 
@@ -121,7 +129,7 @@ class MarketingOrderController extends Controller
                     'total_tagihan' => $totalSemuaBuku + ($request->ongkir ?? 0)
                 ]);
 
-                return redirect()->back()->with('success', "Invoice #{$noInvoice} berhasil disimpan!");
+                return redirect()->back()->with('success', "Invoice #{$noInvoice} berhasil disimpan & stok dipotong!");
             });
         } catch (\Exception $e) {
             return redirect()->back()->withInput()->with('error', 'Gagal Simpan: ' . $e->getMessage());
@@ -172,12 +180,42 @@ class MarketingOrderController extends Controller
 
     public function hapusInvoice($id)
     {
-        try {
-            $order = Order::findOrFail($id);
+    try {
+        return DB::transaction(function () use ($id) {
+            // 1. Cari data order beserta detailnya
+            $order = Order::with('details')->findOrFail($id);
+
+            // 2. Cegah penghapusan jika sudah Lunas (Opsional, demi keamanan keuangan)
+            if ($order->status == 'Lunas') {
+                throw new \Exception("Invoice yang sudah Lunas tidak boleh dihapus. Batalkan status lunas terlebih dahulu.");
+            }
+
+            // 3. Kembalikan Stok Buku
+            foreach ($order->details as $detail) {
+                // Cari buku terkait
+                $book = Book::find($detail->buku_id);
+                if ($book) {
+                    // Tambahkan kembali stok yang tadinya dipotong
+                    $book->increment('stok_gudang', $detail->jumlah);
+                }
+            }
+
+            // 4. Hapus Detail dan Header (Gunakan cascade delete jika sudah disetting di migrasi,
+            // jika belum, hapus manual detailnya dulu)
+            $order->details()->delete();
             $order->delete();
-            return redirect()->back()->with('success', 'Invoice berhasil dihapus!');
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Gagal menghapus: ' . $e->getMessage());
-        }
+
+            return redirect()->back()->with('success', 'Invoice dibatalkan & stok buku telah dikembalikan ke gudang!');
+        });
+    } catch (\Exception $e) {
+        return redirect()->back()->with('error', 'Gagal menghapus: ' . $e->getMessage());
+    }
+    }
+
+    public function printInvoice($id)
+    {
+        $order = Order::with(['details.book'])->findOrFail($id);
+
+        return view('marketing.print_invoice', compact('order'));
     }
 }

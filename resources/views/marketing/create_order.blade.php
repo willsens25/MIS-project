@@ -222,13 +222,19 @@
                                                 Rp{{ number_format($inv->total_tagihan, 0, ',', '.') }}
                                             </div>
                                             <div class="d-flex justify-content-end">
+                                                {{-- TOMBOL CETAK (BARU) --}}
+                                                <a href="{{ route('marketing.order.print', $inv->id) }}" target="_blank" class="btn btn-info btn-action mr-1" title="Cetak Invoice">
+                                                    <i class="fas fa-print"></i>
+                                                </a>
+
                                                 <form action="{{ route('mad.tandai-lunas', $inv->id) }}" method="POST" class="mr-1">
                                                     @csrf
                                                     <button type="submit" class="btn btn-success btn-action" title="Tandai Lunas">
                                                         <i class="fas fa-check"></i>
                                                     </button>
                                                 </form>
-                                                <form action="{{ route('mad.hapus-invoice', $inv->id) }}" method="POST" onsubmit="return confirm('Hapus invoice ini?')">
+
+                                                <form action="{{ route('mad.hapus-invoice', $inv->id) }}" method="POST" onsubmit="return confirm('Hapus invoice ini? Stok akan dikembalikan ke gudang.')">
                                                     @csrf @method('DELETE')
                                                     <button type="submit" class="btn btn-outline-danger btn-action" title="Hapus">
                                                         <i class="fas fa-trash"></i>
@@ -304,11 +310,11 @@
         width: 32px; height: 32px; padding: 0;
         display: inline-flex; align-items: center; justify-content: center;
         border-radius: 8px; transition: all 0.2s;
+        border: none;
     }
-    .btn-action:hover { transform: translateY(-2px); }
+    .btn-action:hover { transform: translateY(-2px); filter: brightness(90%); }
     .table-hover tbody tr:hover { background-color: rgba(78, 115, 223, 0.05); }
 
-    /* Perbaikan posisi tombol X di alert agar tidak tertumpuk elemen lain */
     .custom-alert {
         position: relative;
         z-index: 1050;

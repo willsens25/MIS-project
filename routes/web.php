@@ -146,6 +146,7 @@ Route::middleware('auth')->group(function () {
             });
 
             Route::get('/marketing-order', [MarketingOrderController::class, 'create'])->name('mad.create');
+            Route::get('/marketing/order/print/{id}', [MarketingOrderController::class, 'printInvoice'])->name('marketing.order.print');
         });
     });
 

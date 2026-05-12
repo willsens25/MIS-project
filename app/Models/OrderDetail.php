@@ -19,8 +19,8 @@ class OrderDetail extends Model
         return $this->belongsTo(Order::class);
     }
 
-    public function buku()
+    public function book()
     {
-        return $this->belongsTo(Buku::class);
+    return $this->belongsTo(Book::class, 'buku_id');
     }
 }

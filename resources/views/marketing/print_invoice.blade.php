@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice - {{ $order->no_invoice }}</title>
+    <style>
+        body { font-family: 'Courier New', Courier, monospace; font-size: 14px; color: #333; margin: 0; padding: 20px; }
+        .invoice-box { max-width: 800px; margin: auto; padding: 30px; border: 1px solid #eee; background: #fff; }
+
+        /* Header Style */
+        .header-table { width: 100%; border-bottom: 3px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+        .logo { width: 180px; height: auto; }
+        .invoice-title { text-align: right; vertical-align: bottom; }
+        .invoice-title h1 { margin: 0; font-size: 42px; font-weight: bold; letter-spacing: 1px; line-height: 1; }
+        .invoice-title p { margin: 5px 0 0 0; font-size: 16px; }
+
+        .info { margin-top: 10px; display: flex; justify-content: space-between; }
+        .info div { width: 45%; line-height: 1.5; }
+
+        table.items { width: 100%; border-collapse: collapse; margin-top: 25px; }
+        table.items th { background: #f2f2f2; padding: 12px 10px; border: 1px solid #000; text-align: left; }
+        table.items td { padding: 10px; border: 1px solid #000; }
+
+        .total-row { font-weight: bold; background: #f9f9f9; }
+        .footer { margin-top: 40px; text-align: center; font-size: 12px; border-top: 1px dashed #999; padding-top: 15px; }
+
+        @media print {
+            .no-print { display: none; }
+            body { padding: 0; }
+            .invoice-box { border: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="text-align:center; margin-bottom: 20px;">
+        <button onclick="window.print()" style="padding: 10px 25px; cursor:pointer; background: #000; color: #fff; border: none; font-weight: bold;">PRINT INVOICE</button>
+        <button onclick="window.history.back()" style="padding: 10px 25px; cursor:pointer; background: #ccc; border: none;">KEMBALI</button>
+    </div>
+
+    <div class="invoice-box">
+        <table class="header-table">
+            <tr>
+                <td>
+                    @php
+                    $path = public_path('img/Logo Lamrimnesia.png');
+                    $type = pathinfo($path, PATHINFO_EXTENSION);
+                    $data = file_get_contents($path);
+                    $base64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
+                    @endphp
+                    <img src="{{ $base64 }}" class="logo" alt="Logo Lamrimnesia">
+                </td>
+                <td class="invoice-title">
+                    <h1>INVOICE</h1>
+                    <p><strong>Nomor:</strong> {{ $order->no_invoice }}</p>
+                </td>
+            </tr>
+        </table>
+
+        <div class="info">
+            <div>
+                <strong>DARI:</strong><br>
+                Gudang MIS Project<br>
+                Jakarta, Indonesia
+            </div>
+            <div style="text-align: right;">
+                <strong>UNTUK:</strong><br>
+                <strong>{{ $order->nama_penerima }}</strong><br>
+                {{ $order->alamat_penerima }}<br>
+                Tanggal: {{ date('d M Y', strtotime($order->tanggal_pesan)) }}<br>
+                <small>Kurir: {{ $order->ekspedisi }} ({{ $order->via }})</small>
+            </div>
+        </div>
+
+        <table class="items">
+            <thead>
+                <tr>
+                    <th>Deskripsi Item</th>
+                    <th style="text-align:center; width: 60px;">Qty</th>
+                    <th style="text-align:right; width: 130px;">Harga</th>
+                    <th style="text-align:right; width: 130px;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($order->details as $detail)
+                <tr>
+                    <td>{{ $detail->book->judul ?? 'Item tidak ditemukan' }}</td>
+                    <td style="text-align:center;">{{ $detail->jumlah }}</td>
+                    <td style="text-align:right;">{{ number_format($detail->harga_satuan, 0, ',', '.') }}</td>
+                    <td style="text-align:right;">{{ number_format($detail->subtotal, 0, ',', '.') }}</td>
+                </tr>
+                @endforeach
+                <tr>
+                    <td colspan="3" style="text-align:right;">Ongkos Kirim</td>
+                    <td style="text-align:right;">{{ number_format($order->ongkir, 0, ',', '.') }}</td>
+                </tr>
+                <tr class="total-row">
+                    <td colspan="3" style="text-align:right; font-size:16px;">TOTAL PEMBAYARAN</td>
+                    <td style="text-align:right; font-size:16px;">Rp {{ number_format($order->total_tagihan, 0, ',', '.') }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="footer">
+            <p>Terima kasih atas pesanan Anda!</p>
+            <p>Harap simpan invoice ini sebagai bukti transaksi yang sah.</p>
+            <p><em>Generated by MIS System on {{ date('d/m/Y H:i') }}</em></p>
+        </div>
+    </div>
+</body>
+</html>
