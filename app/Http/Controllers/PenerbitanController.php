@@ -68,4 +68,20 @@ class PenerbitanController extends Controller
     return redirect()->back()->with('success', count($ids) . ' item berhasil dihapus.');
 }
 
+    public function ajukanCetak(Request $request)
+{
+    $request->validate([
+        'book_id' => 'required|exists:bukus,id',
+        'jumlah' => 'required|numeric|min:1',
+    ]);
+
+    \App\Models\PengajuanCetak::create([
+        'buku_id' => $request->book_id,
+        'jumlah_pengajuan' => $request->jumlah,
+        'status' => 'pending',
+    ]);
+
+    return back()->with('success', 'Pengajuan cetak telah dikirim ke Finance!');
+}
+
 }

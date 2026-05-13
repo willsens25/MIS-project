@@ -7,6 +7,8 @@ use App\Models\Account;
 use App\Models\Mutasi;
 use App\Models\Category;
 use App\Models\Invoice;
+use App\Models\PengajuanCetak;
+use App\Models\Book;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 
@@ -20,13 +22,13 @@ class FinanceController extends Controller
         $accounts = Account::all();
         $categories = Category::all();
 
-        // 1. Query Utama
+        // 1. Query Utama Mutasi
         $query = Mutasi::with(['category', 'account'])->whereYear('tanggal', $tahun);
         if ($bulan) { $query->whereMonth('tanggal', $bulan); }
 
         $mutasis = $query->latest()->get();
 
-        // Summary
+        // Summary Keuangan
         $totalMasuk = (clone $query)->where('tipe', 'Masuk')->sum('nominal');
         $totalKeluar = (clone $query)->where('tipe', 'Keluar')->sum('nominal');
         $total_saldo = $totalMasuk - $totalKeluar;
@@ -62,9 +64,12 @@ class FinanceController extends Controller
             }
         }
 
+        // 3. Ambil data pengajuan cetak (Agar variabel $pengajuans terdefinisi di view finance)
+        $pengajuans = PengajuanCetak::with('buku')->where('status', 'pending')->get();
+
         return view('pages.finance', compact(
             'accounts', 'categories', 'mutasis', 'totalMasuk', 'totalKeluar', 'total_saldo',
-            'days', 'masukHarian', 'keluarHarian', 'tahun', 'bulan'
+            'days', 'masukHarian', 'keluarHarian', 'tahun', 'bulan', 'pengajuans'
         ));
     }
 
@@ -107,13 +112,10 @@ class FinanceController extends Controller
         return back()->with('success', 'Transaksi berhasil diperbarui!');
     }
 
-    // DELETE - Hapus Transaksi
     public function destroy($id) {
         Mutasi::findOrFail($id)->delete();
         return back()->with('success', 'Transaksi berhasil dihapus!');
     }
-
-    // --- FITUR LAINNYA ---
 
     public function simpanAkun(Request $request) {
         $request->validate(['nama_akun' => 'required']);
@@ -149,13 +151,8 @@ class FinanceController extends Controller
         return redirect()->route('finance.index')->with('success', 'Pembayaran Berhasil Masuk!');
     }
 
-    /**
-     * Fix Error: Menambahkan method downloadPdf yang dipanggil oleh Route
-     */
     public function downloadPdf(Request $request, $id = null)
     {
-        // Jika route memanggil /finance/download-pdf/{id}, kita arahkan ke downloadReport
-        // agar tetap menggunakan logika laporan yang sudah kamu buat.
         return $this->downloadReport($request);
     }
 
@@ -166,19 +163,16 @@ class FinanceController extends Controller
 
         $query = Mutasi::with(['category', 'account']);
 
-        if ($bulan) {
-            $query->whereMonth('tanggal', $bulan);
-        }
+        if ($bulan) { $query->whereMonth('tanggal', $bulan); }
         $query->whereYear('tanggal', $tahun);
 
         $mutasis = $query->orderBy('tanggal', 'desc')->get();
 
-        // Hitung total untuk summary di PDF
         $totalMasuk = $mutasis->where('tipe', 'Masuk')->sum('nominal');
         $totalKeluar = $mutasis->where('tipe', 'Keluar')->sum('nominal');
         $saldo = $totalMasuk - $totalKeluar;
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pages.finance_pdf', [
+        $pdf = Pdf::loadView('pages.finance_pdf', [
             'mutasis' => $mutasis,
             'bulan' => $bulan,
             'tahun' => $tahun,
@@ -193,4 +187,55 @@ class FinanceController extends Controller
 
         return $pdf->stream("Laporan_Keuangan_{$bulan}_{$tahun}.pdf");
     }
+
+    // --- INTEGRASI PENERBITAN (PNB) ---
+
+    public function persetujuanCetak()
+    {
+    $pengajuans = \App\Models\PengajuanCetak::where('status', 'pending')->get();
+    $accounts = \App\Models\Account::all();
+
+    return view('pages.finance_persetujuan', compact('pengajuans', 'accounts'));
+    }
+
+    public function prosesCetak(Request $request, $id)
+{
+    $pengajuan = PengajuanCetak::findOrFail($id);
+    // Menggunakan Book sesuai struktur model kamu
+    $buku = Book::findOrFail($pengajuan->buku_id);
+
+    if ($request->aksi == 'setujui') {
+        // Estimasi Rp 20.000 per eksamplar
+        $biayaCetak = $pengajuan->jumlah_pengajuan * 20000;
+
+        // 1. Catat Otomatis ke Mutasi (Pengeluaran)
+        Mutasi::create([
+            'account_id'  => $request->account_id,
+            'category_id' => 2, // Pastikan ID 2 adalah kategori pengeluaran di DB kamu
+            'user_id'     => auth()->id(),
+            'tipe'        => 'Keluar',
+            'nominal'     => $biayaCetak,
+            'keterangan'  => 'Biaya Cetak Ulang: ' . $buku->judul . ' (' . $pengajuan->jumlah_pengajuan . ' Eks)',
+            'tanggal'     => now(),
+            'jenis'       => 'MANUAL',
+        ]);
+
+        // 2. Tambah Stok Buku Otomatis
+        $buku->increment('stok_gudang', $pengajuan->jumlah_pengajuan);
+
+        // 3. Update Status (Disesuaikan dengan ENUM database: approved)
+        $pengajuan->update(['status' => 'approved']);
+
+        return back()->with('success', 'Pengajuan disetujui, kas berkurang dan stok buku bertambah!');
+    }
+
+    // Jika Ditolak (Disesuaikan dengan ENUM database: rejected)
+    $pengajuan->update([
+        'status' => 'rejected',
+        'catatan_bendahara' => $request->catatan
+    ]);
+
+    return back()->with('info', 'Pengajuan cetak ditolak.');
+}
+
 }

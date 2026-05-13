@@ -2,6 +2,17 @@
 
 @section('content')
 <div class="container py-4 text-start">
+    {{-- Alert Notifikasi --}}
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4 rounded-4" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+                <div>{{ session('success') }}</div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
     {{-- Header Section --}}
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
         <div>
@@ -102,7 +113,6 @@
 
     {{-- Main Table Section --}}
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-        {{-- Form Hapus Massal Membungkus Tabel --}}
         <form action="{{ route('pnb.bulkDelete') }}" method="POST" id="formBulkDelete">
             @csrf
             @method('DELETE')
@@ -171,32 +181,71 @@
     </div>
 </div>
 
-{{-- Modal Pengajuan Cetak --}}
+{{-- MODAL TAMBAH JUDUL --}}
+<div class="modal fade" id="tambahBuku" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <form action="{{ route('pnb.tambahBuku') }}" method="POST">
+                @csrf
+                <div class="modal-header border-0 p-4 pb-0">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-journal-plus me-2 text-success"></i>Tambah Judul Baru</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="small fw-bold mb-1 text-muted">Judul Buku</label>
+                        <input type="text" name="judul" class="form-control border-0 bg-body-secondary" placeholder="Masukkan judul lengkap" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small fw-bold mb-1 text-muted">Penulis</label>
+                        <input type="text" name="penulis" class="form-control border-0 bg-body-secondary" placeholder="Nama penulis" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small fw-bold mb-1 text-muted">Harga Jual (Rp)</label>
+                        <input type="number" name="harga_jual" class="form-control border-0 bg-body-secondary" placeholder="Contoh: 75000" required>
+                    </div>
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-success py-2 fw-bold rounded-3 shadow-sm">Simpan Katalog</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- Modal Pengajuan Cetak - SEKARANG SUDAH BERFUNGSI --}}
 <div class="modal fade" id="modalCetak" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header border-0 p-4 pb-0">
-                <h5 class="fw-bold mb-0"><i class="bi bi-printer-fill me-2 text-primary"></i>Pengajuan Cetak Ulang</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4">
-                <p class="text-muted small">Data akan dikirim ke <strong>Bendahara (KEU)</strong> untuk persetujuan anggaran.</p>
-                <div class="mb-3">
-                    <label class="small fw-bold mb-1 text-muted">Pilih Item S-SALUR</label>
-                    <select class="form-select border-0 bg-body-secondary">
-                        @foreach($books as $b)
-                            <option value="{{ $b->id }}">{{ $b->judul }} (Sisa: {{ $b->stok_gudang }})</option>
-                        @endforeach
-                    </select>
+            <form action="{{ route('pnb.ajukanCetak') }}" method="POST">
+                @csrf
+                <div class="modal-header border-0 p-4 pb-0">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-printer-fill me-2 text-primary"></i>Pengajuan Cetak Ulang</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="mb-3">
-                    <label class="small fw-bold mb-1 text-muted">Target Jumlah (Eks)</label>
-                    <input type="number" class="form-control border-0 bg-body-secondary" placeholder="Contoh: 1000">
+                <div class="modal-body p-4">
+                    <p class="text-muted small">Data akan dikirim ke <strong>Bendahara (KEU)</strong> untuk persetujuan anggaran.</p>
+
+                    <div class="mb-3">
+                        <label class="small fw-bold mb-1 text-muted">Pilih Item S-SALUR</label>
+                        <select name="book_id" class="form-select border-0 bg-body-secondary" required>
+                            <option value="" selected disabled>Pilih item...</option>
+                            @foreach($books as $b)
+                                <option value="{{ $b->id }}">{{ $b->judul }} (Sisa: {{ $b->stok_gudang }})</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="small fw-bold mb-1 text-muted">Target Jumlah (Eks)</label>
+                        <input type="number" name="jumlah" class="form-control border-0 bg-body-secondary" placeholder="Contoh: 1000" required>
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary py-2 fw-bold rounded-3 shadow-sm">Kirim ke Bendahara</button>
+                    </div>
                 </div>
-                <div class="d-grid mt-4">
-                    <button type="button" class="btn btn-primary py-2 fw-bold rounded-3">Kirim ke Bendahara</button>
-                </div>
-            </div>
+            </form>
         </div>
     </div>
 </div>
@@ -229,7 +278,6 @@
 </div>
 @endforeach
 
-{{-- Script Bulk Delete --}}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const selectAll = document.getElementById('selectAll');
@@ -270,5 +318,7 @@
     .table thead th { letter-spacing: 0.5px; font-weight: 700; border-bottom: none; }
     .breadcrumb-item + .breadcrumb-item::before { content: "•"; color: var(--bs-secondary); }
     .badge { font-weight: 700; font-size: 11px; }
+    .modal { z-index: 1060 !important; }
+    .modal-backdrop { z-index: 1050 !important; }
 </style>
 @endsection

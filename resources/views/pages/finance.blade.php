@@ -99,12 +99,22 @@
             border: 1px solid var(--border-color);
         }
 
-        /* Utils */
         .theme-toggle {
             cursor: pointer;
             transition: transform 0.3s ease;
         }
         .theme-toggle:hover { transform: rotate(20deg); }
+
+        /* Custom Pulse Animation */
+        @keyframes pulse-red {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .pulse-urgent {
+            animation: pulse-red 2s infinite;
+            color: #ef4444 !important;
+        }
     </style>
 </head>
 <body data-bs-theme="light">
@@ -114,6 +124,7 @@
         1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni',
         7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
     ];
+    $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
 @endphp
 
 <nav class="navbar-custom mb-4 sticky-top">
@@ -135,6 +146,12 @@
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow border-0">
                     <li>
+                        <a class="dropdown-item py-2 small fw-bold" href="{{ route('finance.persetujuan') }}">
+                            <i class="fas fa-check-circle me-2 text-primary"></i> Persetujuan Cetak
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
                         <form action="{{ route('logout') }}" method="POST">
                             @csrf
                             <button type="submit" class="dropdown-item text-danger small fw-bold">
@@ -149,6 +166,28 @@
 </nav>
 
 <div class="container pb-5">
+
+    {{-- PERMANENT APPROVAL SECTION --}}
+    <div class="alert shadow-sm border-0 d-flex justify-content-between align-items-center mb-4"
+         style="background: var(--bg-card); border-left: 5px solid {{ $countPengajuan > 0 ? '#EF4444' : '#4F46E5' }} !important;">
+        <div class="d-flex align-items-center">
+            <div class="rounded-circle {{ $countPengajuan > 0 ? 'bg-danger' : 'bg-primary' }} bg-opacity-10 p-3 me-3">
+                <i class="fas fa-print {{ $countPengajuan > 0 ? 'text-danger' : 'text-primary' }}"></i>
+            </div>
+            <div>
+                <h6 class="mb-0 fw-bold">Persetujuan Produksi Buku</h6>
+                @if($countPengajuan > 0)
+                    <small class="fw-bold pulse-urgent">Ada {{ $countPengajuan }} permintaan baru yang perlu divalidasi!</small>
+                @else
+                    <small class="text-muted small">Semua pengajuan sudah diproses (Antrean Bersih).</small>
+                @endif
+            </div>
+        </div>
+        <a href="{{ route('finance.persetujuan') }}" class="btn {{ $countPengajuan > 0 ? 'btn-danger' : 'btn-outline-primary' }} btn-sm rounded-pill px-4 fw-bold shadow-sm transition-all">
+            {{ $countPengajuan > 0 ? 'Buka Antrean' : 'Riwayat & Antrean' }} <i class="fas fa-arrow-right ms-2"></i>
+        </a>
+    </div>
+
     @if(session('success'))
         <div class="alert alert-success border-0 shadow-sm mb-4">{{ session('success') }}</div>
     @endif
@@ -301,6 +340,7 @@
     </div>
 </div>
 
+{{-- MODAL TRANSAKSI & AKUN (Sama seperti sebelumnya) --}}
 <div class="modal fade" id="modalTr" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content shadow-lg border-0">
@@ -400,14 +440,12 @@
         setTheme(body.getAttribute('data-bs-theme') === 'light' ? 'dark' : 'light');
     });
 
-    // --- INPUT MASKING (CLEAVE.JS) ---
+    // --- INPUT MASKING ---
     function initCleave() {
         document.querySelectorAll('.input-nominal-display').forEach(function(el) {
             if (el.dataset.cleaveInited) return;
-
             const container = el.closest('div');
             const realInput = container.querySelector('.input-nominal-real');
-
             const cleave = new Cleave(el, {
                 numeral: true,
                 numeralThousandsGroupStyle: 'thousand',
@@ -415,19 +453,11 @@
                 prefix: 'Rp ',
                 rawValueTrimPrefix: true
             });
-
-            if (realInput.value) {
-                cleave.setRawValue(realInput.value);
-            }
-
-            el.addEventListener('input', () => {
-                realInput.value = cleave.getRawValue();
-            });
-
+            if (realInput.value) cleave.setRawValue(realInput.value);
+            el.addEventListener('input', () => realInput.value = cleave.getRawValue());
             el.dataset.cleaveInited = "true";
         });
     }
-
     document.addEventListener('DOMContentLoaded', initCleave);
     document.addEventListener('shown.bs.modal', initCleave);
 

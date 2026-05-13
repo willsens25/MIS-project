@@ -95,34 +95,36 @@ Route::middleware('auth')->group(function () {
 
     /* |--- KHUSUS BENDAHARA / FINANCE (Divisi 2) --- */
     Route::middleware(['checkRole:2'])->group(function () {
-        Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');
+    Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');
 
-        // Route untuk download REKAP (Filter Bulan/Tahun)
-        Route::get('/finance/download-report', [FinanceController::class, 'downloadReport'])->name('finance.download_report');
+    // --- PINDAHKAN KE SINI (DI LUAR PREFIX 'bendahara') ---
+    Route::get('/finance/persetujuan', [FinanceController::class, 'persetujuanCetak'])->name('finance.persetujuan');
+    Route::post('/finance/proses-cetak/{id}', [FinanceController::class, 'prosesCetak'])->name('finance.prosesCetak');
 
-        // Route untuk download PER TRANSAKSI (Jika dibutuhkan)
-        Route::get('/finance/download-pdf/{id}', [FinanceController::class, 'downloadPdf'])->name('finance.download_pdf');
+    // Route report
+    Route::get('/finance/download-report', [FinanceController::class, 'downloadReport'])->name('finance.download_report');
+    Route::get('/finance/download-pdf/{id}', [FinanceController::class, 'downloadPdf'])->name('finance.download_pdf');
 
-        Route::prefix('bendahara')->group(function () {
-            // ... route lainnya tetap sama ...
-            Route::post('/simpan', [FinanceController::class, 'store_transaction'])->name('finance.store_transaction');
-            Route::put('/update/{id}', [FinanceController::class, 'update'])->name('finance.update');
-            Route::delete('/hapus/{id}', [FinanceController::class, 'destroy'])->name('finance.destroy');
-            Route::post('/confirm-invoice/{id}', [FinanceController::class, 'konfirmasiInvoice'])->name('finance.confirm_invoice');
-            Route::post('/konfirmasi-bayar/{id}', [FinanceController::class, 'konfirmasiBayarInvoice'])->name('finance.konfirmasi_pembayaran');
-            Route::post('/akun/simpan', [FinanceController::class, 'simpanAkun'])->name('finance.simpanAkun');
-        });
+    Route::prefix('bendahara')->group(function () {
+        Route::post('/simpan', [FinanceController::class, 'store_transaction'])->name('finance.store_transaction');
+        Route::put('/update/{id}', [FinanceController::class, 'update'])->name('finance.update');
+        Route::delete('/hapus/{id}', [FinanceController::class, 'destroy'])->name('finance.destroy');
+        Route::post('/confirm-invoice/{id}', [FinanceController::class, 'konfirmasiInvoice'])->name('finance.confirm_invoice');
+        Route::post('/konfirmasi-bayar/{id}', [FinanceController::class, 'konfirmasiBayarInvoice'])->name('finance.konfirmasi_pembayaran');
+        Route::post('/akun/simpan', [FinanceController::class, 'simpanAkun'])->name('finance.simpanAkun');
     });
+});
 
     /* |--- KHUSUS PENERBITAN (Divisi 3) --- */
     Route::middleware(['checkRole:3'])->group(function () {
-        Route::prefix('penerbitan')->group(function () {
-            Route::get('/', [PenerbitanController::class, 'index'])->name('penerbitan');
-            Route::post('/tambah-buku', [PenerbitanController::class, 'tambahBuku'])->name('pnb.tambah-buku');
-            Route::post('/update-buku/{id}', [PenerbitanController::class, 'updateBuku'])->name('pnb.update-buku');
-            Route::delete('/hapus-buku/{id}', [PenerbitanController::class, 'hapusBuku'])->name('pnb.hapus-buku');
-            Route::delete('/penerbitan/bulk-delete', [PenerbitanController::class, 'bulkDelete'])->name('pnb.bulkDelete');
-            Route::post('/penerbitan/update-harga/{id}', [PenerbitanController::class, 'updateHarga'])->name('penerbitan.updateHarga');
+    Route::prefix('penerbitan')->group(function () {
+        Route::get('/', [PenerbitanController::class, 'index'])->name('penerbitan');
+        Route::post('/tambah', [PenerbitanController::class, 'tambahBuku'])->name('pnb.tambahBuku');
+        Route::post('/update/{id}', [PenerbitanController::class, 'updateBuku'])->name('pnb.update-buku');
+        Route::delete('/hapus/{id}', [PenerbitanController::class, 'hapusBuku'])->name('pnb.hapus-buku');
+        Route::delete('/bulk-delete', [PenerbitanController::class, 'bulkDelete'])->name('pnb.bulkDelete');
+        Route::post('/update-harga/{id}', [PenerbitanController::class, 'updateHarga'])->name('penerbitan.updateHarga');
+        Route::post('/ajukan-cetak', [PenerbitanController::class, 'ajukanCetak'])->name('pnb.ajukanCetak');
         });
     });
 
