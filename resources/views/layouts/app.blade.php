@@ -66,13 +66,20 @@
         }
 
         .navbar-brand span { letter-spacing: 0.5px; }
+
+        /* Mencegah konten tertutup jika navbar fixed (opsional) */
+        main {
+            position: relative;
+            z-index: 1;
+        }
     </style>
     @stack('styles')
 </head>
 <body>
 
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm py-2">
-        <div class="container">
+        {{-- Perubahan di sini: Menggunakan container-fluid px-4 agar sinkron dengan Marketing --}}
+        <div class="container-fluid px-4">
             {{-- Logo --}}
             <a class="navbar-brand d-flex align-items-center fw-bold" href="{{ url('/dashboard') }}">
                 <img src="{{ asset('img/Logo Lamrimnesia.png') }}" alt="Logo" style="height: 32px; margin-right: 10px;">

@@ -1,123 +1,67 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finance | SAPA-ALL</title>
+@extends('layouts.app')
 
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+@section('content')
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cleave.js/1.6.0/cleave.min.js"></script>
 
-    <style>
-        :root {
-            --bg-body: #F0F2F5;
-            --bg-card: #ffffff;
-            --text-main: #1a1d20;
-            --text-muted: #6c757d;
-            --border-color: #dee2e6;
-            --shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-            --primary-gradient: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
-        }
+<style>
+    .finance-page {
+        font-family: 'Inter', sans-serif;
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+    }
 
-        [data-bs-theme="dark"] {
-            --bg-body: #121212;
-            --bg-card: #1e1e1e;
-            --text-main: #e0e0e0;
-            --text-muted: #a0a0a0;
-            --border-color: #333333;
-            --shadow: 0 4px 12px rgba(0,0,0,0.5);
-        }
+    .hero-purple {
+        background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+        border-radius: 20px;
+        color: white;
+        padding: 40px;
+        position: relative;
+        overflow: hidden;
+    }
 
-        body {
-            background-color: var(--bg-body);
-            font-family: 'Inter', sans-serif;
-            color: var(--text-main);
-            transition: background-color 0.3s ease;
-        }
+    .table-container {
+        background: var(--bg-card);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        border: 1px solid var(--border-color);
+    }
 
-        /* Navbar Styling */
-        .navbar-custom {
-            background-color: #1a1d21;
-            border-bottom: 1px solid #2d3238;
-            padding: 12px 0;
-        }
-        .brand-wrapper { display: flex; align-items: center; gap: 12px; }
-        .brand-logo-container {
-            background-color: #008b8b;
-            padding: 6px 10px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-        }
-        .brand-text-main { color: #ffffff; font-weight: 700; font-size: 1.1rem; letter-spacing: 0.5px; }
-        .brand-text-mis { color: #00d4ff; }
+    .badge-income { color: #10B981; }
+    .badge-expense { color: #EF4444; }
 
-        /* Profile Dropdown */
-        .btn-profile {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid #444;
-            color: white;
-            padding: 6px 14px;
-            border-radius: 10px;
-            font-size: 0.85rem;
-        }
-        .btn-profile:hover { background: rgba(255,255,255,0.1); border-color: #666; }
+    .badge-category {
+        background: rgba(79, 70, 229, 0.1);
+        color: #4F46E5;
+        font-size: 0.7rem;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-weight: 600;
+    }
 
-        /* Dashboard Elements */
-        .hero-purple {
-            background: var(--primary-gradient);
-            border-radius: 20px;
-            color: white;
-            padding: 40px;
-            position: relative;
-            overflow: hidden;
-        }
-        .table-container {
-            background: var(--bg-card);
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border-color);
-        }
+    .filter-card {
+        background: var(--bg-card);
+        border-radius: 12px;
+        padding: 6px 12px;
+        border: 1px solid var(--border-color);
+    }
 
-        .badge-income { color: #10B981; }
-        .badge-expense { color: #EF4444; }
-        .badge-category {
-            background: rgba(79, 70, 229, 0.1);
-            color: #4F46E5;
-            font-size: 0.7rem;
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-weight: 600;
-        }
+    @keyframes pulse-red {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.05); opacity: 0.8; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    .pulse-urgent {
+        animation: pulse-red 2s infinite;
+        color: #ef4444 !important;
+    }
 
-        .filter-card {
-            background: var(--bg-card);
-            border-radius: 12px;
-            padding: 6px 12px;
-            border: 1px solid var(--border-color);
-        }
-
-        .theme-toggle {
-            cursor: pointer;
-            transition: transform 0.3s ease;
-        }
-        .theme-toggle:hover { transform: rotate(20deg); }
-
-        /* Custom Pulse Animation */
-        @keyframes pulse-red {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.05); opacity: 0.8; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-        .pulse-urgent {
-            animation: pulse-red 2s infinite;
-            color: #ef4444 !important;
-        }
-    </style>
-</head>
-<body data-bs-theme="light">
+    [data-bs-theme="dark"] .table-container {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+</style>
 
 @php
     $namaBulanIndo = [
@@ -127,52 +71,14 @@
     $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
 @endphp
 
-<nav class="navbar-custom mb-4 sticky-top">
-    <div class="container d-flex justify-content-between align-items-center">
-        <div class="brand-wrapper">
-            <div class="brand-logo-container">
-                <img src="{{ asset('img/Logo Lamrimnesia.png') }}" alt="Logo" style="height: 20px;">
-            </div>
-            <div class="brand-text-main">SAPA-ALL <span class="brand-text-mis">MIS</span></div>
-        </div>
+<div class="container-fluid finance-page pb-5">
 
-        <div class="d-flex align-items-center gap-3">
-            <button class="theme-toggle btn p-0 border-0" id="themeSwitcher">
-                <i class="fas fa-sun text-warning fs-5" id="themeIcon"></i>
-            </button>
-            <div class="dropdown">
-                <button class="btn btn-profile dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                    <i class="far fa-user-circle me-2"></i> {{ auth()->user()->name }}
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow border-0">
-                    <li>
-                        <a class="dropdown-item py-2 small fw-bold" href="{{ route('finance.persetujuan') }}">
-                            <i class="fas fa-check-circle me-2 text-primary"></i> Persetujuan Cetak
-                        </a>
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li>
-                        <form action="{{ route('logout') }}" method="POST">
-                            @csrf
-                            <button type="submit" class="dropdown-item text-danger small fw-bold">
-                                <i class="fas fa-sign-out-alt me-2"></i> Logout
-                            </button>
-                        </form>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </div>
-</nav>
-
-<div class="container pb-5">
-
-    {{-- PERMANENT APPROVAL SECTION --}}
+    {{-- SECTION PERSETUJUAN --}}
     <div class="alert shadow-sm border-0 d-flex justify-content-between align-items-center mb-4"
          style="background: var(--bg-card); border-left: 5px solid {{ $countPengajuan > 0 ? '#EF4444' : '#4F46E5' }} !important;">
         <div class="d-flex align-items-center">
-            <div class="rounded-circle {{ $countPengajuan > 0 ? 'bg-danger' : 'bg-primary' }} bg-opacity-10 p-3 me-3">
-                <i class="fas fa-print {{ $countPengajuan > 0 ? 'text-danger' : 'text-primary' }}"></i>
+            <div class="rounded-circle {{ $countPengajuan > 0 ? 'bg-danger' : 'bg-primary' }} bg-opacity-10 p-3 me-3 text-center" style="width: 50px;">
+                <i class="bi bi-printer-fill {{ $countPengajuan > 0 ? 'text-danger' : 'text-primary' }}"></i>
             </div>
             <div>
                 <h6 class="mb-0 fw-bold">Persetujuan Produksi Buku</h6>
@@ -183,8 +89,8 @@
                 @endif
             </div>
         </div>
-        <a href="{{ route('finance.persetujuan') }}" class="btn {{ $countPengajuan > 0 ? 'btn-danger' : 'btn-outline-primary' }} btn-sm rounded-pill px-4 fw-bold shadow-sm transition-all">
-            {{ $countPengajuan > 0 ? 'Buka Antrean' : 'Riwayat & Antrean' }} <i class="fas fa-arrow-right ms-2"></i>
+        <a href="{{ route('finance.persetujuan') }}" class="btn {{ $countPengajuan > 0 ? 'btn-danger' : 'btn-outline-primary' }} btn-sm rounded-pill px-4 fw-bold shadow-sm">
+            {{ $countPengajuan > 0 ? 'Buka Antrean' : 'Riwayat & Antrean' }} <i class="bi bi-arrow-right ms-2"></i>
         </a>
     </div>
 
@@ -192,9 +98,10 @@
         <div class="alert alert-success border-0 shadow-sm mb-4">{{ session('success') }}</div>
     @endif
 
+    {{-- FILTER --}}
     <div class="d-flex justify-content-between align-items-center mb-4">
         <form action="{{ route('finance.index') }}" method="GET" class="filter-card d-flex align-items-center gap-2 shadow-sm">
-            <i class="fas fa-filter text-muted small"></i>
+            <i class="bi bi-funnel text-muted small"></i>
             <select name="bulan" class="form-select form-select-sm border-0 bg-transparent fw-bold" onchange="this.form.submit()">
                 <option value="">Semua Bulan</option>
                 @foreach(range(1, 12) as $m)
@@ -210,6 +117,7 @@
         </form>
     </div>
 
+    {{-- HERO CARD --}}
     <div class="hero-purple mb-4 shadow-sm">
         <div class="row align-items-center">
             <div class="col-lg-7">
@@ -228,22 +136,24 @@
             </div>
             <div class="col-lg-5 text-lg-end mt-4 mt-lg-0">
                 <a href="{{ route('finance.download_report', ['tahun' => $tahun ?? date('Y'), 'bulan' => $bulan]) }}" class="btn btn-light rounded-pill px-4 fw-bold me-2" target="_blank">
-                    <i class="fas fa-file-pdf me-2 text-danger"></i> PDF Laporan
+                    <i class="bi bi-file-earmark-pdf me-2 text-danger"></i> PDF Laporan
                 </a>
                 <button class="btn btn-white bg-white text-primary rounded-pill px-4 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalTr">
-                    <i class="fas fa-plus-circle me-2"></i> Transaksi
+                    <i class="bi bi-plus-circle me-2"></i> Transaksi
                 </button>
             </div>
         </div>
     </div>
 
+    {{-- CHART --}}
     <div class="table-container mb-4">
-        <h6 class="fw-bold mb-4 text-muted text-uppercase small"><i class="fas fa-chart-area me-2 text-primary"></i>Visualisasi Arus Kas</h6>
+        <h6 class="fw-bold mb-4 text-muted text-uppercase small"><i class="bi bi-graph-up-arrow me-2 text-primary"></i>Visualisasi Arus Kas</h6>
         <div style="height: 300px;"><canvas id="cashflowChart"></canvas></div>
     </div>
 
+    {{-- TABEL TRANSAKSI --}}
     <div class="table-container">
-        <h6 class="fw-bold mb-4 text-muted text-uppercase small"><i class="fas fa-list me-2 text-primary"></i>Riwayat Transaksi</h6>
+        <h6 class="fw-bold mb-4 text-muted text-uppercase small"><i class="bi bi-list-ul me-2 text-primary"></i>Riwayat Transaksi</h6>
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
@@ -258,11 +168,11 @@
                     @forelse($mutasis as $m)
                     <tr class="align-middle">
                         <td>
-                            <div class="fw-bold text-main">{{ date('d M Y', strtotime($m->tanggal)) }}</div>
+                            <div class="fw-bold">{{ date('d M Y', strtotime($m->tanggal)) }}</div>
                             <span class="badge-category">{{ $m->category->nama_kategori ?? 'Umum' }}</span>
                         </td>
                         <td>
-                            <div class="fw-semibold text-main">{{ $m->keterangan }}</div>
+                            <div class="fw-semibold">{{ $m->keterangan }}</div>
                             <small class="text-muted">Via: {{ $m->account->nama_akun ?? 'Kas' }}</small>
                         </td>
                         <td class="text-end fw-bold {{ $m->tipe == 'Masuk' ? 'badge-income' : 'badge-expense' }}">
@@ -270,15 +180,15 @@
                         </td>
                         <td class="text-end">
                             <div class="dropdown">
-                                <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-h text-muted"></i></button>
+                                <button class="btn btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots text-muted"></i></button>
                                 <ul class="dropdown-menu dropdown-menu-end border-0 shadow">
-                                    <li><button class="dropdown-item py-2 small" data-bs-toggle="modal" data-bs-target="#modalEdit{{ $m->id }}"><i class="fas fa-edit me-2 text-primary"></i> Edit</button></li>
-                                    <li><a class="dropdown-item py-2 small" href="{{ route('finance.download_pdf', $m->id) }}" target="_blank"><i class="fas fa-file-pdf me-2 text-danger"></i> PDF Bukti</a></li>
+                                    <li><button class="dropdown-item py-2 small" data-bs-toggle="modal" data-bs-target="#modalEdit{{ $m->id }}"><i class="bi bi-pencil-square me-2 text-primary"></i> Edit</button></li>
+                                    <li><a class="dropdown-item py-2 small" href="{{ route('finance.download_pdf', $m->id) }}" target="_blank"><i class="bi bi-file-earmark-pdf me-2 text-danger"></i> PDF Bukti</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li>
                                         <form action="{{ route('finance.destroy', $m->id) }}" method="POST" onsubmit="return confirm('Hapus transaksi ini?')">
                                             @csrf @method('DELETE')
-                                            <button type="submit" class="dropdown-item py-2 small text-danger"><i class="fas fa-trash-alt me-2"></i> Hapus</button>
+                                            <button type="submit" class="dropdown-item py-2 small text-danger"><i class="bi bi-trash me-2"></i> Hapus</button>
                                         </form>
                                     </li>
                                 </ul>
@@ -286,6 +196,7 @@
                         </td>
                     </tr>
 
+                    {{-- MODAL EDIT DALAM LOOP --}}
                     <div class="modal fade" id="modalEdit{{ $m->id }}" tabindex="-1" aria-hidden="true">
                         <div class="modal-dialog modal-dialog-centered">
                             <div class="modal-content shadow-lg border-0">
@@ -340,7 +251,7 @@
     </div>
 </div>
 
-{{-- MODAL TRANSAKSI & AKUN (Sama seperti sebelumnya) --}}
+{{-- MODAL TAMBAH TRANSAKSI --}}
 <div class="modal fade" id="modalTr" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content shadow-lg border-0">
@@ -355,7 +266,7 @@
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <label class="small fw-bold text-muted">Akun Keuangan</label>
                             <a href="javascript:void(0)" class="text-primary small fw-bold text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalTambahAkun">
-                                <i class="fas fa-plus-circle"></i> Tambah Akun
+                                <i class="bi bi-plus-circle"></i> Tambah Akun
                             </a>
                         </div>
                         <select name="account_id" class="form-select" required>
@@ -396,6 +307,7 @@
     </div>
 </div>
 
+{{-- MODAL TAMBAH AKUN --}}
 <div class="modal fade" id="modalTambahAkun" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content shadow-lg border-0">
@@ -408,7 +320,7 @@
                 <div class="modal-body p-4">
                     <div class="mb-3">
                         <label class="small fw-bold text-muted mb-1">Nama Akun/Bank</label>
-                        <input type="text" name="nama_akun" class="form-control" placeholder="Contoh: Bank BCA, Kas Kecil" required>
+                        <input type="text" name="nama_akun" class="form-control" placeholder="Contoh: BCA, Kas Kecil" required>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0">
@@ -419,28 +331,9 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cleave.js/1.6.0/cleave.min.js"></script>
-
+@push('scripts')
 <script>
-    // --- THEME ENGINE ---
-    const themeSwitcher = document.getElementById('themeSwitcher');
-    const themeIcon = document.getElementById('themeIcon');
-    const body = document.body;
-
-    function setTheme(theme) {
-        body.setAttribute('data-bs-theme', theme);
-        themeIcon.className = theme === 'dark' ? 'fas fa-moon text-info fs-5' : 'fas fa-sun text-warning fs-5';
-        localStorage.setItem('theme', theme);
-    }
-
-    setTheme(localStorage.getItem('theme') || 'light');
-    themeSwitcher.addEventListener('click', () => {
-        setTheme(body.getAttribute('data-bs-theme') === 'light' ? 'dark' : 'light');
-    });
-
-    // --- INPUT MASKING ---
+    // --- INPUT MASKING (Cleave.js) ---
     function initCleave() {
         document.querySelectorAll('.input-nominal-display').forEach(function(el) {
             if (el.dataset.cleaveInited) return;
@@ -490,7 +383,7 @@
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'bottom', labels: { usePointStyle: true, boxSize: 6, color: '#888' } }
+                legend: { position: 'bottom', labels: { usePointStyle: true, boxSize: 6 } }
             },
             scales: {
                 y: { beginAtZero: true, grid: { color: 'rgba(150,150,150,0.1)' } },
@@ -499,5 +392,6 @@
         }
     });
 </script>
-</body>
-</html>
+@endpush
+
+@endsection
