@@ -12,6 +12,7 @@ class Mutasi extends Model
     protected $table = 'mutasis';
 
     protected $fillable = [
+    'user_id',
     'account_id',
     'category_id',
     'user_id',

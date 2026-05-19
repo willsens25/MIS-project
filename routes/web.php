@@ -19,7 +19,8 @@ use App\Http\Controllers\{
     JobController,
     KegiatanController,
     DivisiController,
-    MarketingOrderController
+    MarketingOrderController,
+    PenjualanController
 };
 
 /*
@@ -104,6 +105,9 @@ Route::middleware('auth')->group(function () {
     // Route report
     Route::get('/finance/download-report', [FinanceController::class, 'downloadReport'])->name('finance.download_report');
     Route::get('/finance/download-pdf/{id}', [FinanceController::class, 'downloadPdf'])->name('finance.download_pdf');
+
+    Route::get('/penjualan/baru', [PenjualanController::class, 'create'])->name('penjualan.create');
+    Route::post('/penjualan/simpan', [PenjualanController::class, 'store'])->name('penjualan.store');
 
     Route::prefix('bendahara')->group(function () {
         Route::post('/simpan', [FinanceController::class, 'store_transaction'])->name('finance.store_transaction');

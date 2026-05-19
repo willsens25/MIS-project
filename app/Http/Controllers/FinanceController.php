@@ -9,6 +9,7 @@ use App\Models\Category;
 use App\Models\Invoice;
 use App\Models\PengajuanCetak;
 use App\Models\Book;
+use App\Models\Penjualan; // ◄ SUDAH DIIMPORT
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 
@@ -67,9 +68,13 @@ class FinanceController extends Controller
         // 3. Ambil data pengajuan cetak (Agar variabel $pengajuans terdefinisi di view finance)
         $pengajuans = PengajuanCetak::with('buku')->where('status', 'pending')->get();
 
+        // 4. DATA BARU: Tarik data dari tabel terpisah khusus penjualan operasional
+        // Kita batasi ambil 10 atau 15 riwayat penjualan terbaru agar dashboard tetap ringan
+        $penjualans = Penjualan::orderBy('tanggal_penjualan', 'desc')->take(15)->get();
+
         return view('pages.finance', compact(
             'accounts', 'categories', 'mutasis', 'totalMasuk', 'totalKeluar', 'total_saldo',
-            'days', 'masukHarian', 'keluarHarian', 'tahun', 'bulan', 'pengajuans'
+            'days', 'masukHarian', 'keluarHarian', 'tahun', 'bulan', 'pengajuans', 'penjualans' // ◄ VARIABEL PENJUALANS SEKARANG DIKIRIM KE VIEW
         ));
     }
 
@@ -192,50 +197,47 @@ class FinanceController extends Controller
 
     public function persetujuanCetak()
     {
-    $pengajuans = \App\Models\PengajuanCetak::where('status', 'pending')->get();
-    $accounts = \App\Models\Account::all();
+        $pengajuans = \App\Models\PengajuanCetak::where('status', 'pending')->get();
+        $accounts = \App\Models\Account::all();
 
-    return view('pages.finance_persetujuan', compact('pengajuans', 'accounts'));
+        return view('pages.finance_persetujuan', compact('pengajuans', 'accounts'));
     }
 
     public function prosesCetak(Request $request, $id)
-{
-    $pengajuan = PengajuanCetak::findOrFail($id);
-    // Menggunakan Book sesuai struktur model kamu
-    $buku = Book::findOrFail($pengajuan->buku_id);
+    {
+        $pengajuan = PengajuanCetak::findOrFail($id);
+        $buku = Book::findOrFail($pengajuan->buku_id);
 
-    if ($request->aksi == 'setujui') {
-        // Estimasi Rp 20.000 per eksamplar
-        $biayaCetak = $pengajuan->jumlah_pengajuan * 20000;
+        if ($request->aksi == 'setujui') {
+            $biayaCetak = $pengajuan->jumlah_pengajuan * 20000;
 
-        // 1. Catat Otomatis ke Mutasi (Pengeluaran)
-        Mutasi::create([
-            'account_id'  => $request->account_id,
-            'category_id' => 2, // Pastikan ID 2 adalah kategori pengeluaran di DB kamu
-            'user_id'     => auth()->id(),
-            'tipe'        => 'Keluar',
-            'nominal'     => $biayaCetak,
-            'keterangan'  => 'Biaya Cetak Ulang: ' . $buku->judul . ' (' . $pengajuan->jumlah_pengajuan . ' Eks)',
-            'tanggal'     => now(),
-            'jenis'       => 'MANUAL',
+            // 1. Catat Otomatis ke Mutasi (Pengeluaran)
+            Mutasi::create([
+                'account_id'  => $request->account_id,
+                'category_id' => 2,
+                'user_id'     => auth()->id(),
+                'tipe'        => 'Keluar',
+                'nominal'     => $biayaCetak,
+                'keterangan'  => 'Biaya Cetak Ulang: ' . $buku->judul . ' (' . $pengajuan->jumlah_pengajuan . ' Eks)',
+                'tanggal'     => now(),
+                'jenis'       => 'MANUAL',
+            ]);
+
+            // 2. Tambah Stok Buku Otomatis
+            $buku->increment('stok_gudang', $pengajuan->jumlah_pengajuan);
+
+            // 3. Update Status
+            $pengajuan->update(['status' => 'approved']);
+
+            return back()->with('success', 'Pengajuan disetujui, kas berkurang dan stok buku bertambah!');
+        }
+
+        // Jika Ditolak
+        $pengajuan->update([
+            'status' => 'rejected',
+            'catatan_bendahara' => $request->catatan
         ]);
 
-        // 2. Tambah Stok Buku Otomatis
-        $buku->increment('stok_gudang', $pengajuan->jumlah_pengajuan);
-
-        // 3. Update Status (Disesuaikan dengan ENUM database: approved)
-        $pengajuan->update(['status' => 'approved']);
-
-        return back()->with('success', 'Pengajuan disetujui, kas berkurang dan stok buku bertambah!');
+        return back()->with('info', 'Pengajuan cetak ditolak.');
     }
-
-    // Jika Ditolak (Disesuaikan dengan ENUM database: rejected)
-    $pengajuan->update([
-        'status' => 'rejected',
-        'catatan_bendahara' => $request->catatan
-    ]);
-
-    return back()->with('info', 'Pengajuan cetak ditolak.');
-}
-
 }
