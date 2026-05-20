@@ -9,7 +9,7 @@ use App\Models\Category;
 use App\Models\Invoice;
 use App\Models\PengajuanCetak;
 use App\Models\Book;
-use App\Models\Penjualan; // ◄ SUDAH DIIMPORT
+use App\Models\Penjualan;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 
@@ -23,18 +23,19 @@ class FinanceController extends Controller
         $accounts = Account::all();
         $categories = Category::all();
 
-        // 1. Query Utama Mutasi
+        // 1. Query Utama Mutasi (Tetap hitung SEMUA termasuk INVOICE agar SALDO & GRAFIK akurat)
         $query = Mutasi::with(['category', 'account'])->whereYear('tanggal', $tahun);
         if ($bulan) { $query->whereMonth('tanggal', $bulan); }
 
-        $mutasis = $query->latest()->get();
+        // Untuk list Riwayat Transaksi di view, kita FILTER hanya yang jenisnya MANUAL
+        $mutasis = (clone $query)->where('jenis', 'MANUAL')->latest()->get();
 
-        // Summary Keuangan
+        // Summary Keuangan (Tetap hitung total keseluruhan agar tidak selisih uang)
         $totalMasuk = (clone $query)->where('tipe', 'Masuk')->sum('nominal');
         $totalKeluar = (clone $query)->where('tipe', 'Keluar')->sum('nominal');
         $total_saldo = $totalMasuk - $totalKeluar;
 
-        // 2. LOGIC GRAFIK DINAMIS
+        // 2. LOGIC GRAFIK DINAMIS (Menggunakan semua data agar grafik naik)
         $days = collect();
         $masukHarian = collect();
         $keluarHarian = collect();
@@ -65,16 +66,15 @@ class FinanceController extends Controller
             }
         }
 
-        // 3. Ambil data pengajuan cetak (Agar variabel $pengajuans terdefinisi di view finance)
+        // 3. Ambil data pengajuan cetak
         $pengajuans = PengajuanCetak::with('buku')->where('status', 'pending')->get();
 
-        // 4. DATA BARU: Tarik data dari tabel terpisah khusus penjualan operasional
-        // Kita batasi ambil 10 atau 15 riwayat penjualan terbaru agar dashboard tetap ringan
+        // 4. DATA REKAP PENJUALAN: Mengambil data gabungan operasional kasir + limpahan invoice
         $penjualans = Penjualan::orderBy('tanggal_penjualan', 'desc')->take(15)->get();
 
         return view('pages.finance', compact(
             'accounts', 'categories', 'mutasis', 'totalMasuk', 'totalKeluar', 'total_saldo',
-            'days', 'masukHarian', 'keluarHarian', 'tahun', 'bulan', 'pengajuans', 'penjualans' // ◄ VARIABEL PENJUALANS SEKARANG DIKIRIM KE VIEW
+            'days', 'masukHarian', 'keluarHarian', 'tahun', 'bulan', 'pengajuans', 'penjualans'
         ));
     }
 
@@ -137,23 +137,44 @@ class FinanceController extends Controller
         $nominal = $invoice->total_tagihan;
         if (!$nominal || $nominal == 0) return back()->with('error', 'Gagal: Nominal Rp 0.');
 
-        $pemasukanCategory = Category::where('nama_kategori', 'like', '%Penjualan%')
-                            ->orWhere('nama_kategori', 'like', '%Invoice%')
-                            ->first();
+        DB::beginTransaction();
 
-        Mutasi::create([
-            'account_id'  => $request->account_id,
-            'category_id' => $pemasukanCategory->id ?? null,
-            'user_id'     => auth()->id(),
-            'tipe'        => 'Masuk',
-            'nominal'     => $nominal,
-            'keterangan'  => 'Terima Pembayaran #'.$invoice->no_invoice,
-            'tanggal'     => now(),
-            'jenis'       => 'INVOICE'
-        ]);
+        try {
+            $pemasukanCategory = Category::where('nama_kategori', 'like', '%Penjualan%')
+                                ->orWhere('nama_kategori', 'like', '%Invoice%')
+                                ->first();
 
-        $invoice->update(['tercatat_finance' => 1]);
-        return redirect()->route('finance.index')->with('success', 'Pembayaran Berhasil Masuk!');
+            // 1. Masuk ke database mutasi (Agar saldo & grafik bertambah)
+            Mutasi::create([
+                'account_id'  => $request->account_id,
+                'category_id' => $pemasukanCategory->id ?? null,
+                'user_id'     => auth()->id(),
+                'tipe'        => 'Masuk',
+                'nominal'     => $nominal,
+                'keterangan'  => 'Terima Pembayaran #'.$invoice->no_invoice,
+                'tanggal'     => now(),
+                'jenis'       => 'INVOICE' // Ditandai INVOICE agar tidak lolos ke tabel riwayat harian
+            ]);
+
+            // 2. Masuk ke database rekap penjualan operasional
+            Penjualan::create([
+                'no_invoice'        => $invoice->no_invoice,
+                'nama_pelanggan'    => $invoice->nama_pelanggan ?? 'Pelanggan Invoice #' . $invoice->no_invoice,
+                'total_item'        => $invoice->total_item ?? 1,
+                'total_bayar'       => $nominal,
+                'tanggal_penjualan' => now(),
+            ]);
+
+            // Update Status Pelacakan Invoice
+            $invoice->update(['tercatat_finance' => 1]);
+
+            DB::commit();
+            return redirect()->route('finance.index')->with('success', 'Invoice berhasil diproses ke rekap penjualan!');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return back()->with('error', 'Gagal memproses pelunasan invoice: ' . $e->getMessage());
+        }
     }
 
     public function downloadPdf(Request $request, $id = null)
@@ -211,7 +232,6 @@ class FinanceController extends Controller
         if ($request->aksi == 'setujui') {
             $biayaCetak = $pengajuan->jumlah_pengajuan * 20000;
 
-            // 1. Catat Otomatis ke Mutasi (Pengeluaran)
             Mutasi::create([
                 'account_id'  => $request->account_id,
                 'category_id' => 2,
@@ -223,16 +243,12 @@ class FinanceController extends Controller
                 'jenis'       => 'MANUAL',
             ]);
 
-            // 2. Tambah Stok Buku Otomatis
             $buku->increment('stok_gudang', $pengajuan->jumlah_pengajuan);
-
-            // 3. Update Status
             $pengajuan->update(['status' => 'approved']);
 
             return back()->with('success', 'Pengajuan disetujui, kas berkurang dan stok buku bertambah!');
         }
 
-        // Jika Ditolak
         $pengajuan->update([
             'status' => 'rejected',
             'catatan_bendahara' => $request->catatan

@@ -10,6 +10,7 @@ use App\Models\Identitas;
 use App\Models\Mutasi;
 use App\Models\Account;
 use App\Models\Category;
+use App\Models\Penjualan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
@@ -137,81 +138,121 @@ class MarketingOrderController extends Controller
     }
 
     /**
-     * Menandai Invoice Lunas & Otomatis Catat ke Finance
+     * Menandai Invoice Lunas & Otomatis Sinkronisasi Penuh ke Dashboard Finance
      */
     public function tandaiLunas($id)
     {
         try {
             return DB::transaction(function () use ($id) {
-                $order = Order::findOrFail($id);
+                // Ambil data order asli dari database
+                $orderRaw = Order::findOrFail($id);
 
-                $order->update([
+                if ($orderRaw->status == 'Lunas') {
+                    throw new \Exception("Invoice ini sudah berstatus lunas sebelumnya.");
+                }
+
+                // 1. Update status internal invoice di Marketing
+                $orderRaw->update([
                     'status' => 'Lunas',
                     'tercatat_finance' => 1
                 ]);
 
-                $category = Category::where('nama_kategori', 'like', '%Penjualan%')
-                            ->orWhere('nama_kategori', 'like', '%Invoice%')
-                            ->first();
+                // FIX UTAMA: Tarik ulang data segar dari database untuk memastikan properti seperti no_invoice terisi penuh
+                $order = $orderRaw->fresh();
 
+                // Deteksi nomor invoice menggunakan fallback nama kolom database
+                $nomorInvoiceFix = $order->no_invoice ?? $order->nomor_invoice ?? $order->invoice_no ?? $order->invoice;
+
+                // Fallback darurat jika Eloquent tetap gagal me-refresh string properti objek
+                if (empty($nomorInvoiceFix)) {
+                    $nomorInvoiceFix = 'INV-' . date('Ymd') . '-' . str_pad($order->id, 4, '0', STR_PAD_LEFT);
+                }
+
+                // 2. Proteksi Kategori Finance
+                $category = Category::where('nama_kategori', 'like', '%Penjualan%')
+                                    ->orWhere('nama_kategori', 'like', '%Invoice%')
+                                    ->first();
+
+                if (!$category) {
+                    $category = Category::create([
+                        'nama_kategori' => 'Penjualan & Invoice'
+                    ]);
+                }
+
+                // 3. Proteksi Akun Kas/Bank Keuangan
                 $account = Account::where('nama_akun', 'like', '%Kas%')->first() ?? Account::first();
 
                 if (!$account) {
                     throw new \Exception("Akun Kas/Bank belum diatur di sistem Finance.");
                 }
 
+                // 4. Suntik ke tabel Mutasi Finance
                 Mutasi::create([
                     'account_id'  => $account->id,
-                    'category_id' => $category->id ?? null,
-                    'user_id'     => Auth::id(),
+                    'category_id' => $category->id,
+                    'user_id'     => Auth::id() ?? 1,
                     'tipe'        => 'Masuk',
                     'nominal'     => $order->total_tagihan,
-                    'keterangan'  => 'Otomatis: Pelunasan #' . $order->no_invoice . ' (' . $order->nama_pembeli . ')',
+                    'keterangan'  => 'Otomatis: Pelunasan #' . $nomorInvoiceFix . ' (' . $order->nama_pembeli . ')',
                     'tanggal'     => now(),
                     'jenis'       => 'INVOICE',
                 ]);
 
-                return redirect()->back()->with('success', 'Invoice dilunasi & saldo kas bertambah!');
+                // 5. Kirim ke tabel rekap Penjualan
+                $totalItem = OrderDetail::where('order_id', $order->id)->sum('jumlah');
+
+                Penjualan::create([
+                    'no_invoice'        => $nomorInvoiceFix,
+                    'nama_pelanggan'    => $order->nama_pembeli ?? 'Pelanggan #' . $nomorInvoiceFix,
+                    'total_item'        => $totalItem > 0 ? $totalItem : 1,
+                    'total_bayar'       => $order->total_tagihan,
+                    'tanggal_penjualan' => now(),
+                ]);
+
+                return redirect()->back()->with('success', 'Invoice berhasil dilunasi, rekap penjualan terisi, dan kas finance otomatis bertambah!');
             });
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Gagal memproses pelunasan: ' . $e->getMessage());
         }
     }
 
+    /**
+     * Membatalkan Invoice & Mengembalikan Stok Barang ke Gudang
+     */
     public function hapusInvoice($id)
     {
-    try {
-        return DB::transaction(function () use ($id) {
-            // 1. Cari data order beserta detailnya
-            $order = Order::with('details')->findOrFail($id);
+        try {
+            return DB::transaction(function () use ($id) {
+                // 1. Cari data order beserta detailnya
+                $order = Order::with('details')->findOrFail($id);
 
-            // 2. Cegah penghapusan jika sudah Lunas (Opsional, demi keamanan keuangan)
-            if ($order->status == 'Lunas') {
-                throw new \Exception("Invoice yang sudah Lunas tidak boleh dihapus. Batalkan status lunas terlebih dahulu.");
-            }
-
-            // 3. Kembalikan Stok Buku
-            foreach ($order->details as $detail) {
-                // Cari buku terkait
-                $book = Book::find($detail->buku_id);
-                if ($book) {
-                    // Tambahkan kembali stok yang tadinya dipotong
-                    $book->increment('stok_gudang', $detail->jumlah);
+                // 2. Cegah penghapusan jika sudah Lunas
+                if ($order->status == 'Lunas') {
+                    throw new \Exception("Invoice yang sudah Lunas tidak boleh dihapus langsung. Batalkan status lunas terlebih dahulu.");
                 }
-            }
 
-            // 4. Hapus Detail dan Header (Gunakan cascade delete jika sudah disetting di migrasi,
-            // jika belum, hapus manual detailnya dulu)
-            $order->details()->delete();
-            $order->delete();
+                // 3. Kembalikan Stok Buku
+                foreach ($order->details as $detail) {
+                    $book = Book::find($detail->buku_id);
+                    if ($book) {
+                        $book->increment('stok_gudang', $detail->jumlah);
+                    }
+                }
 
-            return redirect()->back()->with('success', 'Invoice dibatalkan & stok buku telah dikembalikan ke gudang!');
-        });
-    } catch (\Exception $e) {
-        return redirect()->back()->with('error', 'Gagal menghapus: ' . $e->getMessage());
+                // 4. Hapus Detail dan Header Order
+                $order->details()->delete();
+                $order->delete();
+
+                return redirect()->back()->with('success', 'Invoice dibatalkan & stok buku telah dikembalikan ke gudang!');
+            });
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal menghapus: ' . $e->getMessage());
+        }
     }
-    }
 
+    /**
+     * Menampilkan Halaman Cetak Nota/Invoice
+     */
     public function printInvoice($id)
     {
         $order = Order::with(['details.book'])->findOrFail($id);

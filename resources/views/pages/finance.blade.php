@@ -38,6 +38,12 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
         </div>
     @endif
 
+    @if(session('error'))
+        <div class="alert alert-danger border-0 shadow-sm mb-4">
+            {{ session('error') }}
+        </div>
+    @endif
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <form action="{{ route('finance.index') }}" method="GET" class="filter-card d-flex align-items-center gap-2 shadow-sm">
             <i class="fas fa-filter text-muted small"></i>
@@ -95,7 +101,7 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
         </div>
     </div>
 
-    {{-- ◄ TABEL BARU: TABEL TERPISAH KHUSUS REKAP PENJUALAN OPERASIONAL --}}
+    {{-- TABEL REKAP PENJUALAN OPERASIONAL --}}
     <div class="table-container mb-4 p-4 shadow-sm" style="background: var(--bg-card); border-radius: 16px;">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h6 class="fw-bold text-muted text-uppercase small mb-0"><i class="fas fa-boxes me-2 text-warning"></i>Tabel Data Rekap Penjualan & Pelanggan</h6>
@@ -113,7 +119,6 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
                     </tr>
                 </thead>
                 <tbody>
-                    {{-- Pastikan variabel $penjualans sudah di-share/dikirim dari FinanceController@index --}}
                     @forelse($penjualans ?? [] as $p)
                     <tr>
                         <td>
@@ -123,7 +128,7 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
                         </td>
                         <td>
                             <div class="fw-bold text-main">{{ $p->nama_pelanggan }}</div>
-                            <small class="text-muted">Status: <span class="text-success fw-semibold">Lunas & Masuk Mutasi</span></small>
+                            <small class="text-muted">Status: <span class="text-success fw-semibold">Lunas & Terbaca Finance</span></small>
                         </td>
                         <td>
                             <div class="fw-semibold text-muted">
@@ -147,8 +152,9 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
         </div>
     </div>
 
+    {{-- TABEL RIWAYAT MUTASI MANUAL --}}
     <div class="table-container p-4 shadow-sm" style="background: var(--bg-card); border-radius: 16px;">
-        <h6 class="fw-bold mb-4 text-muted text-uppercase small"><i class="fas fa-list me-2 text-primary"></i>Riwayat Transaksi</h6>
+        <h6 class="fw-bold mb-4 text-muted text-uppercase small"><i class="fas fa-list me-2 text-primary"></i>Riwayat Transaksi Harian</h6>
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
@@ -192,7 +198,7 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="4" class="text-center py-5 text-muted">Tidak ada data transaksi ditemukan.</td>
+                        <td colspan="4" class="text-center py-5 text-muted">Tidak ada data transaksi harian ditemukan.</td>
                     </tr>
                     @endforelse
                 </tbody>
@@ -202,7 +208,7 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
 
 </div>
 
-{{-- MODALS DATA TRANSAKSI --}}
+{{-- MODAL TRANSAKSI BARU --}}
 <div class="modal fade" id="modalTr" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content shadow-lg border-0">
@@ -261,6 +267,7 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
     </div>
 </div>
 
+{{-- MODAL TAMBAH AKUN --}}
 <div class="modal fade" id="modalTambahAkun" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content shadow-lg border-0">
@@ -284,6 +291,7 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
     </div>
 </div>
 
+{{-- MODAL EDIT TRANSAKSI LOOP --}}
 @foreach($mutasis as $m)
 <div class="modal fade" id="modalEdit{{ $m->id }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -313,7 +321,8 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
                         </div>
                         <div class="col-6">
                             <label class="small fw-bold text-muted mb-1">Nominal</label>
-                            <input type="text" class="form-control input-nominal-display" placeholder="Rp 0" required>
+                            {{-- Diperbaiki: Masukkan langsung nilai mentah ke parameter input display agar dibaca oleh initCleave() --}}
+                            <input type="text" class="form-control input-nominal-display" placeholder="Rp 0" value="{{ $m->nominal }}" required>
                             <input type="hidden" name="nominal" class="input-nominal-real" value="{{ $m->nominal }}">
                         </div>
                     </div>
@@ -346,6 +355,7 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
             if (el.dataset.cleaveInited) return;
             const container = el.closest('div');
             const realInput = container.querySelector('.input-nominal-real');
+
             const cleave = new Cleave(el, {
                 numeral: true,
                 numeralThousandsGroupStyle: 'thousand',
@@ -353,15 +363,25 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
                 prefix: 'Rp ',
                 rawValueTrimPrefix: true
             });
-            if (realInput && realInput.value) cleave.setRawValue(realInput.value);
+
+            // Jaminan sinkronisasi data awal ke Cleave
+            if (realInput && realInput.value) {
+                cleave.setRawValue(realInput.value);
+            } else if (el.value) {
+                cleave.setRawValue(el.value);
+            }
+
             el.addEventListener('input', () => {
                 if(realInput) realInput.value = cleave.getRawValue();
             });
             el.dataset.cleaveInited = "true";
         });
     }
+
     document.addEventListener('DOMContentLoaded', function() {
         initCleave();
+
+        // Render Grafik Cashflow
         const ctx = document.getElementById('cashflowChart').getContext('2d');
         new Chart(ctx, {
             type: 'line',
@@ -394,5 +414,9 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
             }
         });
     });
-    document.addEventListener('shown.bs.modal', initCleave);
+
+    // Pemicu ulang cleave mask saat modal Bootstrap muncul ke layar
+    document.addEventListener('shown.bs.modal', function () {
+        initCleave();
+    });
 </script>
