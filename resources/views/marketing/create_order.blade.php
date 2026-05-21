@@ -31,7 +31,8 @@
     <div class="row">
         {{-- KIRI: FORM INPUT PESANAN BARU --}}
         <div class="col-lg-8">
-            <form action="{{ route('marketing.order.store') }}" method="POST" id="mainOrderForm">
+            {{-- Tambahkan intercept submit Alpine (@submit.prevent) untuk validasi total sebelum kirim --}}
+            <form action="{{ route('marketing.order.store') }}" method="POST" id="mainOrderForm" @submit="handleSubmit($event)">
                 @csrf
                 <div class="card shadow-sm border-0 rounded-lg mb-4">
                     <div class="card-header bg-white py-3">
@@ -94,17 +95,27 @@
                                                         x-model="item.buku_id" required>
                                                     <option value="">-- Pilih Buku --</option>
                                                     @foreach($books as $b)
-                                                        <option value="{{ $b->id }}">{{ $b->judul }}</option>
+                                                        <option value="{{ $b->id }}">{{ $b->judul }} (Stok: {{ $b->stok_gudang }})</option>
                                                     @endforeach
                                                 </select>
                                             </td>
-                                            <td width="120">
+                                            <td width="160">
                                                 <div class="input-group shadow-sm">
-                                                    <input type="number" :name="'qty['+index+']'" class="form-control text-center border-0" min="1" x-model.number="item.qty">
+                                                    {{-- Validasi class is-invalid jika qty melebihi stok yang tersedia --}}
+                                                    <input type="number" :name="'qty['+index+']'"
+                                                           class="form-control text-center border-0"
+                                                           :class="isOverStock(item) ? 'is-invalid text-danger font-weight-bold' : ''"
+                                                           min="1" :disabled="!item.buku_id" x-model.number="item.qty">
                                                     <div class="input-group-append">
                                                         <span class="input-group-text bg-white border-0 small">Pcs</span>
                                                     </div>
                                                 </div>
+                                                {{-- Pesan error yang muncul secara real-time dibawah baris bersangkutan --}}
+                                                <template x-if="isOverStock(item)">
+                                                    <small class="text-danger font-weight-bold mt-1 d-block" style="font-size: 11px;">
+                                                        ⚠️ Maksimal: <span x-text="stocks[item.buku_id]"></span> pcs!
+                                                    </small>
+                                                </template>
                                             </td>
                                             <td width="50" class="align-middle">
                                                 <button type="button" @click="removeItem(index)" class="btn btn-link text-danger p-0" x-show="items.length > 1">
@@ -175,8 +186,13 @@
                             </div>
                         </div>
 
-                        <button type="submit" class="btn btn-primary btn-block btn-lg shadow rounded-pill font-weight-bold">
-                            <i class="fas fa-save mr-2"></i>SIMPAN INVOICE
+                        {{-- Tombol akan berubah warna merah & non-aktifkan interaksi klik jika ada inputan ilegal --}}
+                        <button type="submit"
+                                class="btn btn-lg btn-block shadow rounded-pill font-weight-bold"
+                                :class="hasAnyError() ? 'btn-danger' : 'btn-primary'"
+                                :disabled="hasAnyError()">
+                            <span x-show="!hasAnyError()"><i class="fas fa-save mr-2"></i>SIMPAN INVOICE</span>
+                            <span x-show="hasAnyError()"><i class="fas fa-exclamation-circle mr-2"></i>STOK TIDAK CUKUP</span>
                         </button>
                     </div>
                 </div>
@@ -222,7 +238,6 @@
                                                 Rp{{ number_format($inv->total_tagihan, 0, ',', '.') }}
                                             </div>
                                             <div class="d-flex justify-content-end">
-                                                {{-- TOMBOL CETAK (BARU) --}}
                                                 <a href="{{ route('marketing.order.print', $inv->id) }}" target="_blank" class="btn btn-info btn-action mr-1" title="Cetak Invoice">
                                                     <i class="fas fa-print"></i>
                                                 </a>
@@ -277,12 +292,38 @@
                     "{{ $b->id }}": "{{ $b->judul }}",
                 @endforeach
             },
+            // FIX TAMBAHAN: Muat objek mapping data stok riil dari database ke memori Alpine
+            stocks: {
+                @foreach($books as $b)
+                    "{{ $b->id }}": {{ $b->stok_gudang ?? 0 }},
+                @endforeach
+            },
             items: [{ id: Date.now(), buku_id: '', qty: 1 }],
             addItem() { this.items.push({ id: Date.now(), buku_id: '', qty: 1 }); },
             removeItem(index) { if(this.items.length > 1) this.items.splice(index, 1); },
             getItemSubtotal(item) { return (this.prices[item.buku_id] || 0) * (item.qty || 0); },
             calculateTotalBuku() { return this.items.reduce((total, item) => total + this.getItemSubtotal(item), 0); },
-            calculateTotalQty() { return this.items.reduce((total, item) => total + (parseInt(item.qty) || 0), 0); }
+            calculateTotalQty() { return this.items.reduce((total, item) => total + (parseInt(item.qty) || 0), 0); },
+
+            // Logika Validasi per baris item buku
+            isOverStock(item) {
+                if (!item.buku_id) return false;
+                const availableStock = this.stocks[item.buku_id] || 0;
+                return item.qty > availableStock;
+            },
+
+            // Cek menyeluruh sebelum submit form diizinkan
+            hasAnyError() {
+                return this.items.some(item => this.isOverStock(item));
+            },
+
+            // Jaring pengaman saat user bypass tombol disabled
+            handleSubmit(event) {
+                if (this.hasAnyError()) {
+                    event.preventDefault();
+                    alert('Gagal Menyimpan! Terdapat jumlah pesanan yang melebihi batas stok gudang.');
+                }
+            }
         }));
     });
 

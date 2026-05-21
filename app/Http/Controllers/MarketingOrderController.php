@@ -64,6 +64,24 @@ class MarketingOrderController extends Controller
 
         try {
             return DB::transaction(function () use ($request) {
+
+                // --- LANGKAH PERLINDUNGAN AWAL: Cek ketersediaan seluruh stok terlebih dahulu ---
+                foreach ($request->buku_id as $key => $idBuku) {
+                    if (!$idBuku) continue;
+
+                    // lockForUpdate() mencegah perubahan data stok dari kasir/marketing lain di detik yang sama
+                    $book = Book::lockForUpdate()->find($idBuku);
+                    $jumlahPesanan = $request->qty[$key] ?? 1;
+
+                    if (!$book) {
+                        throw new \Exception("Buku dengan ID tersebut tidak ditemukan.");
+                    }
+
+                    if ($book->stok_gudang < $jumlahPesanan) {
+                        throw new \Exception("Stok buku '{$book->judul}' tidak mencukupi di database. Sisa stok riil: {$book->stok_gudang} pcs. Mohon sesuaikan kembali.");
+                    }
+                }
+
                 // 2. Generate Nomor Invoice
                 $tanggal = date('Ymd');
                 $count = Order::whereDate('created_at', today())->count();
@@ -95,21 +113,15 @@ class MarketingOrderController extends Controller
 
                 $totalSemuaBuku = 0;
 
-                // 5. Simpan Detail Item & Potong Stok
+                // 5. Simpan Detail Item & Eksekusi Potong Stok
                 foreach ($request->buku_id as $key => $idBuku) {
                     if (!$idBuku) continue;
 
                     $book = Book::find($idBuku);
-                    if (!$book) continue;
-
                     $jumlahPesanan = $request->qty[$key] ?? 1;
 
-                    // --- LOGIKA CEK & POTONG STOK ---
-                    if ($book->stok_gudang < $jumlahPesanan) {
-                        throw new \Exception("Stok buku '{$book->judul}' tidak mencukupi. Sisa stok: {$book->stok_gudang}");
-                    }
+                    // Eksekusi pemotongan karena validasi di atas sudah lolos sepenuhnya
                     $book->decrement('stok_gudang', $jumlahPesanan);
-                    // --------------------------------
 
                     $hargaSatuan = $book->harga_jual ?? 0;
                     $subtotal = $hargaSatuan * $jumlahPesanan;
@@ -223,24 +235,26 @@ class MarketingOrderController extends Controller
     {
         try {
             return DB::transaction(function () use ($id) {
-                // 1. Cari data order beserta detailnya
-                $order = Order::with('details')->findOrFail($id);
+                $order = Order::findOrFail($id);
 
-                // 2. Cegah penghapusan jika sudah Lunas
-                if ($order->status == 'Lunas') {
+                // 1. Cegah penghapusan jika sudah Lunas
+                if (strtolower($order->status) == 'lunas') {
                     throw new \Exception("Invoice yang sudah Lunas tidak boleh dihapus langsung. Batalkan status lunas terlebih dahulu.");
                 }
 
-                // 3. Kembalikan Stok Buku
-                foreach ($order->details as $detail) {
+                // 2. Ambil detail order secara manual menggunakan query builder untuk menghindari crash relasi Eloquent
+                $orderDetails = OrderDetail::where('order_id', $order->id)->get();
+
+                // 3. Kembalikan Stok Buku ke Gudang
+                foreach ($orderDetails as $detail) {
                     $book = Book::find($detail->buku_id);
                     if ($book) {
                         $book->increment('stok_gudang', $detail->jumlah);
                     }
                 }
 
-                // 4. Hapus Detail dan Header Order
-                $order->details()->delete();
+                // 4. Hapus Detail baru kemudian Hapus Header Order
+                OrderDetail::where('order_id', $order->id)->delete();
                 $order->delete();
 
                 return redirect()->back()->with('success', 'Invoice dibatalkan & stok buku telah dikembalikan ke gudang!');
@@ -255,8 +269,7 @@ class MarketingOrderController extends Controller
      */
     public function printInvoice($id)
     {
-        $order = Order::with(['details.book'])->findOrFail($id);
-
+        $order = Order::findOrFail($id);
         return view('marketing.print_invoice', compact('order'));
     }
 }
