@@ -135,6 +135,7 @@ Route::middleware('auth')->group(function () {
     /* |--- KHUSUS MARKETING (Divisi 4) --- */
     Route::middleware(['checkRole:4'])->group(function () {
         Route::prefix('marketing')->group(function () {
+            Route::get('/order', [MarketingOrderController::class, 'index'])->name('order.index');
             Route::get('/', [MarketingOrderController::class, 'create'])->name('marketing');
             Route::post('/order/store', [MarketingOrderController::class, 'store'])->name('marketing.order.store');
 

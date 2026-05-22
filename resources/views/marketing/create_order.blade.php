@@ -4,8 +4,14 @@
 <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 
 <div class="container-fluid py-4" x-data="orderSystem()">
+    {{-- HEADER HALAMAN: Ditambahkan tombol Lihat Riwayat Invoice --}}
     <div class="d-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800 font-weight-bold">SAPA-ALL Marketing</h1>
+        <div class="d-flex align-items-center">
+            <h1 class="h3 mb-0 text-gray-800 font-weight-bold mr-3">SAPA-ALL Marketing</h1>
+            <a href="{{ route('order.index') }}" class="btn btn-sm btn-outline-secondary shadow-sm rounded-pill px-3">
+                <i class="fas fa-history mr-1"></i> Lihat Riwayat Invoice
+            </a>
+        </div>
         <span class="badge badge-primary shadow-sm p-2 px-3 rounded-pill">{{ date('d F Y') }}</span>
     </div>
 
@@ -31,7 +37,6 @@
     <div class="row">
         {{-- KIRI: FORM INPUT PESANAN BARU --}}
         <div class="col-lg-8">
-            {{-- Tambahkan intercept submit Alpine (@submit.prevent) untuk validasi total sebelum kirim --}}
             <form action="{{ route('marketing.order.store') }}" method="POST" id="mainOrderForm" @submit="handleSubmit($event)">
                 @csrf
                 <div class="card shadow-sm border-0 rounded-lg mb-4">
@@ -101,7 +106,6 @@
                                             </td>
                                             <td width="160">
                                                 <div class="input-group shadow-sm">
-                                                    {{-- Validasi class is-invalid jika qty melebihi stok yang tersedia --}}
                                                     <input type="number" :name="'qty['+index+']'"
                                                            class="form-control text-center border-0"
                                                            :class="isOverStock(item) ? 'is-invalid text-danger font-weight-bold' : ''"
@@ -110,7 +114,6 @@
                                                         <span class="input-group-text bg-white border-0 small">Pcs</span>
                                                     </div>
                                                 </div>
-                                                {{-- Pesan error yang muncul secara real-time dibawah baris bersangkutan --}}
                                                 <template x-if="isOverStock(item)">
                                                     <small class="text-danger font-weight-bold mt-1 d-block" style="font-size: 11px;">
                                                         ⚠️ Maksimal: <span x-text="stocks[item.buku_id]"></span> pcs!
@@ -186,7 +189,6 @@
                             </div>
                         </div>
 
-                        {{-- Tombol akan berubah warna merah & non-aktifkan interaksi klik jika ada inputan ilegal --}}
                         <button type="submit"
                                 class="btn btn-lg btn-block shadow rounded-pill font-weight-bold"
                                 :class="hasAnyError() ? 'btn-danger' : 'btn-primary'"
@@ -292,7 +294,6 @@
                     "{{ $b->id }}": "{{ $b->judul }}",
                 @endforeach
             },
-            // FIX TAMBAHAN: Muat objek mapping data stok riil dari database ke memori Alpine
             stocks: {
                 @foreach($books as $b)
                     "{{ $b->id }}": {{ $b->stok_gudang ?? 0 }},
@@ -305,19 +306,16 @@
             calculateTotalBuku() { return this.items.reduce((total, item) => total + this.getItemSubtotal(item), 0); },
             calculateTotalQty() { return this.items.reduce((total, item) => total + (parseInt(item.qty) || 0), 0); },
 
-            // Logika Validasi per baris item buku
             isOverStock(item) {
                 if (!item.buku_id) return false;
                 const availableStock = this.stocks[item.buku_id] || 0;
                 return item.qty > availableStock;
             },
 
-            // Cek menyeluruh sebelum submit form diizinkan
             hasAnyError() {
                 return this.items.some(item => this.isOverStock(item));
             },
 
-            // Jaring pengaman saat user bypass tombol disabled
             handleSubmit(event) {
                 if (this.hasAnyError()) {
                     event.preventDefault();
@@ -328,14 +326,12 @@
     });
 
     $(document).ready(function() {
-        // Inisialisasi Select2
         $('#select_pembeli').select2({
             theme: 'bootstrap4',
             placeholder: '-- Cari Nama --',
             allowClear: true
         });
 
-        // Auto-hide notifikasi setelah 5 detik
         setTimeout(function() {
             $(".custom-alert").fadeTo(500, 0).slideUp(500, function(){
                 $(this).remove();

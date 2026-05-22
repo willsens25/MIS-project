@@ -16,6 +16,26 @@ use Illuminate\Support\Facades\Auth;
 
 class MarketingOrderController extends Controller
 {
+    public function index(Request $request)
+    {
+    // Ambil keyword pencarian atau filter status jika ada
+    $search = $request->get('search');
+    $status = $request->get('status');
+
+    $orders = Order::query()
+        ->when($search, function($query) use ($search) {
+            $query->where('no_invoice', 'like', "%{$search}%")
+                ->orWhere('nama_pembeli', 'like', "%{$search}%")
+                ->orWhere('nama_penerima', 'like', "%{$search}%");
+        })
+        ->when($status, function($query) use ($status) {
+            $query->where('status', $status);
+        })
+        ->orderBy('created_at', 'desc')
+        ->paginate(15); // Menampilkan 15 data per halaman
+
+    return view('marketing.index_order', compact('orders'));
+    }
     /**
      * Menampilkan Form Input Pesanan & Daftar Invoice Belum Lunas
      */
@@ -26,8 +46,8 @@ class MarketingOrderController extends Controller
 
         $invoices = Order::where(function($q) {
                 $q->where('status', '!=', 'Lunas')
-                  ->where('status', '!=', 'lunas')
-                  ->orWhereNull('status');
+                ->where('status', '!=', 'lunas')
+                ->orWhereNull('status');
             })
             ->orderBy('updated_at', 'desc')
             ->get();
