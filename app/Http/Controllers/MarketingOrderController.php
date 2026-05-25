@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Auth;
 class MarketingOrderController extends Controller
 {
     public function index(Request $request)
-    {
+{
     // Ambil keyword pencarian atau filter status jika ada
     $search = $request->get('search');
     $status = $request->get('status');
@@ -34,8 +34,15 @@ class MarketingOrderController extends Controller
         ->orderBy('created_at', 'desc')
         ->paginate(15); // Menampilkan 15 data per halaman
 
-    return view('marketing.index_order', compact('orders'));
+    // --- LOGIKA UTAMA AJAX LIVE SEARCH ---
+    // Jika request datang dari AJAX (JavaScript Fetch), kirimkan hanya isi baris tabelnya saja
+    if ($request->ajax()) {
+        return view('marketing.partials.order_table', compact('orders'))->render();
     }
+
+    return view('marketing.index_order', compact('orders'));
+}
+
     /**
      * Menampilkan Form Input Pesanan & Daftar Invoice Belum Lunas
      */

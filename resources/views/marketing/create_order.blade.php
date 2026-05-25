@@ -4,7 +4,7 @@
 <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 
 <div class="container-fluid py-4" x-data="orderSystem()">
-    {{-- HEADER HALAMAN: Ditambahkan tombol Lihat Riwayat Invoice --}}
+    {{-- HEADER HALAMAN --}}
     <div class="d-flex align-items-center justify-content-between mb-4">
         <div class="d-flex align-items-center">
             <h1 class="h3 mb-0 text-gray-800 font-weight-bold mr-3">SAPA-ALL Marketing</h1>
@@ -59,8 +59,8 @@
                                 </datalist>
                             </div>
                             <div class="col-md-4">
-                                <label class="small font-weight-bold text-danger">Kode Promo</label>
-                                <input type="text" name="promo_code" class="form-control rounded-pill shadow-sm" placeholder="DISKON10">
+                                <label class="small font-weight-bold text-primary">Keterangan / Catatan</label>
+                                <input type="text" name="keterangan" class="form-control rounded-pill shadow-sm" placeholder="Contoh: Packing kardus, dll.">
                             </div>
                         </div>
 
@@ -90,39 +90,73 @@
 
                         <h6 class="font-weight-bold text-dark mb-3"><i class="fas fa-book mr-2"></i>Daftar Buku</h6>
                         <div class="table-responsive">
-                            <table class="table table-sm borderless">
+                            <table class="table align-middle" style="min-width: 650px;">
+                                <thead>
+                                    <tr class="text-muted small font-weight-bold bg-light">
+                                        <th class="border-0 pl-3 py-2">Detail Item & Potongan</th>
+                                        <th class="border-0 py-2 text-center" style="width: 140px;">Jumlah (Qty)</th>
+                                        <th class="border-0 py-2 text-right pr-3" style="width: 160px;">Subtotal</th>
+                                        <th class="border-0 py-2 text-center" style="width: 60px;">Aksi</th>
+                                    </tr>
+                                </thead>
                                 <tbody>
                                     <template x-for="(item, index) in items" :key="item.id">
-                                        <tr class="mb-2">
-                                            <td style="min-width: 250px;">
-                                                <select :name="'buku_id['+index+']'"
-                                                        class="form-control shadow-sm border-0 bg-light"
-                                                        x-model="item.buku_id" required>
-                                                    <option value="">-- Pilih Buku --</option>
-                                                    @foreach($books as $b)
-                                                        <option value="{{ $b->id }}">{{ $b->judul }} (Stok: {{ $b->stok_gudang }})</option>
-                                                    @endforeach
-                                                </select>
+                                        <tr class="border-bottom">
+                                            {{-- Kolom 1: Buku & Potongan Harga di bawahnya --}}
+                                            <td class="pl-3 py-3 border-0">
+                                                {{-- 1. Select Buku --}}
+                                                <div class="mb-2">
+                                                    <select :name="'buku_id['+index+']'"
+                                                            class="form-control shadow-sm border-0 bg-light"
+                                                            x-model="item.buku_id" required>
+                                                        <option value="">-- Pilih Buku --</option>
+                                                        @foreach($books as $b)
+                                                            <option value="{{ $b->id }}">{{ $b->judul }} (Stok: {{ $b->stok_gudang }})</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+
+                                                {{-- 2. Input Potongan Harga --}}
+                                                <div x-show="item.buku_id" style="max-width: 200px;">
+                                                    <div class="input-group input-group-sm shadow-sm border rounded">
+                                                        <div class="input-group-prepend">
+                                                            <span class="input-group-text bg-light border-0 small font-weight-bold text-danger">Potongan Rp</span>
+                                                        </div>
+                                                        <input type="number" :name="'promo_item['+index+']'"
+                                                               class="form-control border-0 text-right text-danger font-weight-bold"
+                                                               placeholder="0" min="0" x-model.number="item.promo_item">
+                                                    </div>
+                                                </div>
                                             </td>
-                                            <td width="160">
+
+                                            {{-- Kolom 2: Jumlah / Qty --}}
+                                            <td class="py-3 border-0 text-center align-middle">
                                                 <div class="input-group shadow-sm">
                                                     <input type="number" :name="'qty['+index+']'"
                                                            class="form-control text-center border-0"
                                                            :class="isOverStock(item) ? 'is-invalid text-danger font-weight-bold' : ''"
                                                            min="1" :disabled="!item.buku_id" x-model.number="item.qty">
                                                     <div class="input-group-append">
-                                                        <span class="input-group-text bg-white border-0 small">Pcs</span>
+                                                        <span class="input-group-text bg-white border-0 small font-weight-bold text-muted">Pcs</span>
                                                     </div>
                                                 </div>
                                                 <template x-if="isOverStock(item)">
-                                                    <small class="text-danger font-weight-bold mt-1 d-block" style="font-size: 11px;">
-                                                        ⚠️ Maksimal: <span x-text="stocks[item.buku_id]"></span> pcs!
+                                                    <small class="text-danger font-weight-bold mt-1 d-block text-left" style="font-size: 11px;">
+                                                        ⚠️ Maks: <span x-text="stocks[item.buku_id]"></span> pcs!
                                                     </small>
                                                 </template>
                                             </td>
-                                            <td width="50" class="align-middle">
+
+                                            {{-- Kolom 3: Real-time Subtotal --}}
+                                            <td class="py-3 border-0 text-right pr-3 font-weight-bold text-dark align-middle">
+                                                <span class="small text-muted font-weight-normal mr-1" x-show="item.buku_id">Rp</span>
+                                                <span x-text="item.buku_id ? getItemSubtotal(item).toLocaleString('id-ID') : '-'"></span>
+                                            </td>
+
+                                            {{-- Kolom 4: Tombol Hapus Baris --}}
+                                            <td class="py-3 border-0 text-center align-middle">
                                                 <button type="button" @click="removeItem(index)" class="btn btn-link text-danger p-0" x-show="items.length > 1">
-                                                    <i class="fas fa-minus-circle fa-lg"></i>
+                                                    <i class="fas fa-trash-alt fa-lg"></i>
                                                 </button>
                                             </td>
                                         </tr>
@@ -130,7 +164,8 @@
                                 </tbody>
                             </table>
                         </div>
-                        <button type="button" @click="addItem()" class="btn btn-sm btn-outline-primary rounded-pill px-3 mb-4">
+
+                        <button type="button" @click="addItem()" class="btn btn-sm btn-outline-primary rounded-pill px-3 mt-3 mb-4">
                             <i class="fas fa-plus mr-1"></i> Tambah Baris Buku
                         </button>
 
@@ -159,8 +194,11 @@
                                         <span class="text-muted">
                                             <span x-text="titles[item.buku_id]"></span>
                                             (<span x-text="item.qty"></span> pcs)
+                                            <template x-if="item.promo_item > 0">
+                                                <small class="text-danger d-block">Potongan: Rp <span x-text="(item.promo_item * item.qty).toLocaleString('id-ID')"></span></small>
+                                            </template>
                                         </span>
-                                        <span class="text-dark font-weight-bold">
+                                        <span class="text-dark font-weight-bold align-self-center">
                                             Rp <span x-text="getItemSubtotal(item).toLocaleString('id-ID')"></span>
                                         </span>
                                     </div>
@@ -243,14 +281,12 @@
                                                 <a href="{{ route('marketing.order.print', $inv->id) }}" target="_blank" class="btn btn-info btn-action mr-1" title="Cetak Invoice">
                                                     <i class="fas fa-print"></i>
                                                 </a>
-
                                                 <form action="{{ route('mad.tandai-lunas', $inv->id) }}" method="POST" class="mr-1">
                                                     @csrf
                                                     <button type="submit" class="btn btn-success btn-action" title="Tandai Lunas">
                                                         <i class="fas fa-check"></i>
                                                     </button>
                                                 </form>
-
                                                 <form action="{{ route('mad.hapus-invoice', $inv->id) }}" method="POST" onsubmit="return confirm('Hapus invoice ini? Stok akan dikembalikan ke gudang.')">
                                                     @csrf @method('DELETE')
                                                     <button type="submit" class="btn btn-outline-danger btn-action" title="Hapus">
@@ -299,12 +335,29 @@
                     "{{ $b->id }}": {{ $b->stok_gudang ?? 0 }},
                 @endforeach
             },
-            items: [{ id: Date.now(), buku_id: '', qty: 1 }],
-            addItem() { this.items.push({ id: Date.now(), buku_id: '', qty: 1 }); },
-            removeItem(index) { if(this.items.length > 1) this.items.splice(index, 1); },
-            getItemSubtotal(item) { return (this.prices[item.buku_id] || 0) * (item.qty || 0); },
-            calculateTotalBuku() { return this.items.reduce((total, item) => total + this.getItemSubtotal(item), 0); },
-            calculateTotalQty() { return this.items.reduce((total, item) => total + (parseInt(item.qty) || 0), 0); },
+
+            items: [{ id: Date.now(), buku_id: '', qty: 1, promo_item: 0 }],
+
+            addItem() {
+                this.items.push({ id: Date.now(), buku_id: '', qty: 1, promo_item: 0 });
+            },
+            removeItem(index) {
+                if(this.items.length > 1) this.items.splice(index, 1);
+            },
+
+            getItemSubtotal(item) {
+                const normalPrice = this.prices[item.buku_id] || 0;
+                const discount = parseInt(item.promo_item) || 0;
+                const finalPrice = normalPrice - discount;
+                return (finalPrice > 0 ? finalPrice : 0) * (item.qty || 0);
+            },
+
+            calculateTotalBuku() {
+                return this.items.reduce((total, item) => total + this.getItemSubtotal(item), 0);
+            },
+            calculateTotalQty() {
+                return this.items.reduce((total, item) => total + (parseInt(item.qty) || 0), 0);
+            },
 
             isOverStock(item) {
                 if (!item.buku_id) return false;
@@ -342,7 +395,6 @@
 
 <style>
     .bg-gradient-primary { background: linear-gradient(180deg, #4e73df 10%, #224abe 100%); }
-    .borderless td, .borderless th { border: none !important; }
     .btn-action {
         width: 32px; height: 32px; padding: 0;
         display: inline-flex; align-items: center; justify-content: center;
@@ -365,5 +417,59 @@
     .table-responsive::-webkit-scrollbar { width: 5px; }
     .table-responsive::-webkit-scrollbar-track { background: #f1f1f1; }
     .table-responsive::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+
+    .table td, .table th { vertical-align: middle !important; }
+
+    /* Styling input group promo kecil di bawah select */
+    .input-group-sm .input-group-text {
+        font-size: 11px;
+        padding: 0.25rem 0.5rem;
+        background-color: #f8f9fc !important;
+    }
+
+    /* ==========================================================================
+       OVERRIDE SELECT2 SUPRAY PILLED (ROUNDED)
+       ========================================================================== */
+    /* Membuat container utama Select2 menjadi rounded-pill */
+    .select2-container--bootstrap4 .select2-selection--single {
+        border-radius: 50px !important;
+        height: calc(1.5em + 0.75rem + 2px) !important;
+        padding: 0.375rem 1rem !important;
+        background-color: #fff !important;
+        border: 1px solid #d1d3e2 !important;
+        box-shadow: 0 .125rem .25rem rgba(0,0,0,.075) !important;
+        transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out !important;
+    }
+
+    /* Mengatur posisi teks di dalam select2 yang sudah melengkung */
+    .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
+        padding-left: 0 !important;
+        padding-right: 20px !important;
+        color: #6e707e !important;
+    }
+
+    /* Mengatur posisi ikon panah dropdown agar pas di area melengkung */
+    .select2-container--bootstrap4 .select2-selection--single .select2-selection__arrow {
+        right: 15px !important;
+        height: 100% !important;
+    }
+
+    /* Efek ketika Select2 diklik / fokus */
+    .select2-container--bootstrap4.select2-container--focus .select2-selection--single {
+        border-color: #bac8f3 !important;
+        box-shadow: 0 0 0 0.2rem rgba(78,115,223,.25) !important;
+    }
+
+    /* Merapikan sudut box dropdown pencarian yang muncul di bawahnya */
+    .select2-dropdown {
+        border-radius: 15px !important;
+        overflow: hidden !important;
+        border: 1px solid #d1d3e2 !important;
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important;
+    }
+
+    .select2-search--dropdown .select2-search__field {
+        border-radius: 8px !important;
+    }
 </style>
 @endsection

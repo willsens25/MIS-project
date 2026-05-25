@@ -24,12 +24,12 @@
 
     <div class="card shadow border-0 rounded-lg mb-4">
         <div class="card-body">
-            <form action="{{ route('order.index') }}" method="GET" class="row g-3 align-items-center">
+            <form id="filter-form" action="{{ route('order.index') }}" method="GET" class="row g-3 align-items-center">
                 <div class="col-md-4">
-                    <input type="text" name="search" class="form-control rounded-pill" placeholder="Cari No. Invoice / Nama Agen..." value="{{ request('search') }}">
+                    <input type="text" id="search-input" name="search" class="form-control rounded-pill" placeholder="Cari No. Invoice / Nama Agen..." value="{{ request('search') }}" autocomplete="off">
                 </div>
                 <div class="col-md-3">
-                    <select name="status" class="form-control rounded-pill">
+                    <select id="status-select" name="status" class="form-control rounded-pill">
                         <option value="">-- Semua Status --</option>
                         <option value="Pending" {{ request('status') == 'Pending' ? 'selected' : '' }}>Pending</option>
                         <option value="Lunas" {{ request('status') == 'Lunas' ? 'selected' : '' }}>Lunas</option>
@@ -57,64 +57,103 @@
                             <th>Aksi</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @forelse($orders as $order)
-                            <tr>
-                                <td class="fw-bold text-primary">{{ $order->no_invoice }}</td>
-                                <td>{{ \Carbon\Carbon::parse($order->tanggal_pesan)->format('d/m/Y') }}</td>
-                                <td>
-                                    <div class="font-weight-bold text-dark">{{ $order->nama_pembeli }}</div>
-                                    @if($order->nama_penerima && $order->nama_penerima != $order->nama_pembeli)
-                                        <small class="text-muted">ke: {{ $order->nama_penerima }}</small>
-                                    @endif
-                                </td>
-                                <td><span class="badge bg-light border text-dark">{{ $order->via }}</span></td>
-                                <td class="text-end font-weight-bold">Rp {{ number_format($order->total_tagihan, 0, ',', '.') }}</td>
-                                <td>
-                                    @if(strtolower($order->status) == 'lunas')
-                                        <span class="badge bg-success text-white px-2 py-1 rounded-pill">Lunas</span>
-                                    @else
-                                        <span class="badge bg-warning text-dark px-2 py-1 rounded-pill">Pending</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <div class="btn-group" role="group">
-                                        <a href="{{ route('marketing.order.print', $order->id) }}" target="_blank" class="btn btn-info btn-sm text-white" title="Cetak Nota" style="border-radius: 6px 0 0 6px;">
-                                            <i class="fas fa-print"></i> Cetak
-                                        </a>
-
-                                        @if(strtolower($order->status) != 'lunas')
-                                            <form action="{{ route('mad.tandai-lunas', $order->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Tandai invoice ini sebagai LUNAS? Kas finance akan otomatis bertambah.')">
-                                                @csrf
-                                                <button type="submit" class="btn btn-success btn-sm" style="border-radius: 0;">
-                                                    <i class="fas fa-check"></i> Lunas
-                                                </button>
-                                            </form>
-
-                                            <form action="{{ route('mad.hapus-invoice', $order->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Yakin ingin membatalkan invoice ini? Stok akan dikembalikan ke gudang.')">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-danger btn-sm" style="border-radius: 0 6px 6px 0;">
-                                                    <i class="fas fa-trash"></i> Batal
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="text-center text-muted py-4">Tidak ada data invoice ditemukan.</td>
-                            </tr>
-                        @endforelse
+                    <tbody id="order-table-body">
+                        @include('marketing.partials.order_table')
                     </tbody>
                 </table>
             </div>
 
-            <div class="d-flex justify-content-end mt-3">
+            <div id="pagination-container" class="d-flex justify-content-end mt-3">
                 {{ $orders->appends(request()->query())->links() }}
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('search-input');
+    const statusSelect = document.getElementById('status-select');
+    const tableBody = document.getElementById('order-table-body');
+    const paginationContainer = document.getElementById('pagination-container');
+    const form = document.getElementById('filter-form');
+
+    let debounceTimer;
+
+    // Fungsi utama mengambil data parsial HTML via AJAX
+    function fetchOrders() {
+        const formData = new FormData(form);
+        const params = new URLSearchParams(formData).toString();
+        const url = `${form.action}?${params}`;
+
+        // Beri efek redup tipis sebagai indikator data sedang di-load
+        tableBody.style.opacity = '0.5';
+
+        fetch(url, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            tableBody.innerHTML = html;
+            tableBody.style.opacity = '1';
+
+            // Sinkronisasi link pagination baru dari baris tersembunyi partial
+            const newPagination = document.getElementById('ajax-pagination-links');
+            if (newPagination) {
+                paginationContainer.innerHTML = newPagination.innerHTML;
+            } else {
+                paginationContainer.innerHTML = '';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            tableBody.style.opacity = '1';
+        });
+    }
+
+    // Event 1: Ngetik di input pencarian (Debounce 300ms mencegah spam query database)
+    searchInput.addEventListener('input', function () {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(fetchOrders, 300);
+    });
+
+    // Event 2: Mengganti pilihan Status dropdown
+    statusSelect.addEventListener('change', fetchOrders);
+
+    // Event 3: Cegah reload total saat user menekan Enter / klik tombol filter manual
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        fetchOrders();
+    });
+
+    // Event 4: Menjaga link pagination agar tetap bekerja secara AJAX saat berpindah halaman
+    document.addEventListener('click', function (e) {
+        const paginationLink = e.target.closest('#pagination-container a');
+        if (paginationLink) {
+            e.preventDefault();
+            const url = paginationLink.href;
+
+            tableBody.style.opacity = '0.5';
+
+            fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                tableBody.innerHTML = html;
+                tableBody.style.opacity = '1';
+
+                const newPagination = document.getElementById('ajax-pagination-links');
+                if (newPagination) {
+                    paginationContainer.innerHTML = newPagination.innerHTML;
+                }
+            });
+        }
+    });
+});
+</script>
 @endsection
