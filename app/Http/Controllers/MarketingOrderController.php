@@ -17,31 +17,31 @@ use Illuminate\Support\Facades\Auth;
 class MarketingOrderController extends Controller
 {
     public function index(Request $request)
-{
-    // Ambil keyword pencarian atau filter status jika ada
-    $search = $request->get('search');
-    $status = $request->get('status');
+    {
+        // Ambil keyword pencarian atau filter status jika ada
+        $search = $request->get('search');
+        $status = $request->get('status');
 
-    $orders = Order::query()
-        ->when($search, function($query) use ($search) {
-            $query->where('no_invoice', 'like', "%{$search}%")
-                ->orWhere('nama_pembeli', 'like', "%{$search}%")
-                ->orWhere('nama_penerima', 'like', "%{$search}%");
-        })
-        ->when($status, function($query) use ($status) {
-            $query->where('status', $status);
-        })
-        ->orderBy('created_at', 'desc')
-        ->paginate(15); // Menampilkan 15 data per halaman
+        $orders = Order::query()
+            ->when($search, function($query) use ($search) {
+                $query->where('no_invoice', 'like', "%{$search}%")
+                    ->orWhere('nama_pembeli', 'like', "%{$search}%")
+                    ->orWhere('nama_penerima', 'like', "%{$search}%");
+            })
+            ->when($status, function($query) use ($status) {
+                $query->where('status', $status);
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate(15); // Menampilkan 15 data per halaman
 
-    // --- LOGIKA UTAMA AJAX LIVE SEARCH ---
-    // Jika request datang dari AJAX (JavaScript Fetch), kirimkan hanya isi baris tabelnya saja
-    if ($request->ajax()) {
-        return view('marketing.partials.order_table', compact('orders'))->render();
+        // --- LOGIKA UTAMA AJAX LIVE SEARCH ---
+        // Jika request datang dari AJAX (JavaScript Fetch), kirimkan hanya isi baris tabelnya saja
+        if ($request->ajax()) {
+            return view('marketing.partials.order_table', compact('orders'))->render();
+        }
+
+        return view('marketing.index_order', compact('orders'));
     }
-
-    return view('marketing.index_order', compact('orders'));
-}
 
     /**
      * Menampilkan Form Input Pesanan & Daftar Invoice Belum Lunas
@@ -75,22 +75,22 @@ class MarketingOrderController extends Controller
             'ekspedisi'     => 'required|string',
             'ongkir'        => 'required|numeric|min:0',
             'buku_id'       => 'required|array|min:1',
-            'buku_id.*' => [
-                'required',
-                \Illuminate\Validation\Rule::exists(\App\Models\Book::class, 'id'),
-            ],
+            'buku_id.*'     => ['required', \Illuminate\Validation\Rule::exists(\App\Models\Book::class, 'id')],
             'qty'           => 'required|array|min:1',
             'qty.*'         => 'required|integer|min:1',
         ], [
-            'nama_agen.exists'      => 'Nama agen/pembeli tidak ditemukan di sistem.',
-            'via.required'          => 'Pilih sumber pesanan (WA/Shopee/dll).',
-            'qty.*.min'             => 'Jumlah pesanan (QTY) minimal harus 1.',
-            'buku_id.required'      => 'Minimal pilih satu buku.',
-            'ongkir.numeric'        => 'Ongkir harus berupa angka.',
+            'nama_agen.exists' => 'Nama agen/pembeli tidak ditemukan di sistem.',
+            'via.required'     => 'Pilih sumber pesanan (WA/Shopee/dll).',
+            'qty.*.min'        => 'Jumlah pesanan (QTY) minimal harus 1.',
+            'buku_id.required' => 'Minimal pilih satu buku.',
+            'ongkir.numeric'   => 'Ongkir harus berupa angka.',
         ]);
 
         try {
-            return DB::transaction(function () use ($request) {
+            // Variabel penampung untuk nomor invoice agar bisa diakses di luar closure DB::transaction
+            $noInvoice = '';
+
+            DB::transaction(function () use ($request, &$noInvoice) {
 
                 // --- LANGKAH PERLINDUNGAN AWAL: Cek ketersediaan seluruh stok terlebih dahulu ---
                 foreach ($request->buku_id as $key => $idBuku) {
@@ -146,6 +146,7 @@ class MarketingOrderController extends Controller
 
                     $book = Book::find($idBuku);
                     $jumlahPesanan = $request->qty[$key] ?? 1;
+                    $isPromo = $request->promo_item[$key] ?? 0;
 
                     // Eksekusi pemotongan karena validasi di atas sudah lolos sepenuhnya
                     $book->decrement('stok_gudang', $jumlahPesanan);
@@ -159,6 +160,7 @@ class MarketingOrderController extends Controller
                         'jumlah'       => $jumlahPesanan,
                         'harga_satuan' => $hargaSatuan,
                         'subtotal'     => $subtotal,
+                        // 'promo_item'  => $isPromo, // <--- Hapus comment jika kolom sudah ada di tabel order_details
                     ]);
 
                     $totalSemuaBuku += $subtotal;
@@ -168,9 +170,11 @@ class MarketingOrderController extends Controller
                 $order->update([
                     'total_tagihan' => $totalSemuaBuku + ($request->ongkir ?? 0)
                 ]);
-
-                return redirect()->back()->with('success', "Invoice #{$noInvoice} berhasil disimpan & stok dipotong!");
             });
+
+            // Redirect aman dieksekusi setelah database sukses melakukan commit secara utuh
+            return redirect()->back()->with('success', "Invoice #{$noInvoice} berhasil disimpan & stok dipotong!");
+
         } catch (\Exception $e) {
             return redirect()->back()->withInput()->with('error', 'Gagal Simpan: ' . $e->getMessage());
         }
@@ -299,4 +303,26 @@ class MarketingOrderController extends Controller
         $order = Order::findOrFail($id);
         return view('marketing.print_invoice', compact('order'));
     }
+
+    /**
+ * Mengambil alamat agen secara real-time untuk fitur Auto-Suggest via AJAX
+ */
+    public function getAlamatAgen($nama)
+{
+    // Cari data identitas berdasarkan nama_lengkap
+    $pembeli = Identitas::where('nama_lengkap', $nama)->first();
+
+    if ($pembeli) {
+        return response()->json([
+            'status' => 'success',
+            'alamat' => $pembeli->alamat ?? ''
+        ]);
+    }
+
+    return response()->json([
+        'status' => 'error',
+        'alamat' => ''
+    ], 404);
+}
+
 }

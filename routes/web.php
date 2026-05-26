@@ -134,28 +134,35 @@ Route::middleware('auth')->group(function () {
 
     /* |--- KHUSUS MARKETING (Divisi 4) --- */
     Route::middleware(['checkRole:4'])->group(function () {
-        Route::prefix('marketing')->group(function () {
-            Route::get('/order', [MarketingOrderController::class, 'index'])->name('order.index');
-            Route::get('/', [MarketingOrderController::class, 'create'])->name('marketing');
-            Route::post('/order/store', [MarketingOrderController::class, 'store'])->name('marketing.order.store');
+    Route::prefix('marketing')->group(function () {
+        // --- ROUTE ORDER & BACKEND CORE ---
+        Route::get('/order', [MarketingOrderController::class, 'index'])->name('order.index');
+        Route::get('/', [MarketingOrderController::class, 'create'])->name('marketing');
+        Route::post('/order/store', [MarketingOrderController::class, 'store'])->name('marketing.order.store');
 
-            Route::post('/tambah-agen', [MarketingController::class, 'tambahAgen'])->name('mad.tambah-agen');
-            Route::post('/update-agen/{id}', [MarketingController::class, 'updateAgen'])->name('mad.update-agen');
-            Route::delete('/hapus-agen/{id}', [MarketingController::class, 'hapusAgen'])->name('mad.hapus-agen');
-            Route::get('/clear-notif', [MarketingController::class, 'clearNotif'])->name('mad.clear-notif');
+        // FITUR BARU: Auto-Suggest Alamat Pembeli secara Real-Time via AJAX
+        Route::get('/get-alamat-agen/{nama}', [MarketingOrderController::class, 'getAlamatAgen'])->name('marketing.getAlamatAgen');
 
-            Route::prefix('invoice')->group(function () {
-                Route::get('/bayar/{id}', [MarketingController::class, 'bayarInvoice'])->name('mad.bayar-invoice');
-                Route::get('/cetak/{id}', [MarketingController::class, 'cetakInvoice'])->name('mad.cetak-invoice');
-                Route::post('/update/{id}', [MarketingController::class, 'updateInvoice'])->name('mad.update-invoice');
-                Route::post('/lunas/{id}', [MarketingOrderController::class, 'tandaiLunas'])->name('mad.tandai-lunas');
-                Route::delete('/hapus/{id}', [MarketingOrderController::class, 'hapusInvoice'])->name('mad.hapus-invoice');
-            });
+        // --- ROUTE MANAJEMEN AGEN (MarketingController) ---
+        Route::post('/tambah-agen', [MarketingController::class, 'tambahAgen'])->name('mad.tambah-agen');
+        Route::post('/update-agen/{id}', [MarketingController::class, 'updateAgen'])->name('mad.update-agen');
+        Route::delete('/hapus-agen/{id}', [MarketingController::class, 'hapusAgen'])->name('mad.hapus-agen');
+        Route::get('/clear-notif', [MarketingController::class, 'clearNotif'])->name('mad.clear-notif');
 
-            Route::get('/marketing-order', [MarketingOrderController::class, 'create'])->name('mad.create');
-            Route::get('/marketing/order/print/{id}', [MarketingOrderController::class, 'printInvoice'])->name('marketing.order.print');
+        // --- ROUTE MANAJEMEN INVOICE ---
+        Route::prefix('invoice')->group(function () {
+            Route::get('/bayar/{id}', [MarketingController::class, 'bayarInvoice'])->name('mad.bayar-invoice');
+            Route::get('/cetak/{id}', [MarketingController::class, 'cetakInvoice'])->name('mad.cetak-invoice');
+            Route::post('/update/{id}', [MarketingController::class, 'updateInvoice'])->name('mad.update-invoice');
+            Route::post('/lunas/{id}', [MarketingOrderController::class, 'tandaiLunas'])->name('mad.tandai-lunas');
+            Route::delete('/hapus/{id}', [MarketingOrderController::class, 'hapusInvoice'])->name('mad.hapus-invoice');
         });
+
+        // --- ROUTE TAMBAHAN ---
+        Route::get('/marketing-order', [MarketingOrderController::class, 'create'])->name('mad.create');
+        Route::get('/marketing/order/print/{id}', [MarketingOrderController::class, 'printInvoice'])->name('marketing.order.print');
     });
+});
 
     /* |--- KHUSUS PRODUKSI (Divisi 5) --- */
     Route::middleware(['checkRole:5'])->group(function () {

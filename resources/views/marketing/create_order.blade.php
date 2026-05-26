@@ -80,11 +80,12 @@
                                 <label class="custom-control-label font-weight-bold" for="samaPenerima">Penerima sama dengan pembeli</label>
                             </div>
 
+                            {{-- Ditambahkan ID pada textarea alamat_penerima agar bisa di-inject via JS --}}
                             <div x-show="!samaPenerima" x-transition class="mt-3">
                                 <label class="small font-weight-bold">Nama Penerima Berbeda</label>
                                 <input type="text" name="nama_penerima" class="form-control mb-2 rounded-pill" placeholder="Nama Penerima">
                                 <label class="small font-weight-bold">Alamat Pengiriman</label>
-                                <textarea name="alamat_penerima" class="form-control rounded" rows="2" placeholder="Alamat Pengiriman Lengkap"></textarea>
+                                <textarea name="alamat_penerima" id="alamat_penerima" class="form-control rounded" rows="2" placeholder="Alamat Pengiriman Lengkap"></textarea>
                             </div>
                         </div>
 
@@ -379,10 +380,44 @@
     });
 
     $(document).ready(function() {
-        $('#select_pembeli').select2({
+        const selectPembeli = $('#select_pembeli');
+
+        selectPembeli.select2({
             theme: 'bootstrap4',
             placeholder: '-- Cari Nama --',
             allowClear: true
+        });
+
+        // --- HOOK INTEGRASI SELECT2 DENGAN FETCH API ALAMAT ---
+        selectPembeli.on('change', function () {
+            const namaTerpilih = this.value;
+            const alamatTextarea = document.getElementById('alamat_penerima');
+
+            // Jika alamat_penerima tidak tampil/di-hide Alpine, abaikan pengisian
+            if (!alamatTextarea) return;
+
+            if (!namaTerpilih) {
+                alamatTextarea.value = '';
+                return;
+            }
+
+            // Panggil Endpoint API internal Laravel yang baru kita pasang
+            fetch(`/marketing/get-alamat-agen/${encodeURIComponent(namaTerpilih)}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Alamat tidak ditemukan');
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'success' && data.alamat) {
+                        alamatTextarea.value = data.alamat;
+                    } else {
+                        alamatTextarea.value = '';
+                    }
+                })
+                .catch(error => {
+                    console.error('Gagal mengambil alamat:', error);
+                    alamatTextarea.value = '';
+                });
         });
 
         setTimeout(function() {
@@ -430,7 +465,6 @@
     /* ==========================================================================
        OVERRIDE SELECT2 SUPRAY PILLED (ROUNDED)
        ========================================================================== */
-    /* Membuat container utama Select2 menjadi rounded-pill */
     .select2-container--bootstrap4 .select2-selection--single {
         border-radius: 50px !important;
         height: calc(1.5em + 0.75rem + 2px) !important;
@@ -441,26 +475,22 @@
         transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out !important;
     }
 
-    /* Mengatur posisi teks di dalam select2 yang sudah melengkung */
     .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
         padding-left: 0 !important;
         padding-right: 20px !important;
         color: #6e707e !important;
     }
 
-    /* Mengatur posisi ikon panah dropdown agar pas di area melengkung */
     .select2-container--bootstrap4 .select2-selection--single .select2-selection__arrow {
         right: 15px !important;
         height: 100% !important;
     }
 
-    /* Efek ketika Select2 diklik / fokus */
     .select2-container--bootstrap4.select2-container--focus .select2-selection--single {
         border-color: #bac8f3 !important;
         box-shadow: 0 0 0 0.2rem rgba(78,115,223,.25) !important;
     }
 
-    /* Merapikan sudut box dropdown pencarian yang muncul di bawahnya */
     .select2-dropdown {
         border-radius: 15px !important;
         overflow: hidden !important;
