@@ -2,109 +2,158 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Invoice - {{ $order->no_invoice }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cetak Invoice #{{ $order->no_invoice }}</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
-        body { font-family: 'Courier New', Courier, monospace; font-size: 14px; color: #333; margin: 0; padding: 20px; }
-        .invoice-box { max-width: 800px; margin: auto; padding: 30px; border: 1px solid #eee; background: #fff; }
-
-        /* Header Style */
-        .header-table { width: 100%; border-bottom: 3px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
-        .logo { width: 180px; height: auto; }
-        .invoice-title { text-align: right; vertical-align: bottom; }
-        .invoice-title h1 { margin: 0; font-size: 42px; font-weight: bold; letter-spacing: 1px; line-height: 1; }
-        .invoice-title p { margin: 5px 0 0 0; font-size: 16px; }
-
-        .info { margin-top: 10px; display: flex; justify-content: space-between; }
-        .info div { width: 45%; line-height: 1.5; }
-
-        table.items { width: 100%; border-collapse: collapse; margin-top: 25px; }
-        table.items th { background: #f2f2f2; padding: 12px 10px; border: 1px solid #000; text-align: left; }
-        table.items td { padding: 10px; border: 1px solid #000; }
-
-        .total-row { font-weight: bold; background: #f9f9f9; }
-        .footer { margin-top: 40px; text-align: center; font-size: 12px; border-top: 1px dashed #999; padding-top: 15px; }
-
+        /* Optimasi khusus saat tombol cetak browser ditekan */
         @media print {
-            .no-print { display: none; }
-            body { padding: 0; }
-            .invoice-box { border: none; }
+            body {
+                background-color: #ffffff;
+                color: #000000;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-card {
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+            }
         }
     </style>
 </head>
-<body>
-    <div class="no-print" style="text-align:center; margin-bottom: 20px;">
-        <button onclick="window.print()" style="padding: 10px 25px; cursor:pointer; background: #000; color: #fff; border: none; font-weight: bold;">PRINT INVOICE</button>
-        <button onclick="window.history.back()" style="padding: 10px 25px; cursor:pointer; background: #ccc; border: none;">KEMBALI</button>
+<body class="bg-slate-100 font-sans text-slate-800 antialiased min-h-screen py-8">
+
+    <div class="max-w-4xl mx-auto mb-6 flex justify-between items-center px-4 no-print">
+        <a href="{{ route('marketing') }}" class="inline-flex items-center text-sm font-medium text-slate-600 hover:text-slate-900 transition">
+            ← Kembali ke Daftar Order
+        </a>
+        <button onclick="window.print()" class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm px-5 py-2.5 rounded-lg shadow-sm transition inline-flex items-center gap-2">
+            🖨️ Cetak / Simpan PDF
+        </button>
     </div>
 
-    <div class="invoice-box">
-        <table class="header-table">
-            <tr>
-                <td>
-                    @php
-                    $path = public_path('img/Logo Lamrimnesia.png');
-                    $type = pathinfo($path, PATHINFO_EXTENSION);
-                    $data = file_get_contents($path);
-                    $base64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
-                    @endphp
-                    <img src="{{ $base64 }}" class="logo" alt="Logo Lamrimnesia">
-                </td>
-                <td class="invoice-title">
-                    <h1>INVOICE</h1>
-                    <p><strong>Nomor:</strong> {{ $order->no_invoice }}</p>
-                </td>
-            </tr>
-        </table>
+    <div class="max-w-4xl mx-auto bg-white border border-slate-200 shadow-xl rounded-xl p-8 md:p-12 print-card">
 
-        <div class="info">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200 pb-8 gap-4">
             <div>
-                <strong>DARI:</strong><br>
-                Gudang MIS Project<br>
-                Jakarta, Indonesia
+                <h1 class="text-3xl font-extrabold tracking-tight text-blue-600">Lamrimnesia</h1>
+                <p class="text-sm text-slate-500 mt-1">Sistem Manajemen Penjualan & Distribusi Buku</p>
             </div>
-            <div style="text-align: right;">
-                <strong>UNTUK:</strong><br>
-                <strong>{{ $order->nama_penerima }}</strong><br>
-                {{ $order->alamat_penerima }}<br>
-                Tanggal: {{ date('d M Y', strtotime($order->tanggal_pesan)) }}<br>
-                <small>Kurir: {{ $order->ekspedisi }} ({{ $order->via }})</small>
+            <div class="text-left sm:text-right">
+                <h2 class="text-2xl font-bold tracking-wider text-slate-400 uppercase">Invoice</h2>
+                <p class="text-lg font-semibold text-slate-700 mt-1">{{ $order->no_invoice }}</p>
             </div>
         </div>
 
-        <table class="items">
-            <thead>
-                <tr>
-                    <th>Deskripsi Item</th>
-                    <th style="text-align:center; width: 60px;">Qty</th>
-                    <th style="text-align:right; width: 130px;">Harga</th>
-                    <th style="text-align:right; width: 130px;">Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($order->details as $detail)
-                <tr>
-                    <td>{{ $detail->book->judul ?? 'Item tidak ditemukan' }}</td>
-                    <td style="text-align:center;">{{ $detail->jumlah }}</td>
-                    <td style="text-align:right;">{{ number_format($detail->harga_satuan, 0, ',', '.') }}</td>
-                    <td style="text-align:right;">{{ number_format($detail->subtotal, 0, ',', '.') }}</td>
-                </tr>
-                @endforeach
-                <tr>
-                    <td colspan="3" style="text-align:right;">Ongkos Kirim</td>
-                    <td style="text-align:right;">{{ number_format($order->ongkir, 0, ',', '.') }}</td>
-                </tr>
-                <tr class="total-row">
-                    <td colspan="3" style="text-align:right; font-size:16px;">TOTAL PEMBAYARAN</td>
-                    <td style="text-align:right; font-size:16px;">Rp {{ number_format($order->total_tagihan, 0, ',', '.') }}</td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 my-8 text-sm">
+            <div class="bg-slate-50 rounded-xl p-5 border border-slate-100">
+                <h3 class="text-xs font-bold tracking-wider text-slate-400 uppercase mb-3">Tujuan Pengiriman:</h3>
+                <p class="font-bold text-base text-slate-900 mb-1">{{ $order->nama_penerima }}</p>
+                @if($order->nama_pembeli !== $order->nama_penerima)
+                    <p class="text-xs text-slate-500 mb-2">(Agen Pembeli: {{ $order->nama_pembeli }})</p>
+                @endif
+                <p class="text-slate-600 leading-relaxed">{{ $order->alamat_penerima }}</p>
+            </div>
 
-        <div class="footer">
-            <p>Terima kasih atas pesanan Anda!</p>
-            <p>Harap simpan invoice ini sebagai bukti transaksi yang sah.</p>
-            <p><em>Generated by MIS System on {{ date('d/m/Y H:i') }}</em></p>
+            <div class="flex flex-col justify-between p-1">
+                <div class="grid grid-cols-2 gap-y-3 gap-x-4">
+                    <span class="text-slate-500 font-medium">Tanggal Pesan:</span>
+                    <span class="text-slate-900 font-semibold">{{ \Carbon\Carbon::parse($order->tanggal_pesan)->translatedFormat('d F Y') }}</span>
+
+                    <span class="text-slate-500 font-medium">Metode Order (Via):</span>
+                    <span class="text-slate-900"><span class="bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-md font-semibold border border-blue-100">{{ $order->via }}</span></span>
+
+                    <span class="text-slate-500 font-medium">Ekspedisi:</span>
+                    <span class="text-slate-900 font-medium">{{ $order->ekspedisi }}</span>
+
+                    <span class="text-slate-500 font-medium">Status Nota:</span>
+                    <span>
+                        @if(strtolower($order->status) == 'lunas')
+                            <span class="bg-green-50 text-green-700 text-xs px-2.5 py-1 rounded-md font-bold border border-green-100">LUNAS</span>
+                        @else
+                            <span class="bg-amber-50 text-amber-700 text-xs px-2.5 py-1 rounded-md font-bold border border-amber-100">PENDING / UTANG</span>
+                        @endif
+                    </span>
+                </div>
+            </div>
         </div>
+
+        <div class="overflow-x-auto border border-slate-200 rounded-xl mt-8">
+            <table class="w-full text-left border-collapse text-sm">
+                <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
+                        <th class="py-3 px-4 w-12 text-center">No</th>
+                        <th class="py-3 px-4">Judul Buku / Item</th>
+                        <th class="py-3 px-4 text-right w-32">Harga Satuan</th>
+                        <th class="py-3 px-4 text-center w-24">QTY</th>
+                        <th class="py-3 px-4 text-right w-36">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-700">
+                    @forelse($order->orderDetails ?? $order->details ?? [] as $index => $detail)
+                        <tr class="hover:bg-slate-50/50 transition">
+                            <td class="py-3.5 px-4 text-center text-slate-400 font-medium">{{ $index + 1 }}</td>
+                            <td class="py-3.5 px-4 font-medium text-slate-900">
+                                {{ $detail->book->judul ?? 'Buku Tidak Diketahui (ID: '.$detail->buku_id.')' }}
+                            </td>
+                            <td class="py-3.5 px-4 text-right text-slate-600">
+                                Rp {{ number_format($detail->harga_satuan, 0, ',', '.') }}
+                            </td>
+                            <td class="py-3.5 px-4 text-center font-semibold text-slate-900">
+                                {{ $detail->jumlah }}
+                            </td>
+                            <td class="py-3.5 px-4 text-right font-semibold text-slate-900">
+                                Rp {{ number_format($detail->subtotal, 0, ',', '.') }}
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="py-8 px-4 text-center text-slate-400 italic">
+                                Tidak ada rincian item buku untuk invoice ini.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-8 flex justify-end text-sm">
+            <div class="w-full sm:w-80 bg-slate-50 rounded-xl p-5 border border-slate-200 space-y-3">
+                <div class="flex justify-between text-slate-600 font-medium">
+                    <span>Total Item (Buku):</span>
+                    <span class="text-slate-900 font-semibold">
+                        {{ ($order->orderDetails ?? $order->details ?? collect())->sum('jumlah') }} pcs
+                    </span>
+                </div>
+                <div class="flex justify-between text-slate-600 font-medium">
+                    <span>Subtotal Produk:</span>
+                    <span class="text-slate-900">
+                        Rp {{ number_format(($order->total_tagihan - ($order->ongkir ?? 0)), 0, ',', '.') }}
+                    </span>
+                </div>
+                <div class="flex justify-between text-slate-600 font-medium pb-2 border-b border-slate-200">
+                    <span>Ongkos Kirim:</span>
+                    <span class="text-slate-900">
+                        Rp {{ number_format($order->ongkir ?? 0, 0, ',', '.') }}
+                    </span>
+                </div>
+                <div class="flex justify-between items-baseline pt-1">
+                    <span class="text-base font-bold text-slate-900">Total Tagihan:</span>
+                    <span class="text-xl font-black text-blue-600">
+                        Rp {{ number_format($order->total_tagihan, 0, ',', '.') }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-12 pt-6 border-t border-slate-100 text-center text-xs text-slate-400">
+            <p class="font-medium text-slate-500 mb-1">Terima kasih atas kepercayaan Anda berbelanja bersama kami!</p>
+            <p>Invoice ini sah dibuat secara otomatis oleh sistem komputer internal.</p>
+        </div>
+
     </div>
+
 </body>
 </html>

@@ -32,10 +32,9 @@ class MarketingOrderController extends Controller
                 $query->where('status', $status);
             })
             ->orderBy('created_at', 'desc')
-            ->paginate(15); // Menampilkan 15 data per halaman
+            ->paginate(15);
 
         // --- LOGIKA UTAMA AJAX LIVE SEARCH ---
-        // Jika request datang dari AJAX (JavaScript Fetch), kirimkan hanya isi baris tabelnya saja
         if ($request->ajax()) {
             return view('marketing.partials.order_table', compact('orders'))->render();
         }
@@ -67,36 +66,37 @@ class MarketingOrderController extends Controller
      */
     public function store(Request $request)
     {
-        // 1. Validasi Input Super Ketat
+        // 1. Validasi Input yang Disesuaikan dengan Kondisi Form (Alamat Opsional jika dicentang 'sama_penerima')
         $request->validate([
-            'tanggal_pesan' => 'required|date',
-            'nama_agen'     => 'required|string|exists:identitas,nama_lengkap',
-            'via'           => 'required|string',
-            'ekspedisi'     => 'required|string',
-            'ongkir'        => 'required|numeric|min:0',
-            'buku_id'       => 'required|array|min:1',
-            'buku_id.*'     => ['required', \Illuminate\Validation\Rule::exists(\App\Models\Book::class, 'id')],
-            'qty'           => 'required|array|min:1',
-            'qty.*'         => 'required|integer|min:1',
+            'tanggal_pesan'   => 'required|date',
+            'nama_agen'       => 'required|string|exists:identitas,nama_lengkap',
+            'via'             => 'required|string',
+            'ekspedisi'       => 'required|string',
+            'ongkir'          => 'required|numeric|min:0',
+            'nama_penerima'   => 'nullable|string',
+            'alamat_penerima' => 'required_without:sama_penerima|nullable|string',
+            'buku_id'         => 'required|array|min:1',
+            'buku_id.*'       => ['required', \Illuminate\Validation\Rule::exists(\App\Models\Book::class, 'id')],
+            'qty'             => 'required|array|min:1',
+            'qty.*'           => 'required|integer|min:1',
         ], [
-            'nama_agen.exists' => 'Nama agen/pembeli tidak ditemukan di sistem.',
-            'via.required'     => 'Pilih sumber pesanan (WA/Shopee/dll).',
-            'qty.*.min'        => 'Jumlah pesanan (QTY) minimal harus 1.',
-            'buku_id.required' => 'Minimal pilih satu buku.',
-            'ongkir.numeric'   => 'Ongkir harus berupa angka.',
+            'nama_agen.exists'                 => 'Nama agen/pembeli tidak ditemukan di sistem.',
+            'via.required'                     => 'Pilih sumber pesanan (WA/Shopee/dll).',
+            'qty.*.min'                        => 'Jumlah pesanan (QTY) minimal harus 1.',
+            'buku_id.required'                 => 'Minimal pilih satu buku.',
+            'ongkir.numeric'                   => 'Ongkir harus berupa angka.',
+            'alamat_penerima.required_without' => 'Alamat pengiriman wajib diisi jika tidak dicentang sama dengan penerima.',
         ]);
 
         try {
-            // Variabel penampung untuk nomor invoice agar bisa diakses di luar closure DB::transaction
             $noInvoice = '';
 
             DB::transaction(function () use ($request, &$noInvoice) {
 
-                // --- LANGKAH PERLINDUNGAN AWAL: Cek ketersediaan seluruh stok terlebih dahulu ---
+                // --- LANGKAH PERLINDUNGAN AWAL: Cek ketersediaan seluruh stok ---
                 foreach ($request->buku_id as $key => $idBuku) {
                     if (!$idBuku) continue;
 
-                    // lockForUpdate() mencegah perubahan data stok dari kasir/marketing lain di detik yang sama
                     $book = Book::lockForUpdate()->find($idBuku);
                     $jumlahPesanan = $request->qty[$key] ?? 1;
 
@@ -109,19 +109,42 @@ class MarketingOrderController extends Controller
                     }
                 }
 
-                // 2. Generate Nomor Invoice
+                // 2. Generate Nomor Invoice (Menggunakan substr standar php aman)
                 $tanggal = date('Ymd');
-                $count = Order::whereDate('created_at', today())->count();
-                $noInvoice = "INV-{$tanggal}-" . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
+                $lastOrder = Order::whereDate('created_at', today())
+                                  ->orderBy('id', 'desc')
+                                  ->first();
 
-                // 3. Logika Penentuan Alamat
+                if ($lastOrder && !empty($lastOrder->no_invoice)) {
+                    $stringInvoice = (string) $lastOrder->no_invoice;
+                    $lastUrutan = (int) substr($stringInvoice, -4);
+                    $urutanBaru = $lastUrutan + 1;
+                } else {
+                    $urutanBaru = 1;
+                }
+
+                $noInvoice = "INV-" . $tanggal . "-" . str_pad($urutanBaru, 4, '0', STR_PAD_LEFT);
+
+                // 3. Logika Penentuan Alamat & Penerima (Sudah Diperbaiki Strukturnya)
                 $isSama = $request->has('sama_penerima');
                 $namaPenerima = $isSama ? $request->nama_agen : ($request->nama_penerima ?? $request->nama_agen);
 
-                $alamatFinal = $request->alamat_penerima;
                 if ($isSama) {
-                    $pembeli = Identitas::where('nama_lengkap', $request->nama_agen)->first();
-                    $alamatFinal = $pembeli ? $pembeli->alamat : 'Alamat sesuai identitas';
+                    $agen = Identitas::where('nama_lengkap', $request->nama_agen)->first();
+
+                    // Menggunakan isset dan perbandingan string kosong yang lebih clean & aman dari ParseError
+                    if ($agen && !empty($agen->alamat)) {
+                        $alamatFinal = $agen->alamat;
+                    } else {
+                        $alamatFinal = 'Alamat belum diatur pada master data agen';
+                    }
+                } else {
+                    $alamatFinal = $request->alamat_penerima;
+                }
+
+                // Pengaman ekstra jika variabel tetap kosong
+                if (empty($alamatFinal)) {
+                    $alamatFinal = 'Alamat tidak terisi / kosong';
                 }
 
                 // 4. Simpan Header Order
@@ -146,9 +169,7 @@ class MarketingOrderController extends Controller
 
                     $book = Book::find($idBuku);
                     $jumlahPesanan = $request->qty[$key] ?? 1;
-                    $isPromo = $request->promo_item[$key] ?? 0;
 
-                    // Eksekusi pemotongan karena validasi di atas sudah lolos sepenuhnya
                     $book->decrement('stok_gudang', $jumlahPesanan);
 
                     $hargaSatuan = $book->harga_jual ?? 0;
@@ -160,7 +181,6 @@ class MarketingOrderController extends Controller
                         'jumlah'       => $jumlahPesanan,
                         'harga_satuan' => $hargaSatuan,
                         'subtotal'     => $subtotal,
-                        // 'promo_item'  => $isPromo, // <--- Hapus comment jika kolom sudah ada di tabel order_details
                     ]);
 
                     $totalSemuaBuku += $subtotal;
@@ -172,7 +192,6 @@ class MarketingOrderController extends Controller
                 ]);
             });
 
-            // Redirect aman dieksekusi setelah database sukses melakukan commit secara utuh
             return redirect()->back()->with('success', "Invoice #{$noInvoice} berhasil disimpan & stok dipotong!");
 
         } catch (\Exception $e) {
@@ -187,31 +206,24 @@ class MarketingOrderController extends Controller
     {
         try {
             return DB::transaction(function () use ($id) {
-                // Ambil data order asli dari database
                 $orderRaw = Order::findOrFail($id);
 
                 if ($orderRaw->status == 'Lunas') {
                     throw new \Exception("Invoice ini sudah berstatus lunas sebelumnya.");
                 }
 
-                // 1. Update status internal invoice di Marketing
                 $orderRaw->update([
                     'status' => 'Lunas',
                     'tercatat_finance' => 1
                 ]);
 
-                // FIX UTAMA: Tarik ulang data segar dari database untuk memastikan properti seperti no_invoice terisi penuh
                 $order = $orderRaw->fresh();
-
-                // Deteksi nomor invoice menggunakan fallback nama kolom database
                 $nomorInvoiceFix = $order->no_invoice ?? $order->nomor_invoice ?? $order->invoice_no ?? $order->invoice;
 
-                // Fallback darurat jika Eloquent tetap gagal me-refresh string properti objek
                 if (empty($nomorInvoiceFix)) {
                     $nomorInvoiceFix = 'INV-' . date('Ymd') . '-' . str_pad($order->id, 4, '0', STR_PAD_LEFT);
                 }
 
-                // 2. Proteksi Kategori Finance
                 $category = Category::where('nama_kategori', 'like', '%Penjualan%')
                                     ->orWhere('nama_kategori', 'like', '%Invoice%')
                                     ->first();
@@ -222,14 +234,12 @@ class MarketingOrderController extends Controller
                     ]);
                 }
 
-                // 3. Proteksi Akun Kas/Bank Keuangan
                 $account = Account::where('nama_akun', 'like', '%Kas%')->first() ?? Account::first();
 
                 if (!$account) {
                     throw new \Exception("Akun Kas/Bank belum diatur di sistem Finance.");
                 }
 
-                // 4. Suntik ke tabel Mutasi Finance
                 Mutasi::create([
                     'account_id'  => $account->id,
                     'category_id' => $category->id,
@@ -241,7 +251,6 @@ class MarketingOrderController extends Controller
                     'jenis'       => 'INVOICE',
                 ]);
 
-                // 5. Kirim ke tabel rekap Penjualan
                 $totalItem = OrderDetail::where('order_id', $order->id)->sum('jumlah');
 
                 Penjualan::create([
@@ -253,7 +262,7 @@ class MarketingOrderController extends Controller
                 ]);
 
                 return redirect()->back()->with('success', 'Invoice berhasil dilunasi, rekap penjualan terisi, dan kas finance otomatis bertambah!');
-            });
+                });
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Gagal memproses pelunasan: ' . $e->getMessage());
         }
@@ -268,15 +277,12 @@ class MarketingOrderController extends Controller
             return DB::transaction(function () use ($id) {
                 $order = Order::findOrFail($id);
 
-                // 1. Cegah penghapusan jika sudah Lunas
                 if (strtolower($order->status) == 'lunas') {
                     throw new \Exception("Invoice yang sudah Lunas tidak boleh dihapus langsung. Batalkan status lunas terlebih dahulu.");
                 }
 
-                // 2. Ambil detail order secara manual menggunakan query builder untuk menghindari crash relasi Eloquent
                 $orderDetails = OrderDetail::where('order_id', $order->id)->get();
 
-                // 3. Kembalikan Stok Buku ke Gudang
                 foreach ($orderDetails as $detail) {
                     $book = Book::find($detail->buku_id);
                     if ($book) {
@@ -284,7 +290,6 @@ class MarketingOrderController extends Controller
                     }
                 }
 
-                // 4. Hapus Detail baru kemudian Hapus Header Order
                 OrderDetail::where('order_id', $order->id)->delete();
                 $order->delete();
 
@@ -305,24 +310,22 @@ class MarketingOrderController extends Controller
     }
 
     /**
- * Mengambil alamat agen secara real-time untuk fitur Auto-Suggest via AJAX
- */
+     * Mengambil alamat agen secara real-time untuk fitur Auto-Suggest via AJAX
+     */
     public function getAlamatAgen($nama)
-{
-    // Cari data identitas berdasarkan nama_lengkap
-    $pembeli = Identitas::where('nama_lengkap', $nama)->first();
+    {
+        $pembeli = Identitas::where('nama_lengkap', $nama)->first();
 
-    if ($pembeli) {
+        if ($pembeli) {
+            return response()->json([
+                'status' => 'success',
+                'alamat' => $pembeli->alamat ?? ''
+            ]);
+        }
+
         return response()->json([
-            'status' => 'success',
-            'alamat' => $pembeli->alamat ?? ''
-        ]);
+            'status' => 'error',
+            'alamat' => ''
+        ], 404);
     }
-
-    return response()->json([
-        'status' => 'error',
-        'alamat' => ''
-    ], 404);
-}
-
 }
