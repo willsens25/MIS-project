@@ -159,6 +159,7 @@ class MarketingOrderController extends Controller
                     'ongkir'            => $request->ongkir ?? 0,
                     'status'            => 'Pending',
                     'total_tagihan'     => 0,
+                    'total_semau_buku'  => 0,
                 ]);
 
                 $totalSemuaBuku = 0;
@@ -262,7 +263,7 @@ class MarketingOrderController extends Controller
                 ]);
 
                 return redirect()->back()->with('success', 'Invoice berhasil dilunasi, rekap penjualan terisi, dan kas finance otomatis bertambah!');
-                });
+            });
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Gagal memproses pelunasan: ' . $e->getMessage());
         }
@@ -327,5 +328,103 @@ class MarketingOrderController extends Controller
             'status' => 'error',
             'alamat' => ''
         ], 404);
+    }
+
+    /**
+     * Mengunduh berkas rekap Excel menggunakan HTML Stream (Rupiah & Invoice Fixed)
+     */
+    public function eksporExcel(Request $request)
+    {
+        $search = $request->get('search');
+        $status = $request->get('status');
+
+        $orders = Order::with(['details.book'])
+            ->when($search, function($query) use ($search) {
+                $query->where('no_invoice', 'like', "%{$search}%")
+                    ->orWhere('nama_pembeli', 'like', "%{$search}%")
+                    ->orWhere('nama_penerima', 'like', "%{$search}%");
+            })
+            ->when($status, function($query) use ($status) {
+                $query->where('status', $status);
+            })
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $fileName = 'Rekap_Penjualan_Lamrimnesia_' . date('Ymd_His') . '.xls';
+
+        $headers = [
+            "Content-Type"        => "application/vnd.ms-excel",
+            "Content-Disposition" => "attachment; filename=$fileName",
+            "Pragma"              => "no-cache",
+            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+            "Expires"             => "0"
+        ];
+
+        $callback = function() use($orders) {
+            $file = fopen('php://output', 'w');
+
+            // Set up format HTML Table agar dimengerti Microsoft Excel dengan sempurna
+            echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+            echo '<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"></head>';
+            echo '<body>';
+            echo '<table border="1">';
+
+            // Render Header Kolom dengan style warna background abu-abu tipis
+            echo '<tr style="background-color: #f2f2f2; font-weight: bold; text-align: center;">';
+            echo '<th>No Invoice</th>';
+            echo '<th>Tanggal Pesan</th>';
+            echo '<th>Via / Platform</th>';
+            echo '<th>Nama Pembeli (Agen)</th>';
+            echo '<th>Nama Penerima</th>';
+            echo '<th>Alamat Pengiriman</th>';
+            echo '<th>Ekspedisi</th>';
+            echo '<th>Ongkir</th>';
+            echo '<th>Total Tagihan</th>';
+            echo '<th>Status Nota</th>';
+            echo '<th>Rincian Buku (Judul x QTY)</th>';
+            echo '</tr>';
+
+            foreach ($orders as $order) {
+                $rincianBuku = [];
+                $orderDetails = $order->details ?? [];
+
+                foreach ($orderDetails as $detail) {
+                    $judul = $detail->book->judul ?? 'Buku ID: ' . $detail->buku_id;
+                    $rincianBuku[] = $judul . " (" . $detail->jumlah . " pcs)";
+                }
+
+                // Gunakan tag <br> untuk memisahkan baris buku di dalam satu sel Excel
+                $teksRincian = implode('<br>', $rincianBuku);
+
+                // Fallback pencarian field invoice jika ada inkonsistensi nama kolom database
+                $invoiceTerpilih = $order->no_invoice ?? $order->nomor_invoice ?? $order->invoice ?? 'N/A';
+
+                echo '<tr>';
+                // Menjaga No Invoice tetap bertipe teks agar digit / strip (-) tidak dirusak Excel
+                echo '<td style="vnd.ms-excel.numberformat:@">' . e($invoiceTerpilih) . '</td>';
+                echo '<td>' . e($order->tanggal_pesan) . '</td>';
+                echo '<td>' . e($order->via) . '</td>';
+                echo '<td>' . e($order->nama_pembeli) . '</td>';
+                echo '<td>' . e($order->nama_penerima) . '</td>';
+                echo '<td>' . e($order->alamat_penerima) . '</td>';
+                echo '<td>' . e($order->ekspedisi) . '</td>';
+
+                // Format Akuntansi Rupiah Resmi Excel asli (Tetap bisa dijumlahkan pakai rumus matematika)
+                echo '<td style="vnd.ms-excel.numberformat:\'Rp \'#,##0; text-align: right;">' . (int)$order->ongkir . '</td>';
+                echo '<td style="vnd.ms-excel.numberformat:\'Rp \'#,##0; text-align: right; font-weight: bold;">' . (int)$order->total_tagihan . '</td>';
+
+                echo '<td style="text-align: center;">' . e($order->status ?? 'Pending') . '</td>';
+                echo '<td>' . $teksRincian . '</td>';
+                echo '</tr>';
+            }
+
+            echo '</table>';
+            echo '</body>';
+            echo '</html>';
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

@@ -36,10 +36,14 @@
 
     <div class="max-w-4xl mx-auto bg-white border border-slate-200 shadow-xl rounded-xl p-8 md:p-12 print-card">
 
+        <!-- HEADER INVOICE DENGAN LOGO -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200 pb-8 gap-4">
-            <div>
-                <h1 class="text-3xl font-extrabold tracking-tight text-blue-600">Lamrimnesia</h1>
-                <p class="text-sm text-slate-500 mt-1">Sistem Manajemen Penjualan & Distribusi Buku</p>
+            <div class="flex items-center gap-4">
+                <img src="{{ asset('img/Logo Lamrimnesia.png') }}" alt="Logo Lamrimnesia" class="h-16 w-auto object-contain">
+                <div>
+                    <h1 class="text-2xl font-black tracking-tight text-slate-900">Lamrimnesia</h1>
+                    <p class="text-sm text-slate-500 mt-0.5">Sistem Manajemen Penjualan & Distribusi Buku</p>
+                </div>
             </div>
             <div class="text-left sm:text-right">
                 <h2 class="text-2xl font-bold tracking-wider text-slate-400 uppercase">Invoice</h2>

@@ -143,6 +143,9 @@ Route::middleware('auth')->group(function () {
         // FITUR BARU: Auto-Suggest Alamat Pembeli secara Real-Time via AJAX
         Route::get('/get-alamat-agen/{nama}', [MarketingOrderController::class, 'getAlamatAgen'])->name('marketing.getAlamatAgen');
 
+        // 📥 FITUR BARU: Ekspor Rekap Penjualan ke Excel/CSV
+        Route::get('/ekspor', [MarketingOrderController::class, 'eksporExcel'])->name('marketing.ekspor');
+
         // --- ROUTE MANAJEMEN AGEN (MarketingController) ---
         Route::post('/tambah-agen', [MarketingController::class, 'tambahAgen'])->name('mad.tambah-agen');
         Route::post('/update-agen/{id}', [MarketingController::class, 'updateAgen'])->name('mad.update-agen');

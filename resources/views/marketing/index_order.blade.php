@@ -38,6 +38,11 @@
                 <div class="col-md-2">
                     <button type="submit" class="btn btn-secondary w-100 rounded-pill">Filter</button>
                 </div>
+                <div class="col-md-3">
+                    <a href="{{ route('marketing.ekspor', request()->all()) }}" id="btn-ekspor" class="btn btn-success w-100 rounded-pill shadow-sm">
+                        <i class="fas fa-file-excel mr-1"></i> Ekspor Rekap (Excel)
+                    </a>
+                </div>
             </form>
         </div>
     </div>
@@ -76,15 +81,22 @@ document.addEventListener('DOMContentLoaded', function () {
     const statusSelect = document.getElementById('status-select');
     const tableBody = document.getElementById('order-table-body');
     const paginationContainer = document.getElementById('pagination-container');
+    const btnEkspor = document.getElementById('btn-ekspor');
     const form = document.getElementById('filter-form');
 
     let debounceTimer;
 
-    // Fungsi utama mengambil data parsial HTML via AJAX
+    // Fungsi utama mengambil data parsial HTML via AJAX & Sinkronisasi URL Ekspor
     function fetchOrders() {
         const formData = new FormData(form);
         const params = new URLSearchParams(formData).toString();
         const url = `${form.action}?${params}`;
+
+        // UPDATE LINK EKSPOR SECARA DINAMIS: Agar ketika user mengetik/memilih filter via AJAX,
+        // link download Excel ikut membaca filter terbaru tanpa harus klik tombol filter manual.
+        if (btnEkspor) {
+            btnEkspor.href = `{{ route('marketing.ekspor') }}?${params}`;
+        }
 
         // Beri efek redup tipis sebagai indikator data sedang di-load
         tableBody.style.opacity = '0.5';
@@ -150,6 +162,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 const newPagination = document.getElementById('ajax-pagination-links');
                 if (newPagination) {
                     paginationContainer.innerHTML = newPagination.innerHTML;
+                }
+
+                // Ambil query string dari halaman baru untuk mensinkronkan ulang link ekspor excel
+                const currentQueryString = url.split('?')[1];
+                if (currentQueryString && btnEkspor) {
+                    btnEkspor.href = `{{ route('marketing.ekspor') }}?${currentQueryString}`;
                 }
             });
         }
