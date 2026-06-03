@@ -3,12 +3,12 @@
 @section('content')
 <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 
-<div class="container-fluid py-4" x-data="orderSystem()">
+<div class="container-fluid py-4" x-data="orderSystem()" id="orderSystemRoot">
     {{-- HEADER HALAMAN --}}
     <div class="d-flex align-items-center justify-content-between mb-4">
         <div class="d-flex align-items-center">
             <h1 class="h3 mb-0 text-gray-800 font-weight-bold mr-3">SAPA-ALL Marketing</h1>
-            <a href="{{ route('order.index') }}" class="btn btn-sm btn-outline-secondary shadow-sm rounded-pill px-3">
+            <a href="{{ route('marketing.order.list') }}" class="btn btn-sm btn-outline-secondary shadow-sm rounded-pill px-3">
                 <i class="fas fa-history mr-1"></i> Lihat Riwayat Invoice
             </a>
         </div>
@@ -80,12 +80,11 @@
                                 <label class="custom-control-label font-weight-bold" for="samaPenerima">Penerima sama dengan pembeli</label>
                             </div>
 
-                            {{-- Ditambahkan ID pada textarea alamat_penerima agar bisa di-inject via JS --}}
                             <div x-show="!samaPenerima" x-transition class="mt-3">
                                 <label class="small font-weight-bold">Nama Penerima Berbeda</label>
-                                <input type="text" name="nama_penerima" class="form-control mb-2 rounded-pill" placeholder="Nama Penerima">
+                                <input type="text" name="nama_penerima" class="form-control mb-2 rounded-pill" placeholder="Nama Penerima" :required="!samaPenerima">
                                 <label class="small font-weight-bold">Alamat Pengiriman</label>
-                                <textarea name="alamat_penerima" id="alamat_penerima" class="form-control rounded" rows="2" placeholder="Alamat Pengiriman Lengkap"></textarea>
+                                <textarea name="alamat_penerima" id="alamat_penerima" class="form-control rounded" rows="2" placeholder="Alamat Pengiriman Lengkap" x-model="alamatPenerima" :required="!samaPenerima"></textarea>
                             </div>
                         </div>
 
@@ -103,12 +102,11 @@
                                 <tbody>
                                     <template x-for="(item, index) in items" :key="item.id">
                                         <tr class="border-bottom">
-                                            {{-- Kolom 1: Buku & Potongan Harga di bawahnya --}}
+                                            {{-- Kolom 1: Buku & Potongan Harga --}}
                                             <td class="pl-3 py-3 border-0">
-                                                {{-- 1. Select Buku --}}
                                                 <div class="mb-2">
                                                     <select :name="'buku_id['+index+']'"
-                                                            class="form-control shadow-sm border-0 bg-light"
+                                                            class="form-control shadow-sm border-0 bg-light rounded-pill"
                                                             x-model="item.buku_id" required>
                                                         <option value="">-- Pilih Buku --</option>
                                                         @foreach($books as $b)
@@ -117,8 +115,7 @@
                                                     </select>
                                                 </div>
 
-                                                {{-- 2. Input Potongan Harga --}}
-                                                <div x-show="item.buku_id" style="max-width: 200px;">
+                                                <div x-show="item.buku_id" style="max-width: 200px;" x-transition>
                                                     <div class="input-group input-group-sm shadow-sm border rounded">
                                                         <div class="input-group-prepend">
                                                             <span class="input-group-text bg-light border-0 small font-weight-bold text-danger">Potongan Rp</span>
@@ -196,7 +193,7 @@
                                             <span x-text="titles[item.buku_id]"></span>
                                             (<span x-text="item.qty"></span> pcs)
                                             <template x-if="item.promo_item > 0">
-                                                <small class="text-danger d-block">Potongan: Rp <span x-text="(item.promo_item * item.qty).toLocaleString('id-ID')"></span></small>
+                                                <small class="text-danger d-block">Potongan: Rp <span x-text="(item.promo_item * item.qty).toLocaleString('id-ID')"></span> / item</small>
                                             </template>
                                         </span>
                                         <span class="text-dark font-weight-bold align-self-center">
@@ -282,13 +279,15 @@
                                                 <a href="{{ route('marketing.order.print', $inv->id) }}" target="_blank" class="btn btn-info btn-action mr-1" title="Cetak Invoice">
                                                     <i class="fas fa-print"></i>
                                                 </a>
-                                                <form action="{{ route('mad.tandai-lunas', $inv->id) }}" method="POST" class="mr-1">
+                                                {{-- FIX: Mengubah route mad.tandai-lunas --}}
+                                                <form action="{{ route('marketing.invoice.lunas', $inv->id) }}" method="POST" class="mr-1">
                                                     @csrf
                                                     <button type="submit" class="btn btn-success btn-action" title="Tandai Lunas">
                                                         <i class="fas fa-check"></i>
                                                     </button>
                                                 </form>
-                                                <form action="{{ route('mad.hapus-invoice', $inv->id) }}" method="POST" onsubmit="return confirm('Hapus invoice ini? Stok akan dikembalikan ke gudang.')">
+                                                {{-- FIX: Mengubah route mad.hapus-invoice --}}
+                                                <form action="{{ route('marketing.invoice.hapus', $inv->id) }}" method="POST" onsubmit="return confirm('Hapus invoice ini? Stok akan dikembalikan ke gudang.')">
                                                     @csrf @method('DELETE')
                                                     <button type="submit" class="btn btn-outline-danger btn-action" title="Hapus">
                                                         <i class="fas fa-trash"></i>
@@ -320,6 +319,7 @@
     document.addEventListener('alpine:init', () => {
         Alpine.data('orderSystem', () => ({
             samaPenerima: true,
+            alamatPenerima: '',
             ongkir: 0,
             prices: {
                 @foreach($books as $b)
@@ -371,6 +371,10 @@
             },
 
             handleSubmit(event) {
+                if (this.samaPenerima) {
+                    this.alamatPenerima = '';
+                }
+
                 if (this.hasAnyError()) {
                     event.preventDefault();
                     alert('Gagal Menyimpan! Terdapat jumlah pesanan yang melebihi batas stok gudang.');
@@ -388,20 +392,16 @@
             allowClear: true
         });
 
-        // --- HOOK INTEGRASI SELECT2 DENGAN FETCH API ALAMAT ---
+        // Menghubungkan perubahan Select2 ke state Alpine.js dengan aman
         selectPembeli.on('change', function () {
             const namaTerpilih = this.value;
-            const alamatTextarea = document.getElementById('alamat_penerima');
-
-            // Jika alamat_penerima tidak tampil/di-hide Alpine, abaikan pengisian
-            if (!alamatTextarea) return;
+            const alpineComponent = Alpine.$data(document.getElementById('orderSystemRoot'));
 
             if (!namaTerpilih) {
-                alamatTextarea.value = '';
+                alpineComponent.alamatPenerima = '';
                 return;
             }
 
-            // Panggil Endpoint API internal Laravel yang baru kita pasang
             fetch(`/marketing/get-alamat-agen/${encodeURIComponent(namaTerpilih)}`)
                 .then(response => {
                     if (!response.ok) throw new Error('Alamat tidak ditemukan');
@@ -409,14 +409,14 @@
                 })
                 .then(data => {
                     if (data.status === 'success' && data.alamat) {
-                        alamatTextarea.value = data.alamat;
+                        alpineComponent.alamatPenerima = data.alamat;
                     } else {
-                        alamatTextarea.value = '';
+                        alpineComponent.alamatPenerima = '';
                     }
                 })
                 .catch(error => {
                     console.error('Gagal mengambil alamat:', error);
-                    alamatTextarea.value = '';
+                    alpineComponent.alamatPenerima = '';
                 });
         });
 
@@ -439,14 +439,8 @@
     .btn-action:hover { transform: translateY(-2px); filter: brightness(90%); }
     .table-hover tbody tr:hover { background-color: rgba(78, 115, 223, 0.05); }
 
-    .custom-alert {
-        position: relative;
-        z-index: 1050;
-    }
-    .custom-alert .close {
-        padding: 0.75rem 1.25rem;
-        opacity: 0.8;
-    }
+    .custom-alert { position: relative; z-index: 1050; }
+    .custom-alert .close { padding: 0.75rem 1.25rem; opacity: 0.8; }
     .custom-alert .close:hover { opacity: 1; }
 
     .table-responsive::-webkit-scrollbar { width: 5px; }
@@ -454,17 +448,12 @@
     .table-responsive::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
 
     .table td, .table th { vertical-align: middle !important; }
-
-    /* Styling input group promo kecil di bawah select */
     .input-group-sm .input-group-text {
         font-size: 11px;
         padding: 0.25rem 0.5rem;
         background-color: #f8f9fc !important;
     }
 
-    /* ==========================================================================
-       OVERRIDE SELECT2 SUPRAY PILLED (ROUNDED)
-       ========================================================================== */
     .select2-container--bootstrap4 .select2-selection--single {
         border-radius: 50px !important;
         height: calc(1.5em + 0.75rem + 2px) !important;
@@ -474,32 +463,19 @@
         box-shadow: 0 .125rem .25rem rgba(0,0,0,.075) !important;
         transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out !important;
     }
-
     .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered {
-        padding-left: 0 !important;
-        padding-right: 20px !important;
-        color: #6e707e !important;
+        padding-left: 0 !important; padding-right: 20px !important; color: #6e707e !important;
     }
-
     .select2-container--bootstrap4 .select2-selection--single .select2-selection__arrow {
-        right: 15px !important;
-        height: 100% !important;
+        right: 15px !important; height: 100% !important;
     }
-
     .select2-container--bootstrap4.select2-container--focus .select2-selection--single {
-        border-color: #bac8f3 !important;
-        box-shadow: 0 0 0 0.2rem rgba(78,115,223,.25) !important;
+        border-color: #bac8f3 !important; box-shadow: 0 0 0 0.2rem rgba(78,115,223,.25) !important;
     }
-
     .select2-dropdown {
-        border-radius: 15px !important;
-        overflow: hidden !important;
-        border: 1px solid #d1d3e2 !important;
-        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important;
+        border-radius: 15px !important; overflow: hidden !important;
+        border: 1px solid #d1d3e2 !important; box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important;
     }
-
-    .select2-search--dropdown .select2-search__field {
-        border-radius: 8px !important;
-    }
+    .select2-search--dropdown .select2-search__field { border-radius: 8px !important; }
 </style>
 @endsection

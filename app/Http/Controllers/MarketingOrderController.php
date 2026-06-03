@@ -62,11 +62,11 @@ class MarketingOrderController extends Controller
     }
 
     /**
-     * Menyimpan Data Pesanan Baru & Potong Stok Otomatis
+     * Menyimpan Data Pesanan Baru & Potong Stok Otomatis (VERSI AMAN ANTI-RACE CONDITION)
      */
     public function store(Request $request)
     {
-        // 1. Validasi Input yang Disesuaikan dengan Kondisi Form (Alamat Opsional jika dicentang 'sama_penerima')
+        // 1. Validasi Input yang Disesuaikan dengan Kondisi Form
         $request->validate([
             'tanggal_pesan'   => 'required|date',
             'nama_agen'       => 'required|string|exists:identitas,nama_lengkap',
@@ -93,7 +93,10 @@ class MarketingOrderController extends Controller
 
             DB::transaction(function () use ($request, &$noInvoice) {
 
-                // --- LANGKAH PERLINDUNGAN AWAL: Cek ketersediaan seluruh stok ---
+                // Array penampung objek buku yang berhasil dikunci secara eksklusif
+                $lockedBooks = [];
+
+                // --- LANGKAH PERLINDUNGAN AWAL: Cek ketersediaan seluruh stok & Row Locking ---
                 foreach ($request->buku_id as $key => $idBuku) {
                     if (!$idBuku) continue;
 
@@ -107,6 +110,9 @@ class MarketingOrderController extends Controller
                     if ($book->stok_gudang < $jumlahPesanan) {
                         throw new \Exception("Stok buku '{$book->judul}' tidak mencukupi di database. Sisa stok riil: {$book->stok_gudang} pcs. Mohon sesuaikan kembali.");
                     }
+
+                    // Simpan objek yang terkunci agar tidak query ulang di looping potong stok
+                    $lockedBooks[$key] = $book;
                 }
 
                 // 2. Generate Nomor Invoice (Menggunakan substr standar php aman)
@@ -125,14 +131,13 @@ class MarketingOrderController extends Controller
 
                 $noInvoice = "INV-" . $tanggal . "-" . str_pad($urutanBaru, 4, '0', STR_PAD_LEFT);
 
-                // 3. Logika Penentuan Alamat & Penerima (Sudah Diperbaiki Strukturnya)
+                // 3. Logika Penentuan Alamat & Penerima
                 $isSama = $request->has('sama_penerima');
                 $namaPenerima = $isSama ? $request->nama_agen : ($request->nama_penerima ?? $request->nama_agen);
 
                 if ($isSama) {
                     $agen = Identitas::where('nama_lengkap', $request->nama_agen)->first();
 
-                    // Menggunakan isset dan perbandingan string kosong yang lebih clean & aman dari ParseError
                     if ($agen && !empty($agen->alamat)) {
                         $alamatFinal = $agen->alamat;
                     } else {
@@ -164,13 +169,15 @@ class MarketingOrderController extends Controller
 
                 $totalSemuaBuku = 0;
 
-                // 5. Simpan Detail Item & Eksekusi Potong Stok
+                // 5. Simpan Detail Item & Eksekusi Potong Stok Aman
                 foreach ($request->buku_id as $key => $idBuku) {
                     if (!$idBuku) continue;
 
-                    $book = Book::find($idBuku);
+                    // Ambil kembali objek buku yang sudah ter-lock di langkah awal
+                    $book = $lockedBooks[$key];
                     $jumlahPesanan = $request->qty[$key] ?? 1;
 
+                    // Mengurangi stok pada record yang sedang dikunci
                     $book->decrement('stok_gudang', $jumlahPesanan);
 
                     $hargaSatuan = $book->harga_jual ?? 0;
@@ -227,6 +234,7 @@ class MarketingOrderController extends Controller
 
                 $category = Category::where('nama_kategori', 'like', '%Penjualan%')
                                     ->orWhere('nama_kategori', 'like', '%Invoice%')
+                                    ->orWhere('nama_kategori', 'like', '%Penjualan & Invoice%')
                                     ->first();
 
                 if (!$category) {
@@ -270,34 +278,54 @@ class MarketingOrderController extends Controller
     }
 
     /**
-     * Membatalkan Invoice & Mengembalikan Stok Barang ke Gudang
+     * Membatalkan Invoice (Cancel Order), Mengembalikan Stok, dan Membersihkan Data Keuangan
      */
     public function hapusInvoice($id)
     {
         try {
             return DB::transaction(function () use ($id) {
-                $order = Order::findOrFail($id);
+                // 1. Ambil data order beserta relasi detail itemnya
+                $order = Order::with('details')->findOrFail($id);
 
-                if (strtolower($order->status) == 'lunas') {
-                    throw new \Exception("Invoice yang sudah Lunas tidak boleh dihapus langsung. Batalkan status lunas terlebih dahulu.");
+                // Validasi: Jika status sudah Cancelled, batalkan eksekusi
+                if ($order->status === 'Cancelled') {
+                    throw new \Exception("Invoice ini sudah dibatalkan sebelumnya.");
                 }
 
-                $orderDetails = OrderDetail::where('order_id', $order->id)->get();
-
+                // 2. KEMBALIKAN STOK BARANG KE GUDANG (RESTOCK)
+                $orderDetails = $order->details ?? [];
                 foreach ($orderDetails as $detail) {
                     $book = Book::find($detail->buku_id);
                     if ($book) {
+                        // Tambahkan kembali stok gudang berdasarkan jumlah pesanan yang dibatalkan
                         $book->increment('stok_gudang', $detail->jumlah);
                     }
                 }
 
-                OrderDetail::where('order_id', $order->id)->delete();
-                $order->delete();
+                // 3. SINKRONISASI FINANCE (Hapus log finansial jika sebelumnya orderan ini sudah Lunas)
+                if ($order->tercatat_finance == 1 || strtolower($order->status) == 'lunas') {
 
-                return redirect()->back()->with('success', 'Invoice dibatalkan & stok buku telah dikembalikan ke gudang!');
+                    $nomorInvoiceFix = $order->no_invoice ?? $order->nomor_invoice ?? $order->invoice_no ?? $order->invoice;
+
+                    if (!empty($nomorInvoiceFix)) {
+                        // Hapus otomatis pencatatan mutasi kas masuk terkait invoice ini
+                        Mutasi::where('keterangan', 'like', '%' . $nomorInvoiceFix . '%')->delete();
+
+                        // Hapus rekap tabel penjualan di finance agar omset bulanan akurat
+                        Penjualan::where('no_invoice', $nomorInvoiceFix)->delete();
+                    }
+                }
+
+                // 4. SOFT UPDATE STATUS ORDER UTAMA (Data histori tetap ada di tabel orders)
+                $order->update([
+                    'status' => 'Cancelled',
+                    'tercatat_finance' => 0 // Set kembali ke 0 karena uang batal masuk
+                ]);
+
+                return redirect()->back()->with('success', "Invoice #{$order->no_invoice} berhasil dibatalkan (Cancelled) & stok buku telah dikembalikan ke gudang!");
             });
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Gagal menghapus: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal mematikan/membatalkan invoice: ' . $e->getMessage());
         }
     }
 
@@ -419,7 +447,7 @@ class MarketingOrderController extends Controller
             }
 
             echo '</table>';
-            echo '</body>';
+            echo '<body>';
             echo '</html>';
 
             fclose($file);
