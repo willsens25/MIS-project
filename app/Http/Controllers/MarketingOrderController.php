@@ -278,7 +278,8 @@ class MarketingOrderController extends Controller
     }
 
     /**
-     * Membatalkan Invoice (Cancel Order), Mengembalikan Stok, dan Membersihkan Data Keuangan
+     * Membatalkan Invoice (Cancel Order), Mengembalikan Stok (VERSI AMAN ANTI-RACE CONDITION),
+     * dan Membersihkan Data Keuangan
      */
     public function hapusInvoice($id)
     {
@@ -292,10 +293,13 @@ class MarketingOrderController extends Controller
                     throw new \Exception("Invoice ini sudah dibatalkan sebelumnya.");
                 }
 
-                // 2. KEMBALIKAN STOK BARANG KE GUDANG (RESTOCK)
+                // 2. KEMBALIKAN STOK BARANG KE GUDANG (RESTOCK DENGAN ROW LOCKING)
                 $orderDetails = $order->details ?? [];
                 foreach ($orderDetails as $detail) {
-                    $book = Book::find($detail->buku_id);
+                    // SUNTIKAN KEAMANAN: Mengunci baris data buku sebelum menambahkan stok kembali
+                    // Ini mencegah lonjakan stok jika tombol cancel diklik berkali-kali secara bersamaan
+                    $book = Book::lockForUpdate()->find($detail->buku_id);
+
                     if ($book) {
                         // Tambahkan kembali stok gudang berdasarkan jumlah pesanan yang dibatalkan
                         $book->increment('stok_gudang', $detail->jumlah);

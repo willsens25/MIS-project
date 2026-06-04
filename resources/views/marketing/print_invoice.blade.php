@@ -26,8 +26,8 @@
 <body class="bg-slate-100 font-sans text-slate-800 antialiased min-h-screen py-8">
 
     <div class="max-w-4xl mx-auto mb-6 flex justify-between items-center px-4 no-print">
-        <a href="{{ route('marketing') }}" class="inline-flex items-center text-sm font-medium text-slate-600 hover:text-slate-900 transition">
-            ← Kembali ke Daftar Order
+        <a href="/marketing/order" class="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-4 py-2.5 rounded-lg shadow-sm transition">
+            ⬅️ Kembali
         </a>
         <button onclick="window.print()" class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm px-5 py-2.5 rounded-lg shadow-sm transition inline-flex items-center gap-2">
             🖨️ Cetak / Simpan PDF
@@ -36,7 +36,6 @@
 
     <div class="max-w-4xl mx-auto bg-white border border-slate-200 shadow-xl rounded-xl p-8 md:p-12 print-card">
 
-        <!-- HEADER INVOICE DENGAN LOGO -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200 pb-8 gap-4">
             <div class="flex items-center gap-4">
                 <img src="{{ asset('img/Logo Lamrimnesia.png') }}" alt="Logo Lamrimnesia" class="h-16 w-auto object-contain">
@@ -96,7 +95,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-slate-700">
-                    @forelse($order->orderDetails ?? $order->details ?? [] as $index => $detail)
+                    @forelse($order->details as $index => $detail)
                         <tr class="hover:bg-slate-50/50 transition">
                             <td class="py-3.5 px-4 text-center text-slate-400 font-medium">{{ $index + 1 }}</td>
                             <td class="py-3.5 px-4 font-medium text-slate-900">
@@ -128,7 +127,7 @@
                 <div class="flex justify-between text-slate-600 font-medium">
                     <span>Total Item (Buku):</span>
                     <span class="text-slate-900 font-semibold">
-                        {{ ($order->orderDetails ?? $order->details ?? collect())->sum('jumlah') }} pcs
+                        {{ $order->details->sum('jumlah') }} pcs
                     </span>
                 </div>
                 <div class="flex justify-between text-slate-600 font-medium">

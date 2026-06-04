@@ -28,6 +28,7 @@ use App\Http\Controllers\{
 | Public Routes
 |--------------------------------------------------------------------------
 */
+
 Route::get('/', function () { return view('welcome'); });
 
 // Route Global untuk Invoice & Report
@@ -43,11 +44,13 @@ Route::middleware('guest')->group(function () {
 
 Route::match(['get', 'post'], '/logout', [AuthController::class, 'logout'])->name('logout');
 
+
 /*
 |--------------------------------------------------------------------------
 | Private Routes (Wajib Login)
 |--------------------------------------------------------------------------
 */
+
 Route::middleware('auth')->group(function () {
 
     // Dashboard Utama
@@ -56,7 +59,11 @@ Route::middleware('auth')->group(function () {
     // Integrasi Global Keuangan
     Route::get('/finance/bayar/{id}', [FinanceController::class, 'konfirmasiBayarInvoice'])->name('finance.bayar_global');
 
-    /* |--- KHUSUS DIREKTORAT (Divisi 1) --- */
+    /*
+    |--------------------------------------------------------------------------
+    | KHUSUS DIREKTORAT (Divisi 1)
+    |--------------------------------------------------------------------------
+    */
     Route::middleware(['checkRole:1'])->group(function () {
         Route::get('/divisi/init', [DivisiController::class, 'initialize'])->name('divisi.init');
 
@@ -94,88 +101,106 @@ Route::middleware('auth')->group(function () {
         Route::resource('kegiatans', KegiatanController::class);
     });
 
-    /* |--- KHUSUS BENDAHARA / FINANCE (Divisi 2) --- */
+    /*
+    |--------------------------------------------------------------------------
+    | KHUSUS BENDAHARA / FINANCE (Divisi 2)
+    |--------------------------------------------------------------------------
+    */
     Route::middleware(['checkRole:2'])->group(function () {
-    Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');
+        Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');
 
-    // --- PINDAHKAN KE SINI (DI LUAR PREFIX 'bendahara') ---
-    Route::get('/finance/persetujuan', [FinanceController::class, 'persetujuanCetak'])->name('finance.persetujuan');
-    Route::post('/finance/proses-cetak/{id}', [FinanceController::class, 'prosesCetak'])->name('finance.prosesCetak');
+        // Route Persetujuan Cetak & Laporan Keuangan
+        Route::get('/finance/persetujuan', [FinanceController::class, 'persetujuanCetak'])->name('finance.persetujuan');
+        Route::post('/finance/proses-cetak/{id}', [FinanceController::class, 'prosesCetak'])->name('finance.prosesCetak');
+        Route::get('/finance/download-report', [FinanceController::class, 'downloadReport'])->name('finance.download_report');
+        Route::get('/finance/download-pdf/{id}', [FinanceController::class, 'downloadPdf'])->name('finance.download_pdf');
 
-    // Route report
-    Route::get('/finance/download-report', [FinanceController::class, 'downloadReport'])->name('finance.download_report');
-    Route::get('/finance/download-pdf/{id}', [FinanceController::class, 'downloadPdf'])->name('finance.download_pdf');
+        // Route Form Penjualan Baru
+        Route::get('/penjualan/baru', [PenjualanController::class, 'create'])->name('penjualan.create');
+        Route::post('/penjualan/simpan', [PenjualanController::class, 'store'])->name('penjualan.store');
 
-    Route::get('/penjualan/baru', [PenjualanController::class, 'create'])->name('penjualan.create');
-    Route::post('/penjualan/simpan', [PenjualanController::class, 'store'])->name('penjualan.store');
-
-    Route::prefix('bendahara')->group(function () {
-        Route::post('/simpan', [FinanceController::class, 'store_transaction'])->name('finance.store_transaction');
-        Route::put('/update/{id}', [FinanceController::class, 'update'])->name('finance.update');
-        Route::delete('/hapus/{id}', [FinanceController::class, 'destroy'])->name('finance.destroy');
-        Route::post('/confirm-invoice/{id}', [FinanceController::class, 'konfirmasiInvoice'])->name('finance.confirm_invoice');
-        Route::post('/konfirmasi-bayar/{id}', [FinanceController::class, 'konfirmasiBayarInvoice'])->name('finance.konfirmasi_pembayaran');
-        Route::post('/akun/simpan', [FinanceController::class, 'simpanAkun'])->name('finance.simpanAkun');
+        Route::prefix('bendahara')->group(function () {
+            Route::post('/simpan', [FinanceController::class, 'store_transaction'])->name('finance.store_transaction');
+            Route::put('/update/{id}', [FinanceController::class, 'update'])->name('finance.update');
+            Route::delete('/hapus/{id}', [FinanceController::class, 'destroy'])->name('finance.destroy');
+            Route::post('/confirm-invoice/{id}', [FinanceController::class, 'konfirmasiInvoice'])->name('finance.confirm_invoice');
+            Route::post('/konfirmasi-bayar/{id}', [FinanceController::class, 'konfirmasiBayarInvoice'])->name('finance.konfirmasi_pembayaran');
+            Route::post('/akun/simpan', [FinanceController::class, 'simpanAkun'])->name('finance.simpanAkun');
+        });
     });
-});
 
-    /* |--- KHUSUS PENERBITAN (Divisi 3) --- */
+    /*
+    |--------------------------------------------------------------------------
+    | KHUSUS PENERBITAN (Divisi 3)
+    |--------------------------------------------------------------------------
+    */
     Route::middleware(['checkRole:3'])->group(function () {
-    Route::prefix('penerbitan')->group(function () {
-        Route::get('/', [PenerbitanController::class, 'index'])->name('penerbitan');
-        Route::post('/tambah', [PenerbitanController::class, 'tambahBuku'])->name('pnb.tambahBuku');
-        Route::post('/update/{id}', [PenerbitanController::class, 'updateBuku'])->name('pnb.update-buku');
-        Route::delete('/hapus/{id}', [PenerbitanController::class, 'hapusBuku'])->name('pnb.hapus-buku');
-        Route::delete('/bulk-delete', [PenerbitanController::class, 'bulkDelete'])->name('pnb.bulkDelete');
-        Route::post('/update-harga/{id}', [PenerbitanController::class, 'updateHarga'])->name('penerbitan.updateHarga');
-        Route::post('/ajukan-cetak', [PenerbitanController::class, 'ajukanCetak'])->name('pnb.ajukanCetak');
+        Route::prefix('penerbitan')->group(function () {
+            Route::get('/', [PenerbitanController::class, 'index'])->name('penerbitan');
+            Route::post('/tambah', [PenerbitanController::class, 'tambahBuku'])->name('pnb.tambahBuku');
+            Route::post('/update/{id}', [PenerbitanController::class, 'updateBuku'])->name('pnb.update-buku');
+            Route::delete('/hapus/{id}', [PenerbitanController::class, 'hapusBuku'])->name('pnb.hapus-buku');
+            Route::delete('/bulk-delete', [PenerbitanController::class, 'bulkDelete'])->name('pnb.bulkDelete');
+            Route::post('/update-harga/{id}', [PenerbitanController::class, 'updateHarga'])->name('penerbitan.updateHarga');
+            Route::post('/ajukan-cetak', [PenerbitanController::class, 'ajukanCetak'])->name('pnb.ajukanCetak');
         });
     });
 
-    /* |--- KHUSUS MARKETING (Divisi 4) --- */
+    /*
+    |--------------------------------------------------------------------------
+    | KHUSUS MARKETING (Divisi 4)
+    |--------------------------------------------------------------------------
+    */
     Route::middleware(['checkRole:4'])->group(function () {
-    Route::prefix('marketing')->name('marketing.')->group(function () {
+        Route::prefix('marketing')->name('marketing.')->group(function () {
 
-        // --- ROUTE ORDER & BACKEND CORE ---
-        Route::get('/', [MarketingOrderController::class, 'create'])->name('index'); // Mengarah ke halaman utama marketing (create order)
-        Route::get('/order', [MarketingOrderController::class, 'index'])->name('order.list'); // Halaman list/rekap order
-        Route::post('/order/store', [MarketingOrderController::class, 'store'])->name('order.store');
-        Route::get('/order/print/{id}', [MarketingOrderController::class, 'printInvoice'])->name('order.print'); // Sudah diperbaiki (tidak double prefix)
+            // --- ROUTE ORDER & BACKEND CORE ---
+            Route::get('/', [MarketingOrderController::class, 'create'])->name('index');
+            Route::get('/order', [MarketingOrderController::class, 'index'])->name('order.list');
+            Route::post('/order/store', [MarketingOrderController::class, 'store'])->name('order.store');
+            Route::get('/order/print/{id}', [MarketingOrderController::class, 'printInvoice'])->name('order.print');
 
-        // FITUR BARU: Auto-Suggest Alamat Pembeli secara Real-Time via AJAX
-        Route::get('/get-alamat-agen/{nama}', [MarketingOrderController::class, 'getAlamatAgen'])->name('getAlamatAgen');
+            // Auto-Suggest Alamat Pembeli secara Real-Time via AJAX
+            Route::get('/get-alamat-agen/{nama}', [MarketingOrderController::class, 'getAlamatAgen'])->name('getAlamatAgen');
 
-        // 📥 FITUR BARU: Ekspor Rekap Penjualan ke Excel/CSV
-        Route::get('/ekspor', [MarketingOrderController::class, 'eksporExcel'])->name('ekspor');
+            // Ekspor Rekap Penjualan ke Excel/CSV
+            Route::get('/ekspor', [MarketingOrderController::class, 'eksporExcel'])->name('ekspor');
 
-        // --- ROUTE MANAJEMEN AGEN (MarketingController) ---
-        Route::prefix('agen')->name('agen.')->group(function () {
-            Route::post('/tambah', [MarketingController::class, 'tambahAgen'])->name('tambah');
-            Route::post('/update/{id}', [MarketingController::class, 'updateAgen'])->name('update');
-            Route::delete('/hapus/{id}', [MarketingController::class, 'hapusAgen'])->name('hapus');
+            // --- ROUTE MANAJEMEN AGEN (MarketingController) ---
+            Route::prefix('agen')->name('agen.')->group(function () {
+                Route::post('/tambah', [MarketingController::class, 'tambahAgen'])->name('tambah');
+                Route::post('/update/{id}', [MarketingController::class, 'updateAgen'])->name('update');
+                Route::delete('/hapus/{id}', [MarketingController::class, 'hapusAgen'])->name('hapus');
+            });
+
+            Route::get('/clear-notif', [MarketingController::class, 'clearNotif'])->name('clear-notif');
+
+            // --- ROUTE MANAJEMEN INVOICE ---
+            Route::prefix('invoice')->name('invoice.')->group(function () {
+                Route::get('/bayar/{id}', [MarketingController::class, 'bayarInvoice'])->name('bayar');
+                Route::get('/cetak/{id}', [MarketingController::class, 'cetakInvoice'])->name('cetak');
+                Route::post('/update/{id}', [MarketingController::class, 'updateInvoice'])->name('update');
+                Route::post('/lunas/{id}', [MarketingOrderController::class, 'tandaiLunas'])->name('lunas');
+                Route::delete('/hapus/{id}', [MarketingOrderController::class, 'hapusInvoice'])->name('hapus');
+            });
         });
-
-        Route::get('/clear-notif', [MarketingController::class, 'clearNotif'])->name('clear-notif');
-
-        // --- ROUTE MANAJEMEN INVOICE ---
-        Route::prefix('invoice')->name('invoice.')->group(function () {
-            Route::get('/bayar/{id}', [MarketingController::class, 'bayarInvoice'])->name('bayar');
-            Route::get('/cetak/{id}', [MarketingController::class, 'cetakInvoice'])->name('cetak');
-            Route::post('/update/{id}', [MarketingController::class, 'updateInvoice'])->name('update');
-            Route::post('/lunas/{id}', [MarketingOrderController::class, 'tandaiLunas'])->name('lunas');
-            Route::delete('/hapus/{id}', [MarketingOrderController::class, 'hapusInvoice'])->name('hapus');
-        });
-
     });
-});
 
-    /* |--- KHUSUS PRODUKSI (Divisi 5) --- */
+    /*
+    |--------------------------------------------------------------------------
+    | KHUSUS PRODUKSI (Divisi 5)
+    |--------------------------------------------------------------------------
+    */
     Route::middleware(['checkRole:5'])->group(function () {
         Route::get('/produksi', [ProduksiController::class, 'index'])->name('produksi');
         Route::post('/produksi/simpan', [ProduksiController::class, 'simpan'])->name('produksi.simpan');
     });
 
-    /* |--- KHUSUS LOGISTIK (Divisi 6) --- */
+    /*
+    |--------------------------------------------------------------------------
+    | KHUSUS LOGISTIK (Divisi 6)
+    |--------------------------------------------------------------------------
+    */
     Route::middleware(['checkRole:6'])->group(function () {
         Route::prefix('logistik')->group(function () {
             Route::get('/', [LogistikController::class, 'index'])->name('logistik');
