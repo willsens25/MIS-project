@@ -18,7 +18,7 @@ class MarketingOrderController extends Controller
 {
     public function index(Request $request)
     {
-        // Ambil keyword pencarian atau filter status jika ada
+        // Ambal keyword pencarian atau filter status jika ada
         $search = $request->get('search');
         $status = $request->get('status');
 
@@ -208,13 +208,14 @@ class MarketingOrderController extends Controller
     }
 
     /**
-     * Menandai Invoice Lunas & Otomatis Sinkronisasi Penuh ke Dashboard Finance
+     * Menandai Invoice Lunas & Otomatis Sinkronisasi Penuh ke Dashboard Finance & Logistik
      */
     public function tandaiLunas($id)
     {
         try {
             return DB::transaction(function () use ($id) {
-                $orderRaw = Order::findOrFail($id);
+                // Eager loading relasi details demi performa query loop yang optimal
+                $orderRaw = Order::with('details')->findOrFail($id);
 
                 if ($orderRaw->status == 'Lunas') {
                     throw new \Exception("Invoice ini sudah berstatus lunas sebelumnya.");
@@ -231,6 +232,21 @@ class MarketingOrderController extends Controller
                 if (empty($nomorInvoiceFix)) {
                     $nomorInvoiceFix = 'INV-' . date('Ymd') . '-' . str_pad($order->id, 4, '0', STR_PAD_LEFT);
                 }
+
+                // =================================================================
+                // 🚚 INTEGRASI KE DIVISI LOGISTIK (DIVISI 6)
+                // =================================================================
+                $orderDetails = $order->details ?? [];
+                foreach ($orderDetails as $detail) {
+                    \App\Models\Penyaluran::create([
+                        'no_invoice' => $nomorInvoiceFix,
+                        'buku_id'    => $detail->buku_id,
+                        'qty'        => $detail->jumlah,
+                        'nama_agen'  => $order->nama_penerima ?? $order->nama_pembeli,
+                        'status'     => 'proses packing', // Masuk ke antrean logistik
+                    ]);
+                }
+                // =================================================================
 
                 $category = Category::where('nama_kategori', 'like', '%Penjualan%')
                                     ->orWhere('nama_kategori', 'like', '%Invoice%')
@@ -270,7 +286,7 @@ class MarketingOrderController extends Controller
                     'tanggal_penjualan' => now(),
                 ]);
 
-                return redirect()->back()->with('success', 'Invoice berhasil dilunasi, rekap penjualan terisi, dan kas finance otomatis bertambah!');
+                return redirect()->back()->with('success', 'Invoice berhasil dilunasi, data diteruskan ke Logistik, rekap penjualan terisi, dan kas finance otomatis bertambah!');
             });
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Gagal memproses pelunasan: ' . $e->getMessage());
@@ -296,8 +312,6 @@ class MarketingOrderController extends Controller
                 // 2. KEMBALIKAN STOK BARANG KE GUDANG (RESTOCK DENGAN ROW LOCKING)
                 $orderDetails = $order->details ?? [];
                 foreach ($orderDetails as $detail) {
-                    // SUNTIKAN KEAMANAN: Mengunci baris data buku sebelum menambahkan stok kembali
-                    // Ini mencegah lonjakan stok jika tombol cancel diklik berkali-kali secara bersamaan
                     $book = Book::lockForUpdate()->find($detail->buku_id);
 
                     if ($book) {
@@ -429,7 +443,7 @@ class MarketingOrderController extends Controller
                 $teksRincian = implode('<br>', $rincianBuku);
 
                 // Fallback pencarian field invoice jika ada inkonsistensi nama kolom database
-                $invoiceTerpilih = $order->no_invoice ?? $order->nomor_invoice ?? $order->invoice ?? 'N/A';
+                $invoiceTerpilih = $order->no_invoice ?? $order->nomor_invoice ?? $order->invoice_no ?? $order->invoice;
 
                 echo '<tr>';
                 // Menjaga No Invoice tetap bertipe teks agar digit / strip (-) tidak dirusak Excel

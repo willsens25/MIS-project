@@ -17,8 +17,8 @@ class DashboardController extends Controller
             1 => $this->renderDirektorat(),
             2 => redirect()->route('finance.index'),
             4 => $this->renderMarketing(),
-            5 => $this->indexProduksi(),
-            6 => $this->indexLogistik(),
+            5 => redirect()->route('produksi.index'),
+            6 => redirect()->route('logistik'),
             default => $this->renderDirektorat(),
         };
     }
@@ -67,7 +67,10 @@ class DashboardController extends Controller
         ));
     }
 
-    // ... renderMarketing, indexProduksi, indexLogistik tetap sama ...
+    private function renderMarketing()
+    {
+        return view('dashboards.marketing');
+    }
 
     public function updateAnggota(Request $request, $id) {
         $request->validate([
