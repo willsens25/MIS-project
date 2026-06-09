@@ -99,6 +99,8 @@ Route::middleware('auth')->group(function () {
         });
 
         Route::resource('kegiatans', KegiatanController::class);
+
+        Route::get('/activity-logs', [DashboardController::class, 'activityLogs'])->name('activity.logs');
     });
 
     /*

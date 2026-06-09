@@ -129,6 +129,16 @@
                                 <i class="fas fa-check-circle me-2 text-primary"></i> Persetujuan Cetak
                             </a>
                         </li>
+
+                        {{-- Menu Khusus Direktorat / Admin (Divisi 1) --}}
+                        @if(auth()->user()->divisi_id == 1)
+                        <li>
+                            <a class="dropdown-item py-2 small fw-bold {{ Request::is('activity-logs*') ? 'bg-light text-primary' : '' }}" href="{{ url('/activity-logs') }}">
+                                <i class="fas fa-shield-alt me-2 text-warning"></i> Audit System Log
+                            </a>
+                        </li>
+                        @endif
+
                         <li><hr class="dropdown-divider"></li>
                         <li>
                             <form action="{{ route('logout') }}" method="POST" class="m-0">

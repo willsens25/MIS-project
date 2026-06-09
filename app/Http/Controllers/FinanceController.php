@@ -10,6 +10,7 @@ use App\Models\Invoice;
 use App\Models\PengajuanCetak;
 use App\Models\Book;
 use App\Models\Penjualan;
+use App\Models\ActivityLog;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 
@@ -82,7 +83,7 @@ class FinanceController extends Controller
     public function store_transaction(Request $request) {
         $nominalBersih = preg_replace('/[^0-9]/', '', $request->nominal);
 
-        Mutasi::create([
+        $mutasi = Mutasi::create([
             'account_id'  => $request->account_id,
             'category_id' => $request->category_id,
             'user_id'     => auth()->id(),
@@ -92,6 +93,9 @@ class FinanceController extends Controller
             'tanggal'     => $request->tanggal ?? now(),
             'jenis'       => 'MANUAL',
         ]);
+
+        // 📝 AUDIT LOG
+        ActivityLog::record('Tambah Transaksi', 'Mutasi', 'Membuat transaksi ' . $mutasi->tipe . ' manual: ' . $mutasi->keterangan . ' (Rp ' . number_format($nominalBersih, 0, ',', '.') . ')');
 
         return redirect()->back()->with('success', 'Transaksi berhasil disimpan!');
     }
@@ -114,21 +118,34 @@ class FinanceController extends Controller
             'keterangan'  => $request->keterangan,
         ]);
 
+        // 📝 AUDIT LOG
+        ActivityLog::record('Update Transaksi', 'Mutasi', 'Mengubah data transaksi ID #' . $id . ' menjadi: ' . $mutasi->keterangan . ' (Rp ' . number_format($nominalBersih, 0, ',', '.') . ')');
+
         return back()->with('success', 'Transaksi berhasil diperbarui!');
     }
 
     public function destroy($id) {
-        Mutasi::findOrFail($id)->delete();
+        $mutasi = Mutasi::findOrFail($id);
+
+        // 📝 AUDIT LOG (Dicatat sebelum data dihapus agar datanya masih bisa dibaca sistem)
+        ActivityLog::record('Hapus Transaksi', 'Mutasi', 'Menghapus transaksi ' . $mutasi->tipe . ': ' . $mutasi->keterangan . ' sebesar Rp ' . number_format($mutasi->nominal, 0, ',', '.'));
+
+        $mutasi->delete();
         return back()->with('success', 'Transaksi berhasil dihapus!');
     }
 
     public function simpanAkun(Request $request) {
         $request->validate(['nama_akun' => 'required']);
-        Account::create([
+
+        $account = Account::create([
             'nama_akun'  => $request->nama_akun,
             'kode_akun'  => 'ACC-'.strtoupper(substr(uniqid(),-5)),
             'saldo_awal' => 0
         ]);
+
+        // 📝 AUDIT LOG
+        ActivityLog::record('Tambah Akun', 'Account', 'Menambahkan akun keuangan baru: ' . $account->nama_akun . ' (' . $account->kode_akun . ')');
+
         return back()->with('success', 'Akun ditambahkan!');
     }
 
@@ -168,6 +185,9 @@ class FinanceController extends Controller
             // Update Status Pelacakan Invoice
             $invoice->update(['tercatat_finance' => 1]);
 
+            // 📝 AUDIT LOG
+            ActivityLog::record('Konfirmasi Invoice', 'Invoice', 'Memproses pelunasan Invoice #' . $invoice->no_invoice . ' ke kasir sebesar Rp ' . number_format($nominal, 0, ',', '.'));
+
             DB::commit();
             return redirect()->route('finance.index')->with('success', 'Invoice berhasil diproses ke rekap penjualan!');
 
@@ -197,6 +217,10 @@ class FinanceController extends Controller
         $totalMasuk = $mutasis->where('tipe', 'Masuk')->sum('nominal');
         $totalKeluar = $mutasis->where('tipe', 'Keluar')->sum('nominal');
         $saldo = $totalMasuk - $totalKeluar;
+
+        // 📝 AUDIT LOG
+        $namaBulanIndoText = $bulan ? [1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'][$bulan] : 'Semua Bulan';
+        ActivityLog::record('Unduh PDF', 'Report', 'Mengunduh Laporan Keuangan PDF Periode: ' . $namaBulanIndoText . ' ' . $tahun);
 
         $pdf = Pdf::loadView('pages.finance_pdf', [
             'mutasis' => $mutasis,
@@ -246,6 +270,9 @@ class FinanceController extends Controller
             $buku->increment('stok_gudang', $pengajuan->jumlah_pengajuan);
             $pengajuan->update(['status' => 'approved']);
 
+            // 📝 AUDIT LOG
+            ActivityLog::record('Setujui Cetak Buku', 'PengajuanCetak', 'Menyetujui cetak ulang buku: ' . $buku->judul . ' sejumlah ' . $pengajuan->jumlah_pengajuan . ' Eks (Biaya: Rp ' . number_format($biayaCetak, 0, ',', '.') . ')');
+
             return back()->with('success', 'Pengajuan disetujui, kas berkurang dan stok buku bertambah!');
         }
 
@@ -253,6 +280,9 @@ class FinanceController extends Controller
             'status' => 'rejected',
             'catatan_bendahara' => $request->catatan
         ]);
+
+        // 📝 AUDIT LOG
+        ActivityLog::record('Tolak Cetak Buku', 'PengajuanCetak', 'Menolak pengajuan cetak ulang buku: ' . $buku->judul . ' dengan alasan: ' . $request->catatan);
 
         return back()->with('info', 'Pengajuan cetak ditolak.');
     }

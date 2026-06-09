@@ -72,6 +72,20 @@ class DashboardController extends Controller
         return view('dashboards.marketing');
     }
 
+    /**
+     * Menampilkan Halaman Audit System Log (Khusus Direktorat)
+     */
+    public function activityLogs(Request $request)
+    {
+        // Mengambil data log terbaru dibarengi dengan data user dan divisi (Eager Loading)
+        // Di-paginate sebanyak 25 data agar performa query tetap ringan
+        $logs = ActivityLog::with(['user.divisi'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(25);
+
+        return view('dashboards.activity_logs', compact('logs'));
+    }
+
     public function updateAnggota(Request $request, $id) {
         $request->validate([
             'name' => 'required|string|max:255',
@@ -82,7 +96,7 @@ class DashboardController extends Controller
         $user = User::findOrFail($id);
         $user->update($request->only('name', 'email', 'divisi_id'));
 
-        $this->logActivity('Update Data', 'Mengubah data anggota: ' . $user->name, $request->ip());
+        ActivityLog::record('Update Data', 'User', 'Mengubah data anggota: ' . $user->name);
 
         return back()->with('success', 'Data anggota berhasil diperbarui.');
     }

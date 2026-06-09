@@ -11,6 +11,7 @@ use App\Models\Mutasi;
 use App\Models\Account;
 use App\Models\Category;
 use App\Models\Penjualan;
+use App\Models\ActivityLog;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
@@ -165,6 +166,7 @@ class MarketingOrderController extends Controller
                     'status'            => 'Pending',
                     'total_tagihan'     => 0,
                     'total_semau_buku'  => 0,
+                    'user_id'           => Auth::id()
                 ]);
 
                 $totalSemuaBuku = 0;
@@ -198,6 +200,9 @@ class MarketingOrderController extends Controller
                 $order->update([
                     'total_tagihan' => $totalSemuaBuku + ($request->ongkir ?? 0)
                 ]);
+
+                // 📝 AUDIT LOG
+                ActivityLog::record('Tambah Pesanan', 'Order', 'Membuat pesanan baru ' . $order->no_invoice . ' untuk agen: ' . $order->nama_pembeli . ' via ' . $order->via . ' (Total: Rp ' . number_format($order->total_tagihan, 0, ',', '.') . ')');
             });
 
             return redirect()->back()->with('success', "Invoice #{$noInvoice} berhasil disimpan & stok dipotong!");
@@ -286,6 +291,9 @@ class MarketingOrderController extends Controller
                     'tanggal_penjualan' => now(),
                 ]);
 
+                // 📝 AUDIT LOG
+                ActivityLog::record('Konfirmasi Lunas', 'Order', 'Mengubah status invoice ' . $nomorInvoiceFix . ' menjadi LUNAS. Data otomatis disinkronkan ke Finance & Logistik.');
+
                 return redirect()->back()->with('success', 'Invoice berhasil dilunasi, data diteruskan ke Logistik, rekap penjualan terisi, dan kas finance otomatis bertambah!');
             });
         } catch (\Exception $e) {
@@ -339,6 +347,9 @@ class MarketingOrderController extends Controller
                     'status' => 'Cancelled',
                     'tercatat_finance' => 0 // Set kembali ke 0 karena uang batal masuk
                 ]);
+
+                // 📝 AUDIT LOG
+                ActivityLog::record('Batalkan Invoice', 'Order', 'Membatalkan (Cancel) Invoice ' . $order->no_invoice . '. Stok seluruh buku pesanan otomatis dikembalikan ke gudang.');
 
                 return redirect()->back()->with('success', "Invoice #{$order->no_invoice} berhasil dibatalkan (Cancelled) & stok buku telah dikembalikan ke gudang!");
             });
@@ -405,6 +416,9 @@ class MarketingOrderController extends Controller
             "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
             "Expires"             => "0"
         ];
+
+        // 📝 AUDIT LOG
+        ActivityLog::record('Ekspor Excel Marketing', 'Order', 'Mengekspor rekap data order penjualan ke berkas Excel. Filter Status: ' . ($status ?? 'Semua') . ', Cari: ' . ($search ?? 'Tidak ada'));
 
         $callback = function() use($orders) {
             $file = fopen('php://output', 'w');
