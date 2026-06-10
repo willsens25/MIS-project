@@ -89,7 +89,7 @@
                 <div class="row g-3">
                     <div class="col-6 text-center border-end">
                         <p class="info-label">Total Donasi</p>
-                        <h6 class="fw-800 text-success mb-0">Rp {{ number_format($identitas->total_donasi ?? 0, 0, ',', '.') }}</h6>
+                        <h6 class="fw-800 text-success mb-0">Rp {{ number_format($totalDonasi ?? 0, 0, ',', '.') }}</h6>
                     </div>
                     <div class="col-6 text-center">
                         <p class="info-label">Total Salur</p>
@@ -122,7 +122,7 @@
                 <div class="row g-4">
                     <div class="col-md-6">
                         <p class="info-label">Nomor KTP / Identitas</p>
-                        <p class="info-value">{{ $identitas->no_ktp ?? '-' }}</p>
+                        <p class="info-value">{{ $identitas->nomor_identitas ?? '-' }}</p> {{-- FIX: dari no_ktp ke nomor_identitas --}}
                     </div>
                     <div class="col-md-6">
                         <p class="info-label">Nama di KTP</p>
@@ -130,7 +130,11 @@
                     </div>
                     <div class="col-md-6">
                         <p class="info-label">Nama Panggilan</p>
-                        <p class="info-value">{{ $identitas->nama_panggilan ?? '-' }}</p>
+                        <p class="info-value">{{ $identitas->panggilan ?? '-' }}</p> {{-- FIX: dari nama_panggilan ke panggilan --}}
+                    </div>
+                    <div class="col-md-6">
+                        <p class="info-label">Kategori Anggota / Jenis Umat</p> {{-- ADDED: Kolom Kategori Anggota --}}
+                        <p class="info-value"><span class="badge bg-primary rounded-pill px-3">{{ $identitas->jenis_umat ?? '-' }}</span></p>
                     </div>
                     <div class="col-md-6">
                         <p class="info-label">Kewarganegaraan</p>

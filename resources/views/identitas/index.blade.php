@@ -2,383 +2,264 @@
 
 @section('content')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 
 <style>
-    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f1f5f9; color: #334155; }
-    .page-title { font-weight: 800; letter-spacing: -1px; color: #0f172a; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #1e293b; }
 
-    /* Button Styling */
-    .btn-back {
-        background: white; border: 1px solid #e2e8f0; width: 42px; height: 42px;
-        display: flex; align-items: center; justify-content: center; color: #64748b;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .btn-back:hover { background: #f8fafc; color: #0f172a; transform: translateX(-4px); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+    /* Stats Card Card */
+    .card-stats { border: none; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.02); transition: all 0.3s; }
+    .card-stats:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
 
-    /* Search & Filter */
-    .search-container { position: relative; width: 300px; }
-    .search-input {
-        border-radius: 12px !important; border: 1px solid #e2e8f0 !important;
-        padding-left: 42px !important; font-size: 14px; height: 45px;
-        transition: all 0.2s; background: white !important;
-    }
-    .search-input:focus { border-color: #10b981 !important; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1) !important; }
-    .search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); z-index: 5; color: #94a3b8; font-size: 1.1rem; }
+    /* Modern Datatable Card */
+    .table-container { background: #ffffff; border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); border: none; overflow: hidden; }
 
-    /* Card Stats */
-    .card-stat {
-        border: none; border-radius: 20px; background: white;
-        transition: all 0.3s ease; border: 1px solid rgba(226, 232, 240, 0.6);
-    }
-    .card-stat:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.05); }
-    .icon-box {
-        width: 48px; height: 48px; border-radius: 14px;
-        display: flex; align-items: center; justify-content: center; font-size: 1.25rem;
-    }
+    .table-modern thead { background-color: #f1f5f9; }
+    .table-modern th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #64748b; font-weight: 700; padding: 16px 20px; border: none; }
+    .table-modern td { padding: 16px 20px; vertical-align: middle; color: #334155; font-size: 14px; border-bottom: 1px solid #f1f5f9; }
+    .table-modern tbody tr:hover { background-color: #f8fafc; cursor: pointer; }
 
-    /* Table Styling */
-    .table-container { border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; background: white; }
-    .table thead th {
-        background: #f8fafc; text-transform: uppercase; font-size: 11px;
-        font-weight: 700; letter-spacing: 0.05em; color: #64748b; border-bottom: 1px solid #e2e8f0;
-        padding: 16px 24px;
-    }
-    .table tbody td { padding: 16px 24px; border-bottom: 1px solid #f1f5f9; }
-    .data-row:hover { background-color: #f8fafc; }
+    /* Search Bar Custom */
+    .search-custom { border: none; background-color: #f1f5f9; border-radius: 14px; padding: 12px 20px 12px 45px; font-weight: 600; transition: all 0.2s; }
+    .search-custom:focus { background-color: #ffffff; box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.1); border: 1px solid #007BFF; outline: none; }
+    .search-icon-wrapper { position: relative; }
+    .search-icon-wrapper i { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 16px; }
 
-    /* Modern Form Design */
-    .form-section-card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; }
-    .form-label { font-weight: 700; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-    .form-control-mis {
-        border-radius: 10px; border: 1px solid #e2e8f0; padding: 11px 14px;
-        font-size: 14px; background: #f8fafc !important; transition: all 0.2s;
-    }
-    .form-control-mis:focus { background: white !important; border-color: #10b981; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); }
+    /* Avatar Inisial Bulat */
+    .avatar-circle { width: 42px; height: 42px; background: linear-gradient(135deg, #e0f2fe, #bae6fd); color: #0369a1; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
 
-    .btn-action {
-        width: 36px; height: 36px; border-radius: 10px; border: solid 1px #e2e8f0;
-        display: inline-flex; align-items: center; justify-content: center;
-        background: white; color: #64748b; transition: all 0.2s;
-    }
-    .btn-action:hover { background: #f1f5f9; color: #0f172a; border-color: #cbd5e1; }
-    .badge-custom { font-weight: 700; padding: 6px 12px; border-radius: 8px; font-size: 11px; }
+    /* Badge Status Soft Color */
+    .badge-soft { padding: 6px 12px; border-radius: 10px; font-weight: 700; font-size: 11px; letter-spacing: 0.3px; display: inline-flex; align-items: center; gap: 4px; }
+    .badge-soft-normal { background-color: #dcfce7; color: #15803d; }
+    .badge-soft-vip { background-color: #fef9c3; color: #a16207; border: 1px solid #fde047; }
+    .badge-soft-pengawasan { background-color: #ffedd5; color: #9a3412; }
+    .badge-soft-blacklist { background-color: #fee2e2; color: #991b1b; }
 
-    /* Custom Alert Styling */
-    .alert-custom { border: none; border-radius: 16px; padding: 1rem 1.5rem; }
+    .btn-add { background-color: #007BFF; border: none; border-radius: 14px; padding: 12px 24px; font-weight: 700; transition: 0.3s; }
+    .btn-add:hover { background-color: #0056b3; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0, 123, 255, 0.2); }
+    .btn-action-view { background-color: #f1f5f9; border: none; color: #475569; padding: 8px 12px; border-radius: 10px; font-weight: 600; transition: 0.2s; }
+    .btn-action-view:hover { background-color: #e2e8f0; color: #0f172a; }
 </style>
 
 <div class="container-fluid py-4 px-4">
-    {{-- Notifikasi --}}
-    @if(session('success'))
-        <div class="alert alert-success alert-custom shadow-sm mb-4 d-flex align-items-center">
-            <i class="bi bi-check-circle-fill fs-4 me-3"></i>
-            <div>
-                <div class="fw-bold">Berhasil!</div>
-                <div class="small">{{ session('success') }}</div>
-            </div>
-            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
+        <div>
+            <h3 class="fw-800 mb-1">Database Anggota MIS</h3>
+            <p class="text-muted small mb-0">Kelola informasi profil, kategori umat, dan pengawasan internal.</p>
         </div>
-    @endif
-
-    @if(session('error'))
-        <div class="alert alert-danger alert-custom shadow-sm mb-4 d-flex align-items-center">
-            <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
-            <div>
-                <div class="fw-bold">Gagal Menyimpan Data</div>
-                <div class="small">{{ session('error') }}</div>
-            </div>
-            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
-    @if($errors->any())
-        <div class="alert alert-warning alert-custom shadow-sm mb-4 d-flex align-items-start">
-            <i class="bi bi-info-circle-fill fs-4 me-3 mt-1"></i>
-            <div>
-                <div class="fw-bold">Periksa Kembali Inputan:</div>
-                <ul class="small mb-0 ps-3">
-                    @foreach($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
-    {{-- Header --}}
-    <div class="row align-items-center mb-5">
-        <div class="col-auto">
-            <a href="{{ url('/dashboard') }}" class="btn btn-back shadow-sm rounded-circle"><i class="bi bi-chevron-left"></i></a>
-        </div>
-        <div class="col">
-            <h2 class="page-title mb-0">Database Identitas</h2>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-0 small">
-                    <li class="breadcrumb-item"><a href="#" class="text-decoration-none text-muted">MIS Project</a></li>
-                    <li class="breadcrumb-item active fw-bold text-success">Master Data Member</li>
-                </ol>
-            </nav>
-        </div>
-        <div class="col-auto d-flex gap-3">
-            <div class="search-container">
-                <i class="bi bi-search search-icon"></i>
-                <input type="text" id="liveSearch" class="form-control search-input shadow-sm" placeholder="Cari nama atau KTP..." value="{{ request('search') }}">
-            </div>
-            <button type="button" class="btn btn-success fw-bold rounded-3 px-4 shadow-sm d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#addModal" style="height: 45px;">
-                <i class="bi bi-person-plus"></i> Add New Data
-            </button>
-        </div>
+        <button type="button" class="btn btn-add text-white shadow-sm" data-bs-toggle="modal" data-bs-target="#modalTambahIdentitas">
+            <i class="bi bi-plus-lg me-2"></i> Registrasi Anggota Baru
+        </button>
     </div>
 
-    {{-- Stats Row --}}
-    <div class="row g-4 mb-5">
-        <div class="col-md-3">
-            <div class="card card-stat shadow-sm p-4">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="icon-box bg-primary bg-opacity-10 text-primary"><i class="bi bi-wallet2"></i></div>
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card card-stats bg-white p-4">
+                <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <div class="small fw-bold text-muted text-uppercase mb-1">Saldo Kas</div>
-                        <div class="h4 fw-800 mb-0">Rp {{ number_format($saldoKasGlobal, 0, ',', '.') }}</div>
+                        <p class="text-muted small fw-700 text-uppercase mb-1" style="font-size: 10px; letter-spacing: 0.5px;">Total Anggota Terdaftar</p>
+                        <h3 class="fw-800 mb-0 text-dark">{{ $countAnggota ?? 0 }} <span class="fs-6 fw-normal text-muted">Orang</span></h3>
+                    </div>
+                    <div class="p-3 bg-primary-subtle text-primary rounded-4 fs-3" style="background-color: #eff6ff;">
+                        <i class="bi bi-people-fill text-primary"></i>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card card-stat shadow-sm p-4">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="icon-box bg-success bg-opacity-10 text-success"><i class="bi bi-people-fill"></i></div>
+        <div class="col-md-4">
+            <div class="card card-stats bg-white p-4">
+                <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <div class="small fw-bold text-muted text-uppercase mb-1">Total Anggota</div>
-                        <div class="h4 fw-800 mb-0">{{ $countAnggota }} <span class="small fw-normal text-muted">Orang</span></div>
+                        <p class="text-muted small fw-700 text-uppercase mb-1" style="font-size: 10px; letter-spacing: 0.5px;">Saldo Kas Global</p>
+                        <h3 class="fw-800 mb-0 text-success">Rp {{ number_format($saldoKasGlobal ?? 0, 0, ',', '.') }}</h3>
+                    </div>
+                    <div class="p-3 rounded-4 fs-3" style="background-color: #f0fdf4;">
+                        <i class="bi bi-wallet2 text-success"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-stats bg-white p-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted small fw-700 text-uppercase mb-1" style="font-size: 10px; letter-spacing: 0.5px;">Struktur Divisi</p>
+                        <h3 class="fw-800 mb-0 text-info">{{ $countDivisi ?? 0 }} <span class="fs-6 fw-normal text-muted">Divisi</span></h3>
+                    </div>
+                    <div class="p-3 rounded-4 fs-3" style="background-color: #ecfeff;">
+                        <i class="bi bi-building-gear text-info"></i>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- Table Card --}}
-    <div class="table-container shadow-sm">
+    <div class="card table-container">
+        <div class="p-4 bg-white border-bottom border-light">
+            <form action="{{ route('identitas.index') }}" method="GET">
+                <div class="search-icon-wrapper" style="max-width: 400px;">
+                    <i class="bi bi-search"></i>
+                    <input type="text" name="search" class="form-control search-custom" placeholder="Cari nama, panggilan, nomor KTP..." value="{{ request('search') }}">
+                </div>
+            </form>
+        </div>
+
         <div class="table-responsive">
-            <table class="table align-middle mb-0">
+            <table class="table table-modern align-middle mb-0">
                 <thead>
                     <tr>
-                        <th class="ps-4" width="60">No</th>
-                        <th>Profil & Identitas</th>
-                        <th>Kontak & Alamat</th>
-                        <th class="text-center">Kategori</th>
-                        <th class="text-center">Divisi</th>
-                        <th class="text-center">Aksi</th>
+                        <th width="80">ID MIS</th>
+                        <th>Profil Anggota</th>
+                        <th>Kategori</th>
+                        <th>Kontak Utama</th>
+                        <th>Divisi</th>
+                        <th width="150" class="text-center">Keamanan</th>
+                        <th width="100" class="text-center">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($identitas as $index => $idnt)
-                    <tr class="data-row">
-                        <td class="ps-4 small text-muted">{{ $identitas->firstItem() + $index }}</td>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-3 fw-bold text-primary shadow-sm" style="width: 40px; height: 40px; font-size: 14px;">
-                                    {{ substr($idnt->nama_lengkap, 0, 1) }}
-                                </div>
-                                <div>
-                                    <div class="fw-bold text-dark">{{ strtoupper($idnt->nama_lengkap) }}</div>
-                                    <div class="text-muted small d-flex align-items-center gap-2">
-                                        <span class="text-primary fw-600">{{ $idnt->panggilan }}</span>
-                                        <span style="color: #cbd5e1">|</span>
-                                        <span>ID: {{ $idnt->nomor_identitas }}</span>
+                    @forelse($identitas as $item)
+                        <tr onclick="window.location='{{ route('identitas.show', $item->id) }}'">
+                            <td class="fw-bold text-muted">MIS-{{ str_pad($item->id, 5, '0', STR_PAD_LEFT) }}</td>
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="avatar-circle">
+                                        {{ strtoupper(substr($item->nama_lengkap, 0, 1)) }}
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-0 text-dark">{{ $item->nama_lengkap }}</h6>
+                                        <small class="text-muted">Panggilan: <span class="fw-semibold text-secondary">{{ $item->panggilan ?? '-' }}</span></small>
                                     </div>
                                 </div>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="small fw-500 text-dark">{{ $idnt->nomor_hp_primary }}</div>
-                            <div class="text-muted text-truncate" style="font-size: 11px; max-width: 200px;">
-                                <i class="bi bi-geo-alt me-1"></i>{{ $idnt->alamat ?? 'Alamat Belum Diisi' }}
-                            </div>
-                        </td>
-                        <td class="text-center">
-                            <span class="badge-custom {{ $idnt->jenis_umat == 'Sangha' ? 'bg-warning bg-opacity-10 text-warning' : 'bg-info bg-opacity-10 text-info' }}">
-                                {{ $idnt->jenis_umat }}
-                            </span>
-                        </td>
-                        <td class="text-center">
-                            <div class="fw-600 small">{{ $idnt->divisi->nama_divisi ?? '-' }}</div>
-                        </td>
-                        <td class="text-center">
-                            <div class="d-flex justify-content-center gap-2">
-                                <a href="{{ route('identitas.show', $idnt->id) }}" class="btn-action" title="Detail"><i class="bi bi-eye"></i></a>
-                                <form action="{{ route('identitas.destroy', $idnt->id) }}" method="POST" class="d-inline">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" class="btn-action delete text-danger" onclick="return confirm('Hapus data ini?')" title="Hapus"><i class="bi bi-trash"></i></button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border px-2 py-1.5 rounded-3 fw-semibold small">
+                                    {{ $item->jenis_umat ?? 'Simpatisan' }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="d-flex flex-column">
+                                    <span class="fw-semibold text-dark"><i class="bi bi-whatsapp text-success small me-1"></i>{{ $item->nomor_hp_primary ?? '-' }}</span>
+                                    <small class="text-muted small" style="font-size: 11px;">{{ $item->email ?? '-' }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                @if($item->divisi)
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1.5 rounded-3 fw-bold" style="background-color: #eff6ff;">
+                                        {{ $item->divisi->nama_divisi }}
+                                    </span>
+                                @else
+                                    <span class="text-muted small italic">Belum Set</span>
+                                @endif
+                            </td>
+                            <td class="text-center">
+                                @php
+                                    $statusLower = strtolower($item->status_keamanan ?? 'normal');
+                                @endphp
+                                <span class="badge-soft badge-soft-{{ $statusLower }}">
+                                    <span class="spinner-grow spinner-grow-sm" style="width: 6px; height: 6px;" role="status"></span>
+                                    {{ strtoupper($item->status_keamanan ?? 'NORMAL') }}
+                                </span>
+                            </td>
+                            <td class="text-center" onclick="event.stopPropagation();">
+                                <a href="{{ route('identitas.show', $item->id) }}" class="btn btn-action-view small">
+                                    <i class="bi bi-eye-fill"></i> View
+                                </a>
+                            </td>
+                        </tr>
                     @empty
-                    <tr>
-                        <td colspan="6" class="text-center py-5">
-                            <i class="bi bi-database-exclamation fs-1 opacity-25 d-block mb-3"></i>
-                            <p class="text-muted fw-500">Belum ada data identitas yang tersimpan.</p>
-                        </td>
-                    </tr>
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-folder-x fs-1 d-block mb-2 opacity-40"></i>
+                                <span class="fw-bold">Tidak ada data anggota ditemukan.</span>
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
+
+        @if($identitas->hasPages())
+            <div class="p-4 bg-white border-top border-light d-flex justify-content-center">
+                {{ $identitas->links() }}
+            </div>
+        @endif
     </div>
-    <div class="mt-4">{{ $identitas->links() }}</div>
 </div>
 
-{{-- MODAL INPUT --}}
-<div class="modal fade" id="addModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+<div class="modal fade" id="modalTambahIdentitas" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="border: none; border-radius: 24px;">
+            <div class="modal-header px-4 pt-4 border-0">
+                <h5 class="fw-800 mb-0"><i class="bi bi-person-plus-fill me-2 text-primary"></i>Registrasi Anggota Baru</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
             <form action="{{ route('identitas.store') }}" method="POST">
                 @csrf
-                <div class="modal-header border-0 p-4 bg-success text-white">
-                    <div class="d-flex align-items-center gap-3">
-                        <i class="bi bi-person-plus-fill fs-3"></i>
-                        <div>
-                            <h5 class="modal-title fw-bold mb-0">Input Identitas Baru</h5>
-                            <small class="opacity-75">Lengkapi data sesuai dokumen fisik</small>
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Nomor KTP / Identitas <span class="text-danger">*</span></label>
+                            <input type="text" name="nomor_identitas" class="form-control bg-light border-0 py-2.5 px-3 rounded-3" style="font-weight: 600;" required placeholder="Masukkan No. KTP">
                         </div>
-                    </div>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Jenis Identitas</label>
+                            <select name="jenis_identitas" class="form-select bg-light border-0 py-2.5 px-3 rounded-3" style="font-weight: 600;">
+                                <option value="KTP">KTP</option>
+                                <option value="PASPOR">Paspor</option>
+                            </select>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Nama Lengkap <span class="text-danger">*</span></label>
+                            <input type="text" name="nama_lengkap" class="form-control bg-light border-0 py-2.5 px-3 rounded-3" style="font-weight: 600;" required placeholder="Nama Sesuai Sistem">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Nama Panggilan</label>
+                            <input type="text" name="panggilan" class="form-control bg-light border-0 py-2.5 px-3 rounded-3" style="font-weight: 600;" placeholder="Panggilan">
+                        </div>
 
-                <div class="modal-body p-4 bg-light bg-opacity-50">
-                    <div class="form-section-card shadow-sm">
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <label class="form-label">Nomor Identitas (KTP)</label>
-                                <input type="text" name="nomor_identitas" class="form-control form-control-mis" placeholder="317XXXXXXXXXXXXX" value="{{ old('nomor_identitas') }}" required>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">Jenis ID</label>
-                                <select name="jenis_identitas" class="form-select form-control-mis">
-                                    <option value="KTP" {{ old('jenis_identitas') == 'KTP' ? 'selected' : '' }}>KTP</option>
-                                    <option value="Paspor" {{ old('jenis_identitas') == 'Paspor' ? 'selected' : '' }}>Paspor</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Nama Lengkap (Sesuai KTP)</label>
-                                <input type="text" name="nama_lengkap" class="form-control form-control-mis" placeholder="Nama Tanpa Gelar" value="{{ old('nama_lengkap') }}" required>
-                            </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Nomor WhatsApp / HP</label>
+                            <input type="text" name="nomor_hp_primary" class="form-control bg-light border-0 py-2.5 px-3 rounded-3" style="font-weight: 600;" placeholder="0812xxxx">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Kategori Anggota (Jenis Umat)</label>
+                            <select name="jenis_umat" class="form-select bg-light border-0 py-2.5 px-3 rounded-3" style="font-weight: 600;">
+                                <option value="Simpatisan">Simpatisan</option>
+                                <option value="Anggota">Anggota</option>
+                                <option value="Pengurus">Pengurus</option>
+                            </select>
+                        </div>
 
-                            <div class="col-md-4">
-                                <label class="form-label">Nama Panggilan</label>
-                                <input type="text" name="panggilan" class="form-control form-control-mis" placeholder="Nama Akrab" value="{{ old('panggilan') }}">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Agama / Aliran</label>
-                                <input type="text" name="agama" class="form-control form-control-mis" placeholder="Contoh: Buddha / Theravada" value="{{ old('agama') }}">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label d-block">Jenis Kelamin</label>
-                                <div class="mt-2">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="jenis_kelamin" value="pria" id="pria_add" {{ old('jenis_kelamin', 'pria') == 'pria' ? 'checked' : '' }}>
-                                        <label class="form-check-label small" for="pria_add">Pria</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="jenis_kelamin" value="wanita" id="wanita_add" {{ old('jenis_kelamin') == 'wanita' ? 'checked' : '' }}>
-                                        <label class="form-check-label small" for="wanita_add">Wanita</label>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-md-4">
-                                <label class="form-label">Nomor WhatsApp</label>
-                                <input type="text" name="nomor_hp_primary" class="form-control form-control-mis" placeholder="0812XXXXXXXX" value="{{ old('nomor_hp_primary') }}" required>
-                            </div>
-                            <div class="col-md-8">
-                                <label class="form-label">Alamat Domisili</label>
-                                <input type="text" name="alamat" class="form-control form-control-mis" placeholder="Nama Jalan, No. Rumah, RT/RW" value="{{ old('alamat') }}">
-                            </div>
-
-                            <div class="col-md-12 mt-3">
-                                <div class="p-3 rounded-3" style="background: #f0fdf4; border: 1px dashed #10b981;">
-                                    <label class="form-label text-success">Kategori Anggota</label>
-                                    <select name="jenis_umat" id="kategoriAnggotaAdd" class="form-select border-0 shadow-sm" required>
-                                        <option value="Umat" {{ old('jenis_umat') == 'Umat' ? 'selected' : '' }}>Umat</option>
-                                        <option value="Sangha" {{ old('jenis_umat') == 'Sangha' ? 'selected' : '' }}>Sangha</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            {{-- Penempatan Divisi: Sekarang ID-nya diletakkan di luar agar mudah dikendalikan JS --}}
-                            <div class="col-md-12" id="divDivisiAdd">
-                                <label class="form-label">Penempatan Divisi <span class="text-danger">*</span></label>
-                                <select name="divisi_id" id="selectDivisi" class="form-select form-control-mis" required>
-                                    <option value="">-- Pilih Divisi --</option>
-                                    @foreach($divisi as $div)
-                                        <option value="{{ $div->id }}" {{ old('divisi_id') == $div->id ? 'selected' : '' }}>{{ $div->nama_divisi }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div id="sectionKhususUmatAdd" class="col-md-12">
-                                <div class="d-flex gap-4 p-3 rounded bg-white border shadow-sm mt-2">
-                                    <div class="form-check form-switch">
-                                        <input type="hidden" name="is_agen_purna" value="0">
-                                        <input class="form-check-input" type="checkbox" name="is_agen_purna" value="1" id="switchAgenAdd" {{ old('is_agen_purna') == '1' ? 'checked' : '' }}>
-                                        <label class="form-check-label fw-bold small" for="switchAgenAdd">Agen Purna</label>
-                                    </div>
-                                    <div class="form-check form-switch">
-                                        <input type="hidden" name="is_dharma_patriot" value="0">
-                                        <input class="form-check-input" type="checkbox" name="is_dharma_patriot" value="1" id="switchPatriotAdd" {{ old('is_dharma_patriot') == '1' ? 'checked' : '' }}>
-                                        <label class="form-check-label fw-bold small" for="switchPatriotAdd">Dharma Patriot</label>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="col-md-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Alamat Domisili</label>
+                            <textarea name="alamat" rows="2" class="form-control bg-light border-0 py-2.5 px-3 rounded-3" style="font-weight: 600;" placeholder="Alamat Lengkap Rumah"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Divisi Kerja</label>
+                            <select name="divisi_id" class="form-select bg-light border-0 py-2.5 px-3 rounded-3" style="font-weight: 600;">
+                                <option value="">-- Pilih Divisi --</option>
+                                @foreach($divisi as $div)
+                                    <option value="{{ $div->id }}">{{ $div->nama_divisi }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Jenis Kelamin</label>
+                            <select name="jenis_kelamin" class="form-select bg-light border-0 py-2.5 px-3 rounded-3" style="font-weight: 600;">
+                                <option value="pria">Laki-laki</option>
+                                <option value="wanita">Perempuan</option>
+                            </select>
                         </div>
                     </div>
                 </div>
-
-                <div class="modal-footer bg-white p-4 border-0">
-                    <button type="button" class="btn btn-light fw-bold rounded-3 px-4" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-success fw-bold rounded-3 px-5 shadow-sm">Simpan Data Member</button>
+                <div class="modal-footer px-4 pb-4 border-0 d-flex gap-2">
+                    <button type="button" class="btn btn-light rounded-3 fw-bold py-2.5 px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary rounded-3 fw-bold py-2.5 px-4 shadow-sm">Simpan Anggota</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
-
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script>
-    $(document).ready(function() {
-        // Live Search
-        $('#liveSearch').on('keypress', function(e) {
-            if(e.which == 13) window.location.href = "{{ route('identitas.index') }}?search=" + $(this).val();
-        });
-
-        // Toggle Kategori
-        const kategoriSelect = $('#kategoriAnggotaAdd');
-        const sectionUmat = $('#sectionKhususUmatAdd');
-        const divDivisi = $('#divDivisiAdd');
-        const selectDivisi = $('#selectDivisi');
-
-        function toggleKategori() {
-            if (kategoriSelect.val() === 'Umat') {
-                sectionUmat.show();
-                divDivisi.show();
-                selectDivisi.attr('required', true); // Divisi Wajib diisi jika Umat
-            } else {
-                sectionUmat.hide();
-                divDivisi.hide();
-                selectDivisi.attr('required', false); // Divisi tidak wajib jika Sangha
-                selectDivisi.val(''); // Reset nilai jika Sangha agar tidak bentrok
-            }
-        }
-
-        kategoriSelect.on('change', toggleKategori);
-        toggleKategori(); // Run on load
-
-        @if($errors->any())
-            var myModal = new bootstrap.Modal(document.getElementById('addModal'));
-            myModal.show();
-        @endif
-    });
-</script>
 @endsection
