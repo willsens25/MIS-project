@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Category extends Model
 {
+    protected $fillable = ['nama_kategori'];
+
     public function mutasis()
     {
         return $this->hasMany(Mutasi::class);

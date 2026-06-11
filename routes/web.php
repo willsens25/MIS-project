@@ -109,27 +109,31 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::middleware(['checkRole:2'])->group(function () {
-        Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');
+    Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');
 
-        // Route Persetujuan Cetak & Laporan Keuangan
-        Route::get('/finance/persetujuan', [FinanceController::class, 'persetujuanCetak'])->name('finance.persetujuan');
-        Route::post('/finance/proses-cetak/{id}', [FinanceController::class, 'prosesCetak'])->name('finance.prosesCetak');
-        Route::get('/finance/download-report', [FinanceController::class, 'downloadReport'])->name('finance.download_report');
-        Route::get('/finance/download-pdf/{id}', [FinanceController::class, 'downloadPdf'])->name('finance.download_pdf');
+    // Route Persetujuan Cetak & Laporan Keuangan
+    Route::get('/finance/persetujuan', [FinanceController::class, 'persetujuanCetak'])->name('finance.persetujuan');
+    Route::post('/finance/proses-cetak/{id}', [FinanceController::class, 'prosesCetak'])->name('finance.prosesCetak');
+    Route::get('/finance/download-report', [FinanceController::class, 'downloadReport'])->name('finance.download_report');
+    Route::get('/finance/download-pdf/{id}', [FinanceController::class, 'downloadPdf'])->name('finance.download_pdf');
 
-        // Route Form Penjualan Baru
-        Route::get('/penjualan/baru', [PenjualanController::class, 'create'])->name('penjualan.create');
-        Route::post('/penjualan/simpan', [PenjualanController::class, 'store'])->name('penjualan.store');
+    // Route Form Penjualan Baru
+    Route::get('/penjualan/baru', [PenjualanController::class, 'create'])->name('penjualan.create');
+    Route::post('/penjualan/simpan', [PenjualanController::class, 'store'])->name('penjualan.store');
 
-        Route::prefix('bendahara')->group(function () {
-            Route::post('/simpan', [FinanceController::class, 'store_transaction'])->name('finance.store_transaction');
-            Route::put('/update/{id}', [FinanceController::class, 'update'])->name('finance.update');
-            Route::delete('/hapus/{id}', [FinanceController::class, 'destroy'])->name('finance.destroy');
-            Route::post('/confirm-invoice/{id}', [FinanceController::class, 'konfirmasiInvoice'])->name('finance.confirm_invoice');
-            Route::post('/konfirmasi-bayar/{id}', [FinanceController::class, 'konfirmasiBayarInvoice'])->name('finance.konfirmasi_pembayaran');
-            Route::post('/akun/simpan', [FinanceController::class, 'simpanAkun'])->name('finance.simpanAkun');
-        });
+    Route::prefix('bendahara')->group(function () {
+        Route::post('/simpan', [FinanceController::class, 'store_transaction'])->name('finance.store_transaction');
+        Route::put('/update/{id}', [FinanceController::class, 'update'])->name('finance.update');
+        Route::delete('/hapus/{id}', [FinanceController::class, 'destroy'])->name('finance.destroy');
+        Route::post('/confirm-invoice/{id}', [FinanceController::class, 'konfirmasiInvoice'])->name('finance.confirm_invoice');
+        Route::post('/konfirmasi-bayar/{id}', [FinanceController::class, 'konfirmasiBayarInvoice'])->name('finance.konfirmasi_pembayaran');
+
+        // --- CRUD AKUN (Kumpulan Route Pengelolaan Akun Keuangan) ---
+        Route::post('/akun/simpan', [FinanceController::class, 'simpanAkun'])->name('finance.simpanAkun');
+        Route::put('/akun/update/{id}', [FinanceController::class, 'updateAkun'])->name('finance.updateAkun');
+        Route::delete('/akun/hapus/{id}', [FinanceController::class, 'hapusAkun'])->name('finance.hapusAkun');
     });
+});
 
     /*
     |--------------------------------------------------------------------------

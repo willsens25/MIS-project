@@ -94,6 +94,50 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
         </div>
     </div>
 
+    {{-- TAMBAHAN BARU: DAFTAR KELOLA AKUN KEUANGAN (Daftar Kas/Bank) --}}
+    <div class="table-container mb-4 p-4 shadow-sm" style="background: var(--bg-card); border-radius: 16px;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold text-muted text-uppercase small mb-0"><i class="fas fa-wallet me-2 text-info"></i>Daftar Akun Keuangan</h6>
+            <button class="btn btn-sm btn-outline-success fw-bold rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#modalTambahAkunOnly">
+                <i class="fas fa-plus me-1"></i> Akun Baru
+            </button>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr class="text-muted small">
+                        <th>KODE AKUN</th>
+                        <th>NAMA AKUN / KAS / BANK</th>
+                        <th class="text-end">AKSI</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($accounts as $acc)
+                    <tr>
+                        <td><span class="badge bg-secondary bg-opacity-10 text-secondary fw-bold px-2 py-1">{{ $acc->kode_akun }}</span></td>
+                        <td><div class="fw-bold text-main">{{ $acc->nama_akun }}</div></td>
+                        <td class="text-end">
+                            <button type="button" class="btn btn-sm btn-light border text-primary me-1" data-bs-toggle="modal" data-bs-target="#modalEditAkun{{ $acc->id }}">
+                                <i class="fas fa-edit"></i> Ubah
+                            </button>
+                            <form action="{{ route('finance.hapusAkun', $acc->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus akun keuangan ini? Akun tidak bisa dihapus jika sudah digunakan transaksi.')">
+                                @csrf @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-light border text-danger">
+                                    <i class="fas fa-trash-alt"></i> Hapus
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="3" class="text-center py-3 text-muted small">Belum ada daftar akun keuangan terdaftar.</td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <div class="table-container mb-4 p-4 shadow-sm" style="background: var(--bg-card); border-radius: 16px;">
         <h6 class="fw-bold mb-4 text-muted text-uppercase small"><i class="fas fa-chart-area me-2 text-primary"></i>Visualisasi Arus Kas</h6>
         <div style="height: 300px; position: relative;">
@@ -232,14 +276,12 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
                             @endforeach
                         </select>
                     </div>
+
                     <div class="mb-3">
                         <label class="small fw-bold text-muted mb-1">Kategori</label>
-                        <select name="category_id" class="form-select" required>
-                            @foreach($categories as $cat)
-                                <option value="{{ $cat->id }}">{{ $cat->nama_kategori }}</option>
-                            @endforeach
-                        </select>
+                        <input type="text" name="nama_kategori" list="categories_list" class="form-control" placeholder="Ketik kategori baru atau pilih yang ada..." required autocomplete="off">
                     </div>
+
                     <div class="row g-3 mb-3">
                         <div class="col-6">
                             <label class="small fw-bold text-muted mb-1">Tipe</label>
@@ -267,7 +309,7 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
     </div>
 </div>
 
-{{-- MODAL TAMBAH AKUN --}}
+{{-- MODAL TAMBAH AKUN (Terintegrasi saat isi Transaksi Baru) --}}
 <div class="modal fade" id="modalTambahAkun" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content shadow-lg border-0">
@@ -275,7 +317,7 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
                 @csrf
                 <div class="modal-header border-0 pb-0">
                     <h5 class="fw-bold">Akun Baru</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-toggle="modal" data-bs-target="#modalTr"></button>
                 </div>
                 <div class="modal-body p-4">
                     <div class="mb-3">
@@ -291,6 +333,61 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
     </div>
 </div>
 
+{{-- MODAL TAMBAH AKUN ONLY (Dipanggil via Tombol Atas Tabel Daftar Akun) --}}
+<div class="modal fade" id="modalTambahAkunOnly" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content shadow-lg border-0">
+            <form action="{{ route('finance.simpanAkun') }}" method="POST">
+                @csrf
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="fw-bold">Akun Baru</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="small fw-bold text-muted mb-1">Nama Akun/Bank</label>
+                        <input type="text" name="nama_akun" class="form-control" placeholder="Contoh: Bank Mandiri, Kas Utama" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="submit" class="btn btn-success w-100 py-2 fw-bold shadow-sm">Simpan Akun</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- TAMBAHAN BARU: MODAL EDIT/UPDATE AKUN LOOP --}}
+@foreach($accounts as $acc)
+<div class="modal fade" id="modalEditAkun{{ $acc->id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content shadow-lg border-0">
+            <form action="{{ route('finance.updateAkun', $acc->id) }}" method="POST">
+                @csrf @method('PUT')
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="fw-bold">Ubah Nama Akun</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="small fw-bold text-muted mb-1">Kode Akun</label>
+                        <input type="text" class="form-control bg-light" value="{{ $acc->kode_akun }}" disabled>
+                    </div>
+                    <div class="mb-0">
+                        <label class="small fw-bold text-muted mb-1">Nama Akun Baru</label>
+                        <input type="text" name="nama_akun" class="form-control" value="{{ $acc->nama_akun }}" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-3">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endforeach
+
 {{-- MODAL EDIT TRANSAKSI LOOP --}}
 @foreach($mutasis as $m)
 <div class="modal fade" id="modalEdit{{ $m->id }}" tabindex="-1" aria-hidden="true">
@@ -305,12 +402,9 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
                 <div class="modal-body p-4">
                     <div class="mb-3">
                         <label class="small fw-bold text-muted mb-1">Kategori</label>
-                        <select name="category_id" class="form-select" required>
-                            @foreach($categories as $cat)
-                                <option value="{{ $cat->id }}" {{ $m->category_id == $cat->id ? 'selected' : '' }}>{{ $cat->nama_kategori }}</option>
-                            @endforeach
-                        </select>
+                        <input type="text" name="nama_kategori" list="categories_list" class="form-control" placeholder="Ketik kategori..." value="{{ $m->category->nama_kategori ?? '' }}" required autocomplete="off">
                     </div>
+
                     <div class="row g-3 mb-3">
                         <div class="col-6">
                             <label class="small fw-bold text-muted mb-1">Tipe</label>
@@ -321,7 +415,6 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
                         </div>
                         <div class="col-6">
                             <label class="small fw-bold text-muted mb-1">Nominal</label>
-                            {{-- Diperbaiki: Masukkan langsung nilai mentah ke parameter input display agar dibaca oleh initCleave() --}}
                             <input type="text" class="form-control input-nominal-display" placeholder="Rp 0" value="{{ $m->nominal }}" required>
                             <input type="hidden" name="nominal" class="input-nominal-real" value="{{ $m->nominal }}">
                         </div>
@@ -340,6 +433,13 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
     </div>
 </div>
 @endforeach
+
+{{-- GLOBAL REKOMENDASI DATALIST --}}
+<datalist id="categories_list">
+    @foreach($categories as $cat)
+        <option value="{{ $cat->nama_kategori }}">
+    @endforeach
+</datalist>
 
 @endsection
 
@@ -364,7 +464,6 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
                 rawValueTrimPrefix: true
             });
 
-            // Jaminan sinkronisasi data awal ke Cleave
             if (realInput && realInput.value) {
                 cleave.setRawValue(realInput.value);
             } else if (el.value) {
@@ -381,7 +480,6 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
     document.addEventListener('DOMContentLoaded', function() {
         initCleave();
 
-        // Render Grafik Cashflow
         const ctx = document.getElementById('cashflowChart').getContext('2d');
         new Chart(ctx, {
             type: 'line',
@@ -415,7 +513,6 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
         });
     });
 
-    // Pemicu ulang cleave mask saat modal Bootstrap muncul ke layar
     document.addEventListener('shown.bs.modal', function () {
         initCleave();
     });

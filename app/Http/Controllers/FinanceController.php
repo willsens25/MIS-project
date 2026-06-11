@@ -13,6 +13,7 @@ use App\Models\Penjualan;
 use App\Models\ActivityLog;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str; // Ditambahkan untuk normalisasi teks kategori
 
 class FinanceController extends Controller
 {
@@ -79,13 +80,29 @@ class FinanceController extends Controller
         ));
     }
 
-    // CREATE - Simpan Transaksi Baru
+    // DIUBAH: Mendukung Find or Create kategori otomatis berdasarkan text input
     public function store_transaction(Request $request) {
+        $request->validate([
+            'account_id'    => 'required',
+            'nama_kategori' => 'required|string|max:255',
+            'tipe'          => 'required',
+            'nominal'       => 'required',
+            'keterangan'    => 'required'
+        ]);
+
         $nominalBersih = preg_replace('/[^0-9]/', '', $request->nominal);
+
+        // Bersihkan spasi & ubah teks jadi format kapital awal kata (contoh: "operasional kantor")
+        $namaKategoriClean = Str::title(trim($request->nama_kategori));
+
+        // Cari kategori berdasarkan nama, jika tidak ada maka otomatis buat baru
+        $category = Category::firstOrCreate(
+            ['nama_kategori' => $namaKategoriClean]
+        );
 
         $mutasi = Mutasi::create([
             'account_id'  => $request->account_id,
-            'category_id' => $request->category_id,
+            'category_id' => $category->id, // Menggunakan ID Kategori yang ditemukan/baru dibuat
             'user_id'     => auth()->id(),
             'tipe'        => $request->tipe,
             'nominal'     => $nominalBersih,
@@ -97,22 +114,31 @@ class FinanceController extends Controller
         // 📝 AUDIT LOG
         ActivityLog::record('Tambah Transaksi', 'Mutasi', 'Membuat transaksi ' . $mutasi->tipe . ' manual: ' . $mutasi->keterangan . ' (Rp ' . number_format($nominalBersih, 0, ',', '.') . ')');
 
-        return redirect()->back()->with('success', 'Transaksi berhasil disimpan!');
+        return redirect()->back()->with('success', 'Transaksi berhasil disimpan pada kategori: ' . $category->nama_kategori);
     }
 
+    // DIUBAH: Proses Edit data mutasi juga mendukung Find or Create kategori teks otomatis
     public function update(Request $request, $id) {
         $request->validate([
-            'category_id' => 'required',
-            'tipe'        => 'required',
-            'nominal'     => 'required',
-            'keterangan'  => 'required'
+            'nama_kategori' => 'required|string|max:255',
+            'tipe'          => 'required',
+            'nominal'       => 'required',
+            'keterangan'    => 'required'
         ]);
 
         $nominalBersih = preg_replace('/[^0-9]/', '', $request->nominal);
 
+        // Bersihkan spasi & ubah teks jadi format kapital awal kata
+        $namaKategoriClean = Str::title(trim($request->nama_kategori));
+
+        // Ambil atau buat baru kategori di belakang layar
+        $category = Category::firstOrCreate(
+            ['nama_kategori' => $namaKategoriClean]
+        );
+
         $mutasi = Mutasi::findOrFail($id);
         $mutasi->update([
-            'category_id' => $request->category_id,
+            'category_id' => $category->id, // Mengikat ke ID hasil pengecekan teks di atas
             'tipe'        => $request->tipe,
             'nominal'     => $nominalBersih,
             'keterangan'  => $request->keterangan,
@@ -134,19 +160,57 @@ class FinanceController extends Controller
         return back()->with('success', 'Transaksi berhasil dihapus!');
     }
 
+    // CREATE - Simpan Akun Baru (Tanpa Saldo)
     public function simpanAkun(Request $request) {
-        $request->validate(['nama_akun' => 'required']);
+        $request->validate([
+            'nama_akun' => 'required|string|max:255|unique:accounts,nama_akun'
+        ]);
 
         $account = Account::create([
             'nama_akun'  => $request->nama_akun,
             'kode_akun'  => 'ACC-'.strtoupper(substr(uniqid(),-5)),
-            'saldo_awal' => 0
         ]);
 
         // 📝 AUDIT LOG
         ActivityLog::record('Tambah Akun', 'Account', 'Menambahkan akun keuangan baru: ' . $account->nama_akun . ' (' . $account->kode_akun . ')');
 
         return back()->with('success', 'Akun ditambahkan!');
+    }
+
+    // UPDATE - Ubah Nama Akun
+    public function updateAkun(Request $request, $id) {
+        $request->validate([
+            'nama_akun' => 'required|string|max:255|unique:accounts,nama_akun,' . $id
+        ]);
+
+        $account = Account::findOrFail($id);
+        $namaLama = $account->nama_akun;
+
+        $account->update([
+            'nama_akun' => $request->nama_akun
+        ]);
+
+        // 📝 AUDIT LOG
+        ActivityLog::record('Update Akun', 'Account', 'Mengubah nama akun "' . $namaLama . '" menjadi "' . $account->nama_akun . '"');
+
+        return back()->with('success', 'Nama akun berhasil diperbarui!');
+    }
+
+    // DELETE - Hapus Akun dengan Proteksi Transaksi
+    public function hapusAkun($id) {
+        $account = Account::findOrFail($id);
+
+        // Proteksi: Cegah hapus data jika akun sudah memiliki riwayat mutasi keuangan
+        $terpakai = Mutasi::where('account_id', $id)->exists();
+        if ($terpakai) {
+            return back()->with('error', 'Gagal menghapus! Akun "' . $account->nama_akun . '" sudah memiliki riwayat transaksi keuangan.');
+        }
+
+        // 📝 AUDIT LOG
+        ActivityLog::record('Hapus Akun', 'Account', 'Menghapus akun keuangan: ' . $account->nama_akun . ' (' . $account->kode_akun . ')');
+
+        $account->delete();
+        return back()->with('success', 'Akun berhasil dihapus!');
     }
 
     public function konfirmasiInvoice(Request $request, $id) {
