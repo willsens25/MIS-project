@@ -15,6 +15,9 @@
     .preview-card { position: sticky; top: 20px; }
     .avatar-preview { width: 80px; height: 80px; background: linear-gradient(135deg, #007BFF, #00d4ff); border-radius: 24px; display: flex; align-items: center; justify-content: center; font-size: 32px; color: white; margin: 0 auto 15px; box-shadow: 0 10px 20px rgba(0, 123, 255, 0.2); }
     .form-switch .form-check-input { width: 2.5em; height: 1.25em; cursor: pointer; }
+
+    /* Efek transisi smooth untuk field yang bersembunyi */
+    .animated-collapse { transition: all 0.3s ease-in-out; overflow: hidden; }
 </style>
 
 <div class="container py-4">
@@ -43,6 +46,19 @@
                 {{-- INFORMASI UTAMA --}}
                 <div class="card card-custom p-4 bg-white mb-4">
                     <h5 class="fw-800 mb-4"><i class="bi bi-person-badge me-2 text-primary"></i>Informasi Utama</h5>
+
+                    {{-- 1. SWITCH UTAMA: SANGHA vs UMAT --}}
+                    <div class="p-3 rounded-4 bg-light mb-4 border border-light">
+                        <div class="form-check form-switch d-flex align-items-center justify-content-between px-0">
+                            <div class="ms-1">
+                                <label class="fw-800 text-dark mb-0 d-block" style="font-size: 14px;" for="switch-kategori-utama">Kategori Anggota Sangha</label>
+                                <small class="text-muted" id="kategori-desc">Aktifkan switch ini jika profil merupakan anggota Sangha.</small>
+                            </div>
+                            <input class="form-check-input ms-0 fs-5" type="checkbox" id="switch-kategori-utama"
+                                   {{ str_contains(strtolower($identitas->jenis_umat ?? ''), 'sangha') ? 'checked' : '' }}>
+                        </div>
+                    </div>
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label-custom">Nomor KTP / Identitas</label>
@@ -55,23 +71,24 @@
                                 <option value="Bpk/Ibu" {{ $identitas->gelar_panggilan == 'Bpk/Ibu' ? 'selected' : '' }}>Bpk/Ibu</option>
                                 <option value="Ko" {{ $identitas->gelar_panggilan == 'Ko' ? 'selected' : '' }}>Ko</option>
                                 <option value="Ci" {{ $identitas->gelar_panggilan == 'Ci' ? 'selected' : '' }}>Ci</option>
+                                <option value="Bhante" {{ $identitas->gelar_panggilan == 'Bhante' ? 'selected' : '' }}>Bhante</option>
+                                <option value="Ayya" {{ $identitas->gelar_panggilan == 'Ayya' ? 'selected' : '' }}>Ayya/Attasilani</option>
                             </select>
                         </div>
                         <div class="col-md-12 mb-3">
                             <label class="form-label-custom">Nama Lengkap (Sesuai Sistem)</label>
                             <input type="text" name="nama_lengkap" id="input-nama" class="form-control input-custom" value="{{ old('nama_lengkap', $identitas->nama_lengkap) }}" required>
                         </div>
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label-custom">Nama Sesuai KTP (Jika Berbeda)</label>
-                            <input type="text" name="nama_ktp" class="form-control input-custom" value="{{ old('nama_ktp', $identitas->nama_ktp) }}">
-                        </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label-custom">Nama Panggilan</label>
                             <input type="text" name="nama_panggilan" class="form-control input-custom" value="{{ old('nama_panggilan', $identitas->nama_panggilan) }}">
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label-custom">Divisi</label>
-                            <select name="divisi_id" id="input-divisi" class="form-select input-custom" required>
+
+                        {{-- 2. FIELD DIVISI: Dinamis Sembunyi / Muncul --}}
+                        <div class="col-md-6 mb-3 animated-collapse" id="wrapper-divisi">
+                            <label class="form-label-custom">Divisi <span class="text-danger">*</span></label>
+                            <select name="divisi_id" id="input-divisi" class="form-select input-custom">
+                                <option value="">-- Pilih Divisi --</option>
                                 @foreach($divisi as $div)
                                     <option value="{{ $div->id }}" data-nama="{{ $div->nama_divisi }}" {{ $identitas->divisi_id == $div->id ? 'selected' : '' }}>
                                         [{{ $div->kode }}] {{ $div->nama_divisi }}
@@ -82,7 +99,7 @@
                     </div>
                 </div>
 
-                {{-- KONTAK & ALAMAT (DITAMBAHKAN) --}}
+                {{-- KONTAK & ALAMAT --}}
                 <div class="card card-custom p-4 bg-white mb-4">
                     <h5 class="fw-800 mb-4"><i class="bi bi-geo-alt me-2 text-danger"></i>Kontak & Domisili</h5>
                     <div class="row">
@@ -121,22 +138,14 @@
                             <label class="form-label-custom">Tanggal Lahir</label>
                             <input type="date" name="tanggal_lahir" class="form-control input-custom" value="{{ old('tanggal_lahir', $identitas->tanggal_lahir ? (\Illuminate\Support\Carbon::parse($identitas->tanggal_lahir)->format('Y-m-d')) : '') }}">
                         </div>
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-6 mb-3">
                             <label class="form-label-custom">Jenis Kelamin</label>
                             <select name="jenis_kelamin" class="form-select input-custom">
                                 <option value="pria" {{ $identitas->jenis_kelamin == 'pria' ? 'selected' : '' }}>Laki-laki</option>
                                 <option value="wanita" {{ $identitas->jenis_kelamin == 'wanita' ? 'selected' : '' }}>Perempuan</option>
                             </select>
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label-custom">Jenis Umat (Wajib)</label>
-                            <select name="jenis_umat" class="form-select input-custom" required>
-                                <option value="Simpatisan" {{ $identitas->jenis_umat == 'Simpatisan' ? 'selected' : '' }}>Simpatisan</option>
-                                <option value="Anggota" {{ $identitas->jenis_umat == 'Anggota' ? 'selected' : '' }}>Anggota</option>
-                                <option value="Pengurus" {{ $identitas->jenis_umat == 'Pengurus' ? 'selected' : '' }}>Pengurus</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-6 mb-3">
                             <label class="form-label-custom">Kewarganegaraan</label>
                             <select name="kewarganegaraan" class="form-select input-custom">
                                 <option value="WNI" {{ $identitas->kewarganegaraan == 'WNI' ? 'selected' : '' }}>WNI</option>
@@ -151,9 +160,23 @@
                             <label class="form-label-custom">Pekerjaan</label>
                             <input type="text" name="pekerjaan" class="form-control input-custom" value="{{ old('pekerjaan', $identitas->pekerjaan) }}">
                         </div>
+
+                        {{-- Hidden Input untuk mengirim data `jenis_umat` ke controller berdasarkan Switch --}}
+                        <input type="hidden" name="jenis_umat" id="hidden-jenis-umat" value="{{ $identitas->jenis_umat }}">
+
+                        {{-- Dropdown sub-spesifik Umat dimunculkan hanya jika tipenya Umat --}}
+                        <div class="col-md-12 mb-3 animated-collapse" id="wrapper-sub-umat">
+                            <label class="form-label-custom">Sub Kategori Umat</label>
+                            <select id="select-sub-umat" class="form-select input-custom">
+                                <option value="Umat - Simpatisan" {{ $identitas->jenis_umat == 'Umat - Simpatisan' ? 'selected' : '' }}>Umat - Simpatisan</option>
+                                <option value="Umat - Anggota" {{ $identitas->jenis_umat == 'Umat - Anggota' ? 'selected' : '' }}>Umat - Anggota</option>
+                                <option value="Umat - Pengurus" {{ $identitas->jenis_umat == 'Umat - Pengurus' ? 'selected' : '' }}>Umat - Pengurus</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
+                {{-- STATUS & KEAMANAN --}}
                 <div class="card card-custom p-4 bg-white mb-4">
                     <h5 class="fw-800 mb-4"><i class="bi bi-shield-lock me-2 text-warning"></i>Status & Keamanan</h5>
                     <div class="row">
@@ -170,7 +193,9 @@
                             <label class="form-label-custom">Kategori Jarkom</label>
                             <input type="text" name="kategori_jarkom" class="form-control input-custom" value="{{ old('kategori_jarkom', $identitas->kategori_jarkom) }}">
                         </div>
-                        <div class="col-md-12">
+
+                        {{-- 3. SWICTH KEAGENAN: Hanya tampil untuk rumpun Umat --}}
+                        <div class="col-md-12 animated-collapse" id="wrapper-keagenan">
                             <div class="p-3 rounded-4 border border-dashed bg-light">
                                 <div class="d-flex gap-4">
                                     <div class="form-check form-switch">
@@ -239,6 +264,68 @@
         const checkPatriot = document.getElementById('check-patriot');
         const badgePatriot = document.getElementById('badge-patriot');
 
+        // Elemen Kontrol Logika Baru
+        const switchKategoriUtama = document.getElementById('switch-kategori-utama');
+        const kategoriDesc = document.getElementById('kategori-desc');
+        const wrapperDivisi = document.getElementById('wrapper-divisi');
+        const wrapperSubUmat = document.getElementById('wrapper-sub-umat');
+        const wrapperKeagenan = document.getElementById('wrapper-keagenan');
+        const selectSubUmat = document.getElementById('select-sub-umat');
+        const hiddenJenisUmat = document.getElementById('hidden-jenis-umat');
+
+        function handleCategoryToggle() {
+            if (switchKategoriUtama.checked) {
+                // APABILA SANGHA AKTIF
+                kategoriDesc.innerText = "Status Saat Ini: Anggota Sangha (Bhante / Attasilani)";
+                hiddenJenisUmat.value = "Sangha";
+
+                // Sembunyikan Divisi, Sub Umat, & Keagenan
+                wrapperDivisi.style.display = 'none';
+                wrapperSubUmat.style.display = 'none';
+                wrapperKeagenan.style.display = 'none';
+
+                // Kosongkan value divisi & hilangkan requirement bypass validasi HTML5
+                inputDivisi.value = "";
+                inputDivisi.required = false;
+                previewDivisiText.innerText = "Anggota Sangha";
+
+                // Reset checklist keagenan ke default mati jika diubah ke Sangha
+                checkAgen.checked = false;
+                checkPatriot.checked = false;
+                badgeAgen.classList.add('d-none');
+                badgePatriot.classList.add('d-none');
+            } else {
+                // APABILA UMAT AKTIF
+                kategoriDesc.innerText = "Status Saat Ini: Rumpun Umat Kelompok Kerja";
+                hiddenJenisUmat.value = selectSubUmat.value;
+
+                // Tampilkan Divisi, Pilihan Sub Umat, & Keagenan
+                wrapperDivisi.style.display = 'block';
+                wrapperSubUmat.style.display = 'block';
+                wrapperKeagenan.style.display = 'block';
+
+                inputDivisi.required = true;
+
+                // Update text preview berdasarkan data divisi terpilih
+                const selectedOption = inputDivisi.options[inputDivisi.selectedIndex];
+                previewDivisiText.innerText = selectedOption && selectedOption.value ? selectedOption.getAttribute('data-nama') : 'Belum Set Divisi';
+            }
+        }
+
+        // Event listener perubahan pada switch Sangha vs Umat
+        switchKategoriUtama.addEventListener('change', handleCategoryToggle);
+
+        // Event listener saat sub kategori umat diganti (Simpatisan / Anggota / Pengurus)
+        selectSubUmat.addEventListener('change', function() {
+            if (!switchKategoriUtama.checked) {
+                hiddenJenisUmat.value = this.value;
+            }
+        });
+
+        // Jalankan logika penyesuaian tampilan di awal render
+        handleCategoryToggle();
+
+        // --- Live Preview Original Handler ---
         inputNama.addEventListener('input', function() {
             previewNama.innerText = this.value || 'Nama Lengkap';
             previewAvatar.innerText = this.value ? this.value.charAt(0).toUpperCase() : '?';
@@ -246,7 +333,7 @@
 
         inputDivisi.addEventListener('change', function() {
             const selectedOption = this.options[this.selectedIndex];
-            previewDivisiText.innerText = selectedOption.getAttribute('data-nama');
+            previewDivisiText.innerText = selectedOption.value ? selectedOption.getAttribute('data-nama') : 'Belum Set Divisi';
         });
 
         inputStatus.addEventListener('change', function() {

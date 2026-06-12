@@ -55,51 +55,57 @@ class IdentitasController extends Controller
         $request->validate([
             'nomor_identitas' => 'required',
             'nama_lengkap'    => 'required',
-            'jenis_identitas' => 'required_with:jenis_identitas,jenis_id',
+            'jenis_identitas' => 'required',
         ]);
 
         try {
             DB::beginTransaction();
 
-            // 1. OTOMATISASI NAMA LENGKAP: Diubah ke Huruf Kapital Semua (Sesuai Logika MIS Kamu)
             $namaUpper = strtoupper($request->nama_lengkap);
 
-            // 2. OTOMATISASI NAMA PANGGILAN: Otomatis Title Case (Contoh: "willsen" -> "Willsen")
             $panggilanInput = $request->panggilan ?? $request->nama_panggilan;
             $panggilanClean = $panggilanInput ? ucwords(strtolower($panggilanInput)) : null;
 
-            // 3. PEMBERSIHAN NOMOR HP / WHATSAPP (Standardisasi ke Format Angka Bersih)
             $noHpInput = $request->nomor_hp_primary ?? $request->nomor_whatsapp;
             $noHpClean = null;
             if ($noHpInput) {
-                // Hapus spasi, strip, tanda plus, dll
                 $noHpClean = preg_replace('/[^0-9]/', '', $noHpInput);
-                // Jika user mengetik pakai kode negara (628xx), konversi otomatis ke format lokal (08xx) demi keseragaman
                 if (str_starts_with($noHpClean, '62')) {
                     $noHpClean = '0' . substr($noHpClean, 2);
                 }
             }
 
+            // Logika determinasi awal untuk store jika input jenis_umat adalah Sangha
+            $jenisUmat = $request->jenis_umat ?? $request->kategori_anggota;
+            $bhanteLay = null;
+            $divisiId = $request->divisi_id ?: null;
+
+            if ($jenisUmat === 'Sangha') {
+                $divisiId = null;
+                $bhanteLay = ($request->jenis_kelamin === 'pria') ? 'Bhante' : 'Ayya';
+            }
+
             Identitas::create([
                 'nama_lengkap'      => $namaUpper,
                 'panggilan'         => $panggilanClean,
-                'jenis_identitas'   => $request->jenis_identitas ?? $request->jenis_id,
+                'jenis_identitas'   => $request->jenis_identitas,
                 'nomor_identitas'   => $request->nomor_identitas,
                 'jenis_kelamin'     => $request->jenis_kelamin,
                 'kewarganegaraan'   => $request->kewarganegaraan ?? 'WNI',
-                'nomor_hp_primary'  => $noHpClean, // Menggunakan nomor yang sudah dibersihkan
+                'nomor_hp_primary'  => $noHpClean,
                 'email'             => $request->email,
                 'pekerjaan'         => $request->pekerjaan,
                 'alamat'            => $request->alamat ?? $request->alamat_domisili,
                 'kota'              => $request->kota,
                 'kode_pos'          => $request->kode_pos,
-                'agama'             => $request->agama ?? $request->agama_aliran,
+                'agama'             => $request->agama ?? $request->agama_aliran ?? 'Buddha',
                 'status_keamanan'   => 'Normal',
-                'jenis_umat'        => $request->jenis_umat ?? $request->kategori_anggota,
+                'jenis_umat'        => $jenisUmat,
+                'bhante_lay'        => $bhanteLay,
                 'is_agen_purna'     => $request->has('is_agen_purna') && $request->is_agen_purna == 1 ? 1 : 0,
                 'is_dharma_patriot' => $request->has('is_dharma_patriot') && $request->is_dharma_patriot == 1 ? 1 : 0,
-                'divisi_id'         => $request->divisi_id ?: null,
-                'created_by'        => auth()->id(), // 4. JALUR AMAN: Otomatis rekam user yang sedang login
+                'divisi_id'         => $divisiId,
+                'created_by'        => auth()->id(),
             ]);
 
             ActivityLog::record(
@@ -140,14 +146,11 @@ class IdentitasController extends Controller
         try {
             DB::beginTransaction();
 
-            // 1. OTOMATISASI NAMA LENGKAP: Diubah ke Huruf Kapital Semua saat Update
             $namaUpper = strtoupper($request->nama_lengkap);
 
-            // 2. OTOMATISASI NAMA PANGGILAN: Otomatis Title Case saat Update
             $panggilanInput = $request->panggilan ?? $request->nama_panggilan;
             $panggilanClean = $panggilanInput ? ucwords(strtolower($panggilanInput)) : null;
 
-            // 3. PEMBERSIHAN NOMOR HP / WHATSAPP SAAT UPDATE
             $noHpInput = $request->nomor_hp_primary ?? $request->nomor_whatsapp;
             $noHpClean = null;
             if ($noHpInput) {
@@ -157,13 +160,29 @@ class IdentitasController extends Controller
                 }
             }
 
+            //--- LOGIKA OTOMATISASI UNTUK SANGHA & UMAT ---
+            $jenisUmat = $request->jenis_umat;
+            $divisiId = $request->divisi_id;
+            $bhanteLay = $request->bhante_lay;
+
+            if ($jenisUmat === 'Sangha') {
+                // Sangha tidak memiliki divisi kelompok kerja umat
+                $divisiId = null;
+                // Isi otomatis kolom 'bhante_lay' berdasarkan pilihan jenis kelamin agar lolos NOT NULL constraint
+                $bhanteLay = ($request->jenis_kelamin === 'pria') ? 'Bhante' : 'Ayya';
+            } else {
+                // Jika dia beralih/tetap menjadi Umat, pastikan field bhante_lay di-set data default (misal kosong/Umat)
+                // jika struktur databasemu tidak membolehkan NULL, ganti null di bawah dengan string default seperti 'Umat' atau '-'
+                $bhanteLay = 'Umat';
+            }
+
             $identitas->update([
                 'nama_lengkap'      => $namaUpper,
                 'panggilan'         => $panggilanClean,
                 'jenis_identitas'   => $request->jenis_identitas ?? $identitas->jenis_identitas,
                 'nomor_identitas'   => $request->nomor_identitas,
                 'jenis_kelamin'     => $request->jenis_kelamin,
-                'nomor_hp_primary'  => $noHpClean, // Menggunakan nomor yang sudah dibersihkan
+                'nomor_hp_primary'  => $noHpClean,
                 'email'             => $request->email,
                 'pekerjaan'         => $request->pekerjaan,
                 'alamat'            => $request->alamat ?? $request->alamat_domisili,
@@ -172,12 +191,12 @@ class IdentitasController extends Controller
                 'agama'             => $request->agama ?? $request->agama_aliran,
                 'triyana'           => $request->triyana,
                 'status_keamanan'   => $request->status_keamanan ?? 'Normal',
-                'jenis_umat'        => $request->jenis_umat ?? $request->kategori_anggota,
-                'bhante_lay'        => $request->bhante_lay,
+                'jenis_umat'        => $jenisUmat,
+                'bhante_lay'        => $bhanteLay,
                 'kategori_jarkom'   => $request->kategori_jarkom,
                 'is_agen_purna'     => $request->is_agen_purna == '1' ? 1 : 0,
                 'is_dharma_patriot' => $request->is_dharma_patriot == '1' ? 1 : 0,
-                'divisi_id'         => $request->divisi_id,
+                'divisi_id'         => $divisiId,
             ]);
 
             ActivityLog::record(

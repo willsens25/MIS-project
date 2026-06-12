@@ -224,11 +224,12 @@
                             <input type="text" name="nomor_hp_primary" class="form-control bg-light border-0 py-2.5 px-3 rounded-3" style="font-weight: 600;" placeholder="0812xxxx">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold text-muted text-uppercase">Kategori Anggota (Jenis Umat)</label>
-                            <select name="jenis_umat" class="form-select bg-light border-0 py-2.5 px-3 rounded-3" style="font-weight: 600;">
-                                <option value="Simpatisan">Simpatisan</option>
-                                <option value="Anggota">Anggota</option>
-                                <option value="Pengurus">Pengurus</option>
+                            <label class="form-label small fw-bold text-muted text-uppercase">Kategori Anggota</label>
+                            <select name="jenis_umat" id="jenis_umat_select" class="form-select bg-light border-0 py-2.5 px-3 rounded-3" style="font-weight: 600;">
+                                <option value="Umat - Simpatisan">Umat - Simpatisan</option>
+                                <option value="Umat - Anggota">Umat - Anggota</option>
+                                <option value="Umat - Pengurus">Umat - Pengurus</option>
+                                <option value="Sangha">Sangha (Bhante/Attasilani)</option>
                             </select>
                         </div>
 
@@ -236,9 +237,10 @@
                             <label class="form-label small fw-bold text-muted text-uppercase">Alamat Domisili</label>
                             <textarea name="alamat" rows="2" class="form-control bg-light border-0 py-2.5 px-3 rounded-3" style="font-weight: 600;" placeholder="Alamat Lengkap Rumah"></textarea>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold text-muted text-uppercase">Divisi Kerja</label>
-                            <select name="divisi_id" class="form-select bg-light border-0 py-2.5 px-3 rounded-3" style="font-weight: 600;">
+
+                        <div class="col-md-6" id="divisi_kerja_wrapper">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Divisi Kerja <span class="text-danger text-required-divisi">*</span></label>
+                            <select name="divisi_id" id="divisi_id_select" class="form-select bg-light border-0 py-2.5 px-3 rounded-3" style="font-weight: 600;">
                                 <option value="">-- Pilih Divisi --</option>
                                 @foreach($divisi as $div)
                                     <option value="{{ $div->id }}">{{ $div->nama_divisi }}</option>
@@ -262,4 +264,36 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const jenisUmatSelect = document.getElementById('jenis_umat_select');
+    const divisiWrapper = document.getElementById('divisi_kerja_wrapper');
+    const divisiSelect = document.getElementById('divisi_id_select');
+    const requiredStar = document.querySelector('.text-required-divisi');
+
+    function toggleDivisiField() {
+        const selectedValue = jenisUmatSelect.value;
+
+        // Jika yang dipilih adalah Sangha
+        if (selectedValue === 'Sangha') {
+            divisiSelect.value = ""; // Reset nilainya agar tidak terkirim data divisi lawas
+            divisiSelect.required = false;
+            divisiWrapper.style.display = 'none'; // Sembunyikan field divisi
+        } else {
+            // Jika rumpun Umat, tampilkan dan wajibkan pilihan divisi
+            divisiWrapper.style.display = 'block';
+            divisiSelect.required = true;
+        }
+    }
+
+    // Pasang listener event saat user mengubah pilihan kategori
+    if (jenisUmatSelect && divisiSelect) {
+        jenisUmatSelect.addEventListener('change', toggleDivisiField);
+
+        // Jalankan sekali di awal saat modal siap
+        toggleDivisiField();
+    }
+});
+</script>
 @endsection
