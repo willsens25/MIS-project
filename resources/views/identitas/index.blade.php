@@ -37,8 +37,16 @@
 
     .btn-add { background-color: #007BFF; border: none; border-radius: 14px; padding: 12px 24px; font-weight: 700; transition: 0.3s; }
     .btn-add:hover { background-color: #0056b3; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0, 123, 255, 0.2); }
-    .btn-action-view { background-color: #f1f5f9; border: none; color: #475569; padding: 8px 12px; border-radius: 10px; font-weight: 600; transition: 0.2s; }
+
+    .btn-action-view { background-color: #f1f5f9; border: none; color: #475569; padding: 8px 12px; border-radius: 10px; font-weight: 600; transition: 0.2s; text-decoration: none; }
     .btn-action-view:hover { background-color: #e2e8f0; color: #0f172a; }
+
+    .btn-action-delete { background-color: #fee2e2; border: none; color: #991b1b; padding: 8px 12px; border-radius: 10px; font-weight: 600; transition: 0.2s; }
+    .btn-action-delete:hover { background-color: #fca5a5; color: #7f1d1d; }
+
+    /* Custom Checkbox */
+    .form-check-input { width: 18px; height: 18px; cursor: pointer; }
+    .btn-bulk-delete { border-radius: 12px; font-weight: 700; padding: 10px 20px; display: none; transition: all 0.2s; }
 </style>
 
 <div class="container-fluid py-4 px-4">
@@ -47,11 +55,19 @@
             <h3 class="fw-800 mb-1">Database Anggota MIS</h3>
             <p class="text-muted small mb-0">Kelola informasi profil, kategori umat, dan pengawasan internal.</p>
         </div>
-        <button type="button" class="btn btn-add text-white shadow-sm" data-bs-toggle="modal" data-bs-target="#modalTambahIdentitas">
-            <i class="bi bi-plus-lg me-2"></i> Registrasi Anggota Baru
-        </button>
+        <div class="d-flex gap-2">
+            {{-- Tombol Bulk Delete --}}
+            <button type="button" id="btnBulkDelete" class="btn btn-danger btn-bulk-delete shadow-sm" onclick="submitBulkDelete()">
+                <i class="bi bi-trash3-fill me-2"></i> Hapus Terpilih (<span id="checkCount">0</span>)
+            </button>
+
+            <button type="button" class="btn btn-add text-white shadow-sm" data-bs-toggle="modal" data-bs-target="#modalTambahIdentitas">
+                <i class="bi bi-plus-lg me-2"></i> Registrasi Anggota Baru
+            </button>
+        </div>
     </div>
 
+    {{-- Ringkasan Stats --}}
     <div class="row g-3 mb-4">
         <div class="col-md-4">
             <div class="card card-stats bg-white p-4">
@@ -104,80 +120,103 @@
             </form>
         </div>
 
-        <div class="table-responsive">
-            <table class="table table-modern align-middle mb-0">
-                <thead>
-                    <tr>
-                        <th width="80">ID MIS</th>
-                        <th>Profil Anggota</th>
-                        <th>Kategori</th>
-                        <th>Kontak Utama</th>
-                        <th>Divisi</th>
-                        <th width="150" class="text-center">Keamanan</th>
-                        <th width="100" class="text-center">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($identitas as $item)
-                        <tr onclick="window.location='{{ route('identitas.show', $item->id) }}'">
-                            <td class="fw-bold text-muted">MIS-{{ str_pad($item->id, 5, '0', STR_PAD_LEFT) }}</td>
-                            <td>
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="avatar-circle">
-                                        {{ strtoupper(substr($item->nama_lengkap, 0, 1)) }}
-                                    </div>
-                                    <div>
-                                        <h6 class="fw-bold mb-0 text-dark">{{ $item->nama_lengkap }}</h6>
-                                        <small class="text-muted">Panggilan: <span class="fw-semibold text-secondary">{{ $item->panggilan ?? '-' }}</span></small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="badge bg-light text-dark border px-2 py-1.5 rounded-3 fw-semibold small">
-                                    {{ $item->jenis_umat ?? 'Simpatisan' }}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="d-flex flex-column">
-                                    <span class="fw-semibold text-dark"><i class="bi bi-whatsapp text-success small me-1"></i>{{ $item->nomor_hp_primary ?? '-' }}</span>
-                                    <small class="text-muted small" style="font-size: 11px;">{{ $item->email ?? '-' }}</small>
-                                </div>
-                            </td>
-                            <td>
-                                @if($item->divisi)
-                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1.5 rounded-3 fw-bold" style="background-color: #eff6ff;">
-                                        {{ $item->divisi->nama_divisi }}
-                                    </span>
-                                @else
-                                    <span class="text-muted small italic">Belum Set</span>
-                                @endif
-                            </td>
-                            <td class="text-center">
-                                @php
-                                    $statusLower = strtolower($item->status_keamanan ?? 'normal');
-                                @endphp
-                                <span class="badge-soft badge-soft-{{ $statusLower }}">
-                                    <span class="spinner-grow spinner-grow-sm" style="width: 6px; height: 6px;" role="status"></span>
-                                    {{ strtoupper($item->status_keamanan ?? 'NORMAL') }}
-                                </span>
-                            </td>
-                            <td class="text-center" onclick="event.stopPropagation();">
-                                <a href="{{ route('identitas.show', $item->id) }}" class="btn btn-action-view small">
-                                    <i class="bi bi-eye-fill"></i> View
-                                </a>
-                            </td>
-                        </tr>
-                    @empty
+        {{-- FORM UTAMA UNTUK BULK DELETE (Disinkronkan dengan web.php) --}}
+        <form id="formBulkDelete" action="{{ route('identitas.bulkDelete') }}" method="POST">
+            @csrf
+            @method('DELETE')
+
+            <div class="table-responsive">
+                <table class="table table-modern align-middle mb-0">
+                    <thead>
                         <tr>
-                            <td colspan="7" class="text-center py-5 text-muted">
-                                <i class="bi bi-folder-x fs-1 d-block mb-2 opacity-40"></i>
-                                <span class="fw-bold">Tidak ada data anggota ditemukan.</span>
-                            </td>
+                            <th width="40" class="text-center" onclick="event.stopPropagation();">
+                                <input type="checkbox" class="form-check-input" id="checkAll">
+                            </th>
+                            <th width="80">ID MIS</th>
+                            <th>Profil Anggota</th>
+                            <th>Kategori</th>
+                            <th>Kontak Utama</th>
+                            <th>Divisi</th>
+                            <th width="150" class="text-center">Keamanan</th>
+                            <th width="160" class="text-center">Aksi</th>
                         </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                    </thead>
+                    <tbody>
+                        @forelse($identitas as $item)
+                            <tr onclick="window.location='{{ route('identitas.show', $item->id) }}'">
+                                <td class="text-center" onclick="event.stopPropagation();">
+                                    <input type="checkbox" name="ids[]" value="{{ $item->id }}" class="form-check-input row-checkbox">
+                                </td>
+                                <td class="fw-bold text-muted">MIS-{{ str_pad($item->id, 5, '0', STR_PAD_LEFT) }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="avatar-circle">
+                                            {{ strtoupper(substr($item->nama_lengkap, 0, 1)) }}
+                                        </div>
+                                        <div>
+                                            <h6 class="fw-bold mb-0 text-dark">{{ $item->nama_lengkap }}</h6>
+                                            <small class="text-muted">Panggilan: <span class="fw-semibold text-secondary">{{ $item->panggilan ?? '-' }}</span></small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border px-2 py-1.5 rounded-3 fw-semibold small">
+                                        {{ $item->jenis_umat ?? 'Simpatisan' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-column">
+                                        <span class="fw-semibold text-dark"><i class="bi bi-whatsapp text-success small me-1"></i>{{ $item->nomor_hp_primary ?? '-' }}</span>
+                                        <small class="text-muted small" style="font-size: 11px;">{{ $item->email ?? '-' }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if($item->divisi)
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1.5 rounded-3 fw-bold" style="background-color: #eff6ff;">
+                                            {{ $item->divisi->nama_divisi }}
+                                        </span>
+                                    @else
+                                        <span class="text-muted small italic">Belum Set</span>
+                                    @endif
+                                </td>
+                                <td class="text-center">
+                                    @php
+                                        $statusLower = strtolower($item->status_keamanan ?? 'normal');
+                                    @endphp
+                                    <span class="badge-soft badge-soft-{{ $statusLower }}">
+                                        <span class="spinner-grow spinner-grow-sm" style="width: 6px; height: 6px;" role="status"></span>
+                                        {{ strtoupper($item->status_keamanan ?? 'NORMAL') }}
+                                    </span>
+                                </td>
+                                <td class="text-center" onclick="event.stopPropagation();">
+                                    <div class="d-flex justify-content-center gap-1">
+                                        <a href="{{ route('identitas.show', $item->id) }}" class="btn btn-action-view small">
+                                            <i class="bi bi-eye-fill"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-action-delete small" title="Hapus Anggota" onclick="confirmSingleDelete({{ $item->id }}, '{{ $item->nama_lengkap }}')">
+                                            <i class="bi bi-trash3-fill"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <i class="bi bi-folder-x fs-1 d-block mb-2 opacity-40"></i>
+                                    <span class="fw-bold">Tidak ada data anggota ditemukan.</span>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </form>
+
+        {{-- Form bantuan terpisah untuk hapus satuan --}}
+        <form id="formSingleDelete" method="POST" style="display:none;">
+            @csrf
+            @method('DELETE')
+        </form>
 
         @if($identitas->hasPages())
             <div class="p-4 bg-white border-top border-light d-flex justify-content-center">
@@ -187,6 +226,7 @@
     </div>
 </div>
 
+{{-- Modal Registrasi --}}
 <div class="modal fade" id="modalTambahIdentitas" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content" style="border: none; border-radius: 24px;">
@@ -270,30 +310,70 @@ document.addEventListener('DOMContentLoaded', function() {
     const jenisUmatSelect = document.getElementById('jenis_umat_select');
     const divisiWrapper = document.getElementById('divisi_kerja_wrapper');
     const divisiSelect = document.getElementById('divisi_id_select');
-    const requiredStar = document.querySelector('.text-required-divisi');
 
     function toggleDivisiField() {
-        const selectedValue = jenisUmatSelect.value;
+        if (jenisUmatSelect && divisiSelect) {
+            if (jenisUmatSelect.value === 'Sangha') {
+                divisiSelect.value = "";
+                divisiSelect.required = false;
+                divisiWrapper.style.display = 'none';
+            } else {
+                divisiWrapper.style.display = 'block';
+                divisiSelect.required = true;
+            }
+        }
+    }
+    if (jenisUmatSelect && divisiSelect) {
+        jenisUmatSelect.addEventListener('change', toggleDivisiField);
+        toggleDivisiField();
+    }
 
-        // Jika yang dipilih adalah Sangha
-        if (selectedValue === 'Sangha') {
-            divisiSelect.value = ""; // Reset nilainya agar tidak terkirim data divisi lawas
-            divisiSelect.required = false;
-            divisiWrapper.style.display = 'none'; // Sembunyikan field divisi
+    const checkAll = document.getElementById('checkAll');
+    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+    const btnBulkDelete = document.getElementById('btnBulkDelete');
+    const checkCount = document.getElementById('checkCount');
+
+    function updateBulkButtonStatus() {
+        const checkedCount = document.querySelectorAll('.row-checkbox:checked').length;
+        checkCount.textContent = checkedCount;
+
+        if (checkedCount > 0) {
+            btnBulkDelete.style.display = 'inline-block';
         } else {
-            // Jika rumpun Umat, tampilkan dan wajibkan pilihan divisi
-            divisiWrapper.style.display = 'block';
-            divisiSelect.required = true;
+            btnBulkDelete.style.display = 'none';
         }
     }
 
-    // Pasang listener event saat user mengubah pilihan kategori
-    if (jenisUmatSelect && divisiSelect) {
-        jenisUmatSelect.addEventListener('change', toggleDivisiField);
-
-        // Jalankan sekali di awal saat modal siap
-        toggleDivisiField();
+    if(checkAll) {
+        checkAll.addEventListener('change', function() {
+            rowCheckboxes.forEach(cb => {
+                cb.checked = checkAll.checked;
+            });
+            updateBulkButtonStatus();
+        });
     }
+
+    rowCheckboxes.forEach(cb => {
+        cb.addEventListener('change', function() {
+            const allChecked = (document.querySelectorAll('.row-checkbox:checked').length === rowCheckboxes.length);
+            checkAll.checked = allChecked;
+            updateBulkButtonStatus();
+        });
+    });
 });
+
+function submitBulkDelete() {
+    if (confirm('Apakah Anda yakin ingin menghapus semua anggota terpilih secara massal? Tindakan ini tidak bisa dibatalkan!')) {
+        document.getElementById('formBulkDelete').submit();
+    }
+}
+
+function confirmSingleDelete(id, name) {
+    if (confirm('Apakah Anda yakin ingin menghapus ' + name + ' dari sistem?')) {
+        const form = document.getElementById('formSingleDelete');
+        form.action = '/anggota/' + id; // Diubah menyesuaikan prefix 'anggota' di web.php kamu
+        form.submit();
+    }
+}
 </script>
 @endsection

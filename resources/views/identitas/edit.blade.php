@@ -161,16 +161,16 @@
                             <input type="text" name="pekerjaan" class="form-control input-custom" value="{{ old('pekerjaan', $identitas->pekerjaan) }}">
                         </div>
 
-                        {{-- Hidden Input untuk mengirim data `jenis_umat` ke controller berdasarkan Switch --}}
+                        {{-- Hidden Input untuk mengirim data `jenis_umat` ke controller berdasarkan Pilihan --}}
                         <input type="hidden" name="jenis_umat" id="hidden-jenis-umat" value="{{ $identitas->jenis_umat }}">
 
-                        {{-- Dropdown sub-spesifik Umat dimunculkan hanya jika tipenya Umat --}}
+                        {{-- Dropdown sub-spesifik Umat: VALUE DISET BERSIH SESUAI ENUM DATABASE --}}
                         <div class="col-md-12 mb-3 animated-collapse" id="wrapper-sub-umat">
                             <label class="form-label-custom">Sub Kategori Umat</label>
                             <select id="select-sub-umat" class="form-select input-custom">
-                                <option value="Umat - Simpatisan" {{ $identitas->jenis_umat == 'Umat - Simpatisan' ? 'selected' : '' }}>Umat - Simpatisan</option>
-                                <option value="Umat - Anggota" {{ $identitas->jenis_umat == 'Umat - Anggota' ? 'selected' : '' }}>Umat - Anggota</option>
-                                <option value="Umat - Pengurus" {{ $identitas->jenis_umat == 'Umat - Pengurus' ? 'selected' : '' }}>Umat - Pengurus</option>
+                                <option value="Simpatisan" {{ str_contains($identitas->jenis_umat, 'Simpatisan') ? 'selected' : '' }}>Umat - Simpatisan</option>
+                                <option value="Anggota" {{ str_contains($identitas->jenis_umat, 'Anggota') ? 'selected' : '' }}>Umat - Anggota</option>
+                                <option value="Pengurus" {{ str_contains($identitas->jenis_umat, 'Pengurus') ? 'selected' : '' }}>Umat - Pengurus</option>
                             </select>
                         </div>
                     </div>
@@ -264,7 +264,7 @@
         const checkPatriot = document.getElementById('check-patriot');
         const badgePatriot = document.getElementById('badge-patriot');
 
-        // Elemen Kontrol Logika Baru
+        // Elemen Kontrol Logika
         const switchKategoriUtama = document.getElementById('switch-kategori-utama');
         const kategoriDesc = document.getElementById('kategori-desc');
         const wrapperDivisi = document.getElementById('wrapper-divisi');
@@ -279,17 +279,14 @@
                 kategoriDesc.innerText = "Status Saat Ini: Anggota Sangha (Bhante / Attasilani)";
                 hiddenJenisUmat.value = "Sangha";
 
-                // Sembunyikan Divisi, Sub Umat, & Keagenan
                 wrapperDivisi.style.display = 'none';
                 wrapperSubUmat.style.display = 'none';
                 wrapperKeagenan.style.display = 'none';
 
-                // Kosongkan value divisi & hilangkan requirement bypass validasi HTML5
                 inputDivisi.value = "";
                 inputDivisi.required = false;
                 previewDivisiText.innerText = "Anggota Sangha";
 
-                // Reset checklist keagenan ke default mati jika diubah ke Sangha
                 checkAgen.checked = false;
                 checkPatriot.checked = false;
                 badgeAgen.classList.add('d-none');
@@ -297,16 +294,16 @@
             } else {
                 // APABILA UMAT AKTIF
                 kategoriDesc.innerText = "Status Saat Ini: Rumpun Umat Kelompok Kerja";
+
+                // ISI VALUE DENGAN VALUE SEKARANG DARI DROPDOWN SUB UMAT
                 hiddenJenisUmat.value = selectSubUmat.value;
 
-                // Tampilkan Divisi, Pilihan Sub Umat, & Keagenan
                 wrapperDivisi.style.display = 'block';
                 wrapperSubUmat.style.display = 'block';
                 wrapperKeagenan.style.display = 'block';
 
                 inputDivisi.required = true;
 
-                // Update text preview berdasarkan data divisi terpilih
                 const selectedOption = inputDivisi.options[inputDivisi.selectedIndex];
                 previewDivisiText.innerText = selectedOption && selectedOption.value ? selectedOption.getAttribute('data-nama') : 'Belum Set Divisi';
             }

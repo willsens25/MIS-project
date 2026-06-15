@@ -44,10 +44,22 @@
                 </nav>
             </div>
         </div>
+
+        {{-- KUMPULAN TOMBOL AKSI --}}
         <div class="d-flex gap-2">
+            {{-- Tombol Edit --}}
             <a href="{{ route('identitas.edit', $identitas->id) }}" class="btn btn-primary btn-action px-4 fw-bold">
                 <i class="bi bi-pencil-square me-2"></i> Edit Profil
             </a>
+
+            {{-- Tombol Hapus Anggota (Form Method DELETE) --}}
+            <form action="{{ route('identitas.destroy', $identitas->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data {{ $identitas->nama_lengkap }} secara permanen dari sistem?');">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="btn btn-outline-danger btn-action px-4 fw-bold">
+                    <i class="bi bi-trash3 me-2"></i> Hapus Anggota
+                </button>
+            </form>
         </div>
     </div>
 
@@ -122,7 +134,7 @@
                 <div class="row g-4">
                     <div class="col-md-6">
                         <p class="info-label">Nomor KTP / Identitas</p>
-                        <p class="info-value">{{ $identitas->nomor_identitas ?? '-' }}</p> {{-- FIX: dari no_ktp ke nomor_identitas --}}
+                        <p class="info-value">{{ $identitas->nomor_identitas ?? '-' }}</p>
                     </div>
                     <div class="col-md-6">
                         <p class="info-label">Nama di KTP</p>
@@ -130,10 +142,10 @@
                     </div>
                     <div class="col-md-6">
                         <p class="info-label">Nama Panggilan</p>
-                        <p class="info-value">{{ $identitas->panggilan ?? '-' }}</p> {{-- FIX: dari nama_panggilan ke panggilan --}}
+                        <p class="info-value">{{ $identitas->panggilan ?? '-' }}</p>
                     </div>
                     <div class="col-md-6">
-                        <p class="info-label">Kategori Anggota / Jenis Umat</p> {{-- ADDED: Kolom Kategori Anggota --}}
+                        <p class="info-label">Kategori Anggota / Jenis Umat</p>
                         <p class="info-value"><span class="badge bg-primary rounded-pill px-3">{{ $identitas->jenis_umat ?? '-' }}</span></p>
                     </div>
                     <div class="col-md-6">

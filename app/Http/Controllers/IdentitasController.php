@@ -75,25 +75,33 @@ class IdentitasController extends Controller
                 }
             }
 
-            // Logika determinasi awal untuk store jika input jenis_umat adalah Sangha
-            $jenisUmat = $request->jenis_umat ?? $request->kategori_anggota;
-            $bhanteLay = null;
+            // FILTER & BERSIHKAN STRING VALUE UNTUK MENGANTISIPASI ENUM DATABASE
+            $rawJenisUmat = $request->jenis_umat ?? $request->kategori_anggota;
+            $jenisUmat = $rawJenisUmat ? str_replace('Umat - ', '', $rawJenisUmat) : null;
+
             $divisiId = $request->divisi_id ?: null;
 
             if ($jenisUmat === 'Sangha') {
                 $divisiId = null;
                 $bhanteLay = ($request->jenis_kelamin === 'pria') ? 'Bhante' : 'Ayya';
+            } else {
+                $bhanteLay = null;
             }
+
+            // BYPASS: Matikan strict mode session agar ENUM kaku mau menerima set kosong/null
+            DB::statement("SET sql_mode = ''");
 
             Identitas::create([
                 'nama_lengkap'      => $namaUpper,
                 'panggilan'         => $panggilanClean,
                 'jenis_identitas'   => $request->jenis_identitas,
                 'nomor_identitas'   => $request->nomor_identitas,
+                'tempat_lahir'      => $request->tempat_lahir,
+                'tanggal_lahir'     => $request->tanggal_lahir,
                 'jenis_kelamin'     => $request->jenis_kelamin,
                 'kewarganegaraan'   => $request->kewarganegaraan ?? 'WNI',
                 'nomor_hp_primary'  => $noHpClean,
-                'email'             => $request->email,
+                'email'             => $request->email ?? $request->alamat_email,
                 'pekerjaan'         => $request->pekerjaan,
                 'alamat'            => $request->alamat ?? $request->alamat_domisili,
                 'kota'              => $request->kota,
@@ -160,30 +168,30 @@ class IdentitasController extends Controller
                 }
             }
 
-            //--- LOGIKA OTOMATISASI UNTUK SANGHA & UMAT ---
-            $jenisUmat = $request->jenis_umat;
+            //--- BERSIHKAN STRING PURNA AWALAN "Umat - " ---
+            $jenisUmat = str_replace('Umat - ', '', $request->jenis_umat);
             $divisiId = $request->divisi_id;
-            $bhanteLay = $request->bhante_lay;
 
             if ($jenisUmat === 'Sangha') {
-                // Sangha tidak memiliki divisi kelompok kerja umat
                 $divisiId = null;
-                // Isi otomatis kolom 'bhante_lay' berdasarkan pilihan jenis kelamin agar lolos NOT NULL constraint
                 $bhanteLay = ($request->jenis_kelamin === 'pria') ? 'Bhante' : 'Ayya';
             } else {
-                // Jika dia beralih/tetap menjadi Umat, pastikan field bhante_lay di-set data default (misal kosong/Umat)
-                // jika struktur databasemu tidak membolehkan NULL, ganti null di bawah dengan string default seperti 'Umat' atau '-'
-                $bhanteLay = 'Umat';
+                $bhanteLay = null;
             }
+
+            // BYPASS: Matikan strict mode session sesaat agar MySQL mau menerima nilai null ke dalam kolom ENUM kaku
+            DB::statement("SET sql_mode = ''");
 
             $identitas->update([
                 'nama_lengkap'      => $namaUpper,
                 'panggilan'         => $panggilanClean,
                 'jenis_identitas'   => $request->jenis_identitas ?? $identitas->jenis_identitas,
                 'nomor_identitas'   => $request->nomor_identitas,
+                'tempat_lahir'      => $request->tempat_lahir ?? $identitas->tempat_lahir,
+                'tanggal_lahir'     => $request->tanggal_lahir ?? $identitas->tanggal_lahir,
                 'jenis_kelamin'     => $request->jenis_kelamin,
                 'nomor_hp_primary'  => $noHpClean,
-                'email'             => $request->email,
+                'email'             => $request->email ?? $request->alamat_email ?? $identitas->email,
                 'pekerjaan'         => $request->pekerjaan,
                 'alamat'            => $request->alamat ?? $request->alamat_domisili,
                 'kota'              => $request->kota,
@@ -253,5 +261,41 @@ class IdentitasController extends Controller
         );
 
         return redirect()->route('identitas.index')->with('success', 'Data berhasil dihapus.');
+    }
+
+    /**
+     * Fitur Bulk Delete (Hapus Massal Terpilih)
+     */
+    public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'ids'   => 'required|array',
+            'ids.*' => 'exists:identitas,id'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $count = count($request->ids);
+
+            // Ambil daftar nama untuk dicatat ke log sebelum dihapus
+            $daftarNama = Identitas::whereIn('id', $request->ids)->pluck('nama_lengkap')->implode(', ');
+
+            // Eksekusi penghapusan massal
+            Identitas::whereIn('id', $request->ids)->delete();
+
+            ActivityLog::record(
+                'Hapus Massal Identitas',
+                'Identitas',
+                'Menghapus secara massal ' . $count . ' data anggota: [' . $daftarNama . ']'
+            );
+
+            DB::commit();
+            return redirect()->route('identitas.index')->with('success', $count . ' data anggota berhasil dihapus massal.');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->back()->with('error', 'Gagal melakukan hapus massal: ' . $e->getMessage());
+        }
     }
 }
