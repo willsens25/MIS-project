@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\Book;
 use App\Models\ActivityLog;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class PenerbitanController extends Controller
 {
@@ -64,24 +65,50 @@ class PenerbitanController extends Controller
         return redirect()->back()->with('success', 'Harga buku ' . $buku->judul . ' berhasil diupdate!');
     }
 
+    /**
+     * Fitur Bulk Delete (Hapus Massal Terpilih) - Dengan Bypass Foreign Key Constraint
+     */
     public function bulkDelete(Request $request)
     {
-        $ids = $request->input('ids');
+        // 1. Validasi request input array id buku
+        $request->validate([
+            'ids'   => 'required|array',
+            'ids.*' => 'numeric'
+        ]);
 
-        if (!$ids || empty($ids)) {
-            return redirect()->back()->with('error', 'Pilih item yang ingin dihapus terlebih dahulu.');
+        try {
+            DB::beginTransaction();
+
+            $ids = $request->input('ids');
+            $count = count($ids);
+
+            // Ambil judul buku terlebih dahulu untuk histori log sebelum datanya lenyap
+            $judulBuku = \App\Models\Book::whereIn('id', $ids)->pluck('judul')->toArray();
+            $daftarJudul = implode(', ', $judulBuku);
+
+            // 🔥 BYPASS LANGKAH 1: Bersihkan semua pengajuan cetak yang mengikat id buku ini
+            \App\Models\PengajuanCetak::whereIn('buku_id', $ids)->delete();
+
+            // 🔥 BYPASS LANGKAH 2: Bersihkan detail orderan yang mengikat id buku ini (Mengatasi Error SQLSTATE[23000])
+            DB::table('order_details')->whereIn('buku_id', $ids)->delete();
+
+            // 2. Eksekusi penghapusan massal data buku utama setelah seluruh data relasi bersih
+            \App\Models\Book::whereIn('id', $ids)->delete();
+
+            // 📝 AUDIT LOG
+            ActivityLog::record(
+                'Hapus Massal Buku',
+                'Book',
+                'Menghapus massal ' . $count . ' buku beserta riwayat transaksi dan pengajuan cetaknya dari katalog: [' . $daftarJudul . ']'
+            );
+
+            DB::commit();
+            return redirect()->back()->with('success', $count . ' item buku dan seluruh data keterkaitannya berhasil dibersihkan total.');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->back()->with('error', 'Gagal melakukan hapus massal: ' . $e->getMessage());
         }
-
-        // Ambil judul buku terlebih dahulu untuk histori log sebelum datanya terhapus
-        $judulBuku = \App\Models\Book::whereIn('id', $ids)->pluck('judul')->toArray();
-        $daftarJudul = implode(', ', $judulBuku);
-
-        \App\Models\Book::whereIn('id', $ids)->delete();
-
-        // 📝 AUDIT LOG
-        ActivityLog::record('Hapus Massal Buku', 'Book', 'Menghapus massal ' . count($ids) . ' buku dari katalog: [' . $daftarJudul . ']');
-
-        return redirect()->back()->with('success', count($ids) . ' item berhasil dihapus.');
     }
 
     public function ajukanCetak(Request $request)
@@ -103,5 +130,20 @@ class PenerbitanController extends Controller
         ActivityLog::record('Ajukan Cetak Buku', 'PengajuanCetak', 'Mengajukan cetak ulang untuk buku "' . $buku->judul . '" sebanyak ' . $request->jumlah . ' Eks. Menunggu persetujuan Finance.');
 
         return back()->with('success', 'Pengajuan cetak telah dikirim ke Finance!');
+    }
+
+    public function exportPdf()
+    {
+    // Ambil semua data buku dari database
+    $books = \App\Models\Book::latest()->get();
+
+    // Catat aksi ke Audit Log
+    ActivityLog::record('Lihat PDF Katalog Buku', 'Book', 'Membuka preview laporan katalog buku dalam format PDF.');
+
+    // Load view html dan ubah menjadi kertas PDF berukuran A4 Portrait
+    $pdf = Pdf::loadView('dashboards.penerbitan_pdf', compact('books'))->setPaper('a4', 'portrait');
+
+    // 🔥 GANTI DI SINI: Dari download() menjadi stream()
+    return $pdf->stream('Laporan_Katalog_S_SALUR_' . date('Ymd_His') . '.pdf');
     }
 }

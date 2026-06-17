@@ -149,6 +149,7 @@ Route::middleware('auth')->group(function () {
             Route::delete('/bulk-delete', [PenerbitanController::class, 'bulkDelete'])->name('pnb.bulkDelete');
             Route::post('/update-harga/{id}', [PenerbitanController::class, 'updateHarga'])->name('penerbitan.updateHarga');
             Route::post('/ajukan-cetak', [PenerbitanController::class, 'ajukanCetak'])->name('pnb.ajukanCetak');
+            Route::get('/penerbitan/export-pdf', [PenerbitanController::class, 'exportPdf'])->name('pnb.exportPdf');
         });
     });
 
