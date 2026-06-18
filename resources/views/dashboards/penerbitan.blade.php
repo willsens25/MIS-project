@@ -177,9 +177,21 @@
                             </td>
                             <td><div class="fw-bold text-dark">Rp {{ number_format($b->harga_jual, 0, ',', '.') }}</div></td>
                             <td class="text-end pe-4">
-                                <button type="button" class="btn btn-icon-edit rounded-3 p-2 border shadow-none" data-bs-toggle="modal" data-bs-target="#editHarga{{ $b->id }}" title="Ubah Harga">
-                                    <i class="bi bi-pencil-square fs-5"></i>
-                                </button>
+                                <div class="d-inline-flex gap-1.5">
+                                    {{-- Tombol Ubah Data --}}
+                                    <button type="button" class="btn btn-icon-edit rounded-3 p-2 border shadow-none" data-bs-toggle="modal" data-bs-target="#editHarga{{ $b->id }}" title="Ubah Informasi Buku">
+                                        <i class="bi bi-pencil-square fs-5"></i>
+                                    </button>
+
+                                    {{-- Tombol Hapus Buku Satuan --}}
+                                    <form action="{{ route('pnb.hapus-buku', $b->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus buku &ldquo;{{ $b->judul }}&rdquo; dari katalog?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-icon-delete rounded-3 p-2 border shadow-none" title="Hapus Buku">
+                                            <i class="bi bi-trash fs-5"></i>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         @empty
@@ -282,28 +294,37 @@
     </div>
 </div>
 
-{{-- Modal Edit Harga --}}
+{{-- MODAL EDIT FULL CRUD (Judul, Penulis, Harga) --}}
 @foreach($books as $b)
 <div class="modal fade" id="editHarga{{ $b->id }}" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
             <form action="{{ route('penerbitan.updateHarga', $b->id) }}" method="POST">
                 @csrf
-                <div class="modal-body p-4 text-center">
-                    <div class="bg-primary bg-opacity-10 p-3.5 rounded-circle d-inline-block mb-3 text-primary">
-                        <i class="bi bi-tag-fill fs-3"></i>
+                <div class="modal-header border-0 px-4 pt-4 pb-0">
+                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-pencil-square me-2 text-primary"></i>Ubah Informasi Katalog</h5>
+                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body px-4 py-3.5">
+                    <div class="mb-3">
+                        <label class="small fw-bold mb-1.5 text-secondary">Judul Buku</label>
+                        <input type="text" name="judul" class="form-control border-light-dark bg-light text-dark shadow-none rounded-3 px-3 py-2" value="{{ $b->judul }}" required>
                     </div>
-                    <h5 class="fw-bold text-dark mb-1">Sesuaikan Harga</h5>
-                    <p class="text-muted small mb-3.5 text-truncate px-2">{{ $b->judul }}</p>
-
-                    <div class="input-group border border-secondary-subtle rounded-3 px-2 py-0.5 bg-white mb-4">
-                        <span class="input-group-text bg-transparent border-0 text-muted small fw-bold pe-2">Rp</span>
-                        <input type="number" name="harga_jual" class="form-control bg-transparent border-0 shadow-none text-dark fw-bold" value="{{ $b->harga_jual }}" required>
+                    <div class="mb-3">
+                        <label class="small fw-bold mb-1.5 text-secondary">Nama Penulis</label>
+                        <input type="text" name="penulis" class="form-control border-light-dark bg-light text-dark shadow-none rounded-3 px-3 py-2" value="{{ $b->penulis }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small fw-bold mb-1.5 text-secondary">Harga Jual Pasar</label>
+                        <div class="input-group border-light-dark rounded-3 bg-light px-2 py-0.5">
+                            <span class="input-group-text bg-transparent border-0 text-muted small fw-bold pe-2">Rp</span>
+                            <input type="number" name="harga_jual" class="form-control bg-transparent border-0 shadow-none text-dark fw-bold" value="{{ $b->harga_jual }}" required>
+                        </div>
                     </div>
 
-                    <div class="row g-2">
-                        <div class="col-5"><button type="button" class="btn btn-light w-100 rounded-3 text-secondary fw-semibold border-0 py-2 btn-sm" data-bs-dismiss="modal">Batal</button></div>
-                        <div class="col-7"><button type="submit" class="btn btn-primary w-100 rounded-3 text-white fw-bold py-2 btn-sm shadow-sm">Perbarui</button></div>
+                    <div class="row g-2 mt-3">
+                        <div class="col-6"><button type="button" class="btn btn-light w-100 rounded-3 text-secondary fw-semibold border-0 py-2.5" data-bs-dismiss="modal">Batal</button></div>
+                        <div class="col-6"><button type="submit" class="btn btn-primary w-100 rounded-3 text-white fw-bold py-2.5 shadow-sm">Simpan Perubahan</button></div>
                     </div>
                 </div>
             </form>
@@ -460,6 +481,17 @@
         background-color: var(--bs-primary);
         color: #fff;
         border-color: var(--bs-primary);
+    }
+    .btn-icon-delete {
+        background-color: #fff;
+        color: var(--bs-danger);
+        border-color: #f8d7da;
+        transition: all 0.2s ease;
+    }
+    .btn-icon-delete:hover {
+        background-color: var(--bs-danger);
+        color: #fff;
+        border-color: var(--bs-danger);
     }
 
     /* Subdued Alert Text colors */

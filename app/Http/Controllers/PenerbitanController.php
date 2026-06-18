@@ -25,12 +25,15 @@ class PenerbitanController extends Controller
         return view('dashboards.penerbitan', compact('books'));
     }
 
+    /**
+     * [CREATE] Mendaftarkan buku baru ke katalog dengan Judul, Penulis, dan Harga
+     */
     public function tambahBuku(Request $request)
     {
         $request->validate([
-            'judul' => 'required',
-            'penulis' => 'required',
-            'harga_jual' => 'required|numeric',
+            'judul' => 'required|string|max:255',
+            'penulis' => 'required|string|max:255',
+            'harga_jual' => 'required|numeric|min:0',
         ]);
 
         $book = Book::create([
@@ -46,23 +49,74 @@ class PenerbitanController extends Controller
         return back()->with('success', 'Buku baru berhasil didaftarkan ke katalog!');
     }
 
+    /**
+     * [UPDATE] Mengubah Informasi Judul, Penulis, dan Harga secara Sekaligus
+     */
     public function updateHarga(Request $request, $id)
     {
+        // Validasi ketiga field data
         $request->validate([
+            'judul' => 'required|string|max:255',
+            'penulis' => 'required|string|max:255',
             'harga_jual' => 'required|numeric|min:0',
         ]);
 
         $buku = \App\Models\Book::findOrFail($id);
+
+        // Simpan data lama untuk kebutuhan komparasi di Audit Log
+        $judulLama = $buku->judul;
+        $penulisLama = $buku->penulis;
         $hargaLama = $buku->harga_jual;
 
         $buku->update([
+            'judul' => $request->judul,
+            'penulis' => $request->penulis,
             'harga_jual' => $request->harga_jual
         ]);
 
-        // 📝 AUDIT LOG
-        ActivityLog::record('Update Harga Buku', 'Book', 'Mengubah harga buku "' . $buku->judul . '" dari Rp ' . number_format($hargaLama, 0, ',', '.') . ' menjadi Rp ' . number_format($buku->harga_jual, 0, ',', '.'));
+        // 📝 AUDIT LOG - Mencatat detail perubahan secara transparan
+        ActivityLog::record(
+            'Update Informasi Buku',
+            'Book',
+            'Mengubah data buku ID ' . $buku->id . ' -> ' .
+            'Judul: ["' . $judulLama . '" => "' . $buku->judul . '"], ' .
+            'Penulis: ["' . $penulisLama . '" => "' . $buku->penulis . '"], ' .
+            'Harga: [Rp ' . number_format($hargaLama, 0, ',', '.') . ' => Rp ' . number_format($buku->harga_jual, 0, ',', '.') . ']'
+        );
 
-        return redirect()->back()->with('success', 'Harga buku ' . $buku->judul . ' berhasil diupdate!');
+        return redirect()->back()->with('success', 'Informasi data buku "' . $buku->judul . '" berhasil diperbarui!');
+    }
+
+    /**
+     * [DELETE] Hapus Buku Satuan - Dengan Bypass Foreign Key Constraint Aman
+     */
+    public function hapusBuku($id)
+    {
+        try {
+            DB::beginTransaction();
+
+            $buku = \App\Models\Book::findOrFail($id);
+            $judul = $buku->judul;
+
+            // 🔥 BYPASS LANGKAH 1: Bersihkan semua pengajuan cetak yang mengikat id buku ini
+            \App\Models\PengajuanCetak::where('buku_id', $id)->delete();
+
+            // 🔥 BYPASS LANGKAH 2: Bersihkan detail orderan yang mengikat id buku ini
+            DB::table('order_details')->where('buku_id', $id)->delete();
+
+            // Eksekusi penghapusan data buku utama
+            $buku->delete();
+
+            // 📝 AUDIT LOG
+            ActivityLog::record('Hapus Buku', 'Book', 'Menghapus buku "' . $judul . '" beserta riwayat transaksi terkait dari katalog.');
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Buku "' . $judul . '" beserta seluruh data keterkaitannya berhasil dihapus.');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->back()->with('error', 'Gagal menghapus buku: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -134,16 +188,15 @@ class PenerbitanController extends Controller
 
     public function exportPdf()
     {
-    // Ambil semua data buku dari database
-    $books = \App\Models\Book::latest()->get();
+        // Ambil semua data buku dari database
+        $books = \App\Models\Book::latest()->get();
 
-    // Catat aksi ke Audit Log
-    ActivityLog::record('Lihat PDF Katalog Buku', 'Book', 'Membuka preview laporan katalog buku dalam format PDF.');
+        // Catat aksi ke Audit Log
+        ActivityLog::record('Lihat PDF Katalog Buku', 'Book', 'Membuka preview laporan katalog buku dalam format PDF.');
 
-    // Load view html dan ubah menjadi kertas PDF berukuran A4 Portrait
-    $pdf = Pdf::loadView('dashboards.penerbitan_pdf', compact('books'))->setPaper('a4', 'portrait');
+        // Load view html dan ubah menjadi kertas PDF berukuran A4 Portrait
+        $pdf = Pdf::loadView('dashboards.penerbitan_pdf', compact('books'))->setPaper('a4', 'portrait');
 
-    // 🔥 GANTI DI SINI: Dari download() menjadi stream()
-    return $pdf->stream('Laporan_Katalog_S_SALUR_' . date('Ymd_His') . '.pdf');
+        return $pdf->stream('Laporan_Katalog_S_SALUR_' . date('Ymd_His') . '.pdf');
     }
 }
