@@ -158,7 +158,7 @@
             <td style="padding-right: 10px;">
                 <div class="info-box">
                     <div class="info-label">Tujuan Pengiriman / Penerima</div>
-                    <div class="info-value text-bold">{{ $data->tujuan }}</div>
+                    <div class="info-value text-bold">{{ $mainData->tujuan }}</div>
                 </div>
             </td>
             <td style="padding-left: 10px;">
@@ -167,11 +167,11 @@
                     <table style="width:100%; border-collapse:collapse; font-size: 11px;">
                         <tr>
                             <td style="color:#718096; width:40%;">Tanggal Keluar</td>
-                            <td>: {{ \Carbon\Carbon::parse($data->created_at)->translatedFormat('d F Y') }}</td>
+                            <td>: {{ \Carbon\Carbon::parse($mainData->created_at)->translatedFormat('d F Y') }}</td>
                         </tr>
                         <tr>
-                            <td style="color:#718096;">Log ID</td>
-                            <td>: #LOG-{{ str_pad($data->id, 5, '0', STR_PAD_LEFT) }}</td>
+                            <td style="color:#718096;">Grup Ref ID</td>
+                            <td>: #LOG-{{ str_pad($mainData->id, 5, '0', STR_PAD_LEFT) }}</td>
                         </tr>
                     </table>
                 </div>
@@ -188,11 +188,14 @@
             </tr>
         </thead>
         <tbody>
-            <tr class="item-row">
-                <td>1</td>
-                <td class="text-bold">{{ $data->book->judul ?? 'Buku Tidak Diketahui' }}</td>
-                <td style="text-align: center; font-size: 12px; font-weight: bold;">{{ $data->qty_keluar }} pcs</td>
-            </tr>
+            {{-- 💡 Looping seluruh item buku di dalam grup pengiriman ini --}}
+            @foreach($items as $index => $item)
+                <tr class="item-row">
+                    <td>{{ $index + 1 }}</td>
+                    <td class="text-bold">{{ $item->book->judul ?? $item->book->judul_buku ?? 'Buku Tidak Diketahui' }}</td>
+                    <td style="text-align: center; font-size: 12px; font-weight: bold;">{{ $item->qty_keluar }} pcs</td>
+                </tr>
+            @endforeach
         </tbody>
     </table>
 
