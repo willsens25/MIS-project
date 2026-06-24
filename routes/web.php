@@ -117,6 +117,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/finance/download-report', [FinanceController::class, 'downloadReport'])->name('finance.download_report');
     Route::get('/finance/download-pdf/{id}', [FinanceController::class, 'downloadPdf'])->name('finance.download_pdf');
 
+    // 💾 Tambahan Route Ekspor Jurnal Flatten untuk VLOOKUP Bendahara (Request PM)
+    Route::get('/finance/export-jurnal', [FinanceController::class, 'exportJurnalExcel'])->name('finance.export_jurnal');
+
     // Route Form Penjualan Baru
     Route::get('/penjualan/baru', [PenjualanController::class, 'create'])->name('penjualan.create');
     Route::post('/penjualan/simpan', [PenjualanController::class, 'store'])->name('penjualan.store');
@@ -129,6 +132,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/konfirmasi-bayar/{id}', [FinanceController::class, 'konfirmasiBayarInvoice'])->name('finance.konfirmasi_pembayaran');
 
         // --- CRUD AKUN (Kumpulan Route Pengelolaan Akun Keuangan) ---
+        // ... (tetap sama seperti kode lamamu) ...
         Route::post('/akun/simpan', [FinanceController::class, 'simpanAkun'])->name('finance.simpanAkun');
         Route::put('/akun/update/{id}', [FinanceController::class, 'updateAkun'])->name('finance.updateAkun');
         Route::delete('/akun/hapus/{id}', [FinanceController::class, 'hapusAkun'])->name('finance.hapusAkun');

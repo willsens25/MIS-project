@@ -19,10 +19,16 @@ class Invoice extends Model
         'status',
         'status_pengiriman',
         'tercatat_finance',
+        // 'ongkir', // 💡 Tambahkan di fillable jika nanti ada field ongkir tersendiri
     ];
 
     public function book()
     {
         return $this->belongsTo(Book::class, 'buku_id');
+    }
+
+    public function penyaluran()
+    {
+        return $this->hasMany(Penyaluran::class, 'no_invoice', 'no_invoice');
     }
 }

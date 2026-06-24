@@ -64,7 +64,7 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
 
     <div class="hero-purple mb-4 shadow-sm">
         <div class="row align-items-center">
-            <div class="col-lg-6">
+            <div class="col-lg-5">
                 <span class="text-uppercase small fw-bold opacity-75">Saldo Saat Ini ({{ $bulan ? $namaBulanIndo[(int)$bulan] : 'Tahunan' }})</span>
                 <h1 class="display-4 fw-bold mt-1 mb-4 text-white">Rp {{ number_format($total_saldo, 0, ',', '.') }}</h1>
                 <div class="row g-3">
@@ -78,16 +78,39 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
                     </div>
                 </div>
             </div>
-            <div class="col-lg-6 text-lg-end mt-4 mt-lg-0 d-flex flex-wrap justify-content-lg-end gap-2">
-                <a href="{{ route('finance.download_report', ['tahun' => $tahun ?? date('Y'), 'bulan' => $bulan]) }}" class="btn btn-light rounded-pill px-4 fw-bold shadow-sm" target="_blank">
+
+            {{-- TAMBAHAN BARU: Form Rentang Tanggal Ekspor Jurnal Bendahara --}}
+            <div class="col-lg-4 my-3 my-lg-0 border-start border-white border-opacity-10 px-lg-4">
+                <form action="{{ route('finance.export_jurnal') }}" method="GET" target="_blank" class="text-white">
+                    <span class="text-uppercase small fw-bold opacity-75 mb-2 d-block"><i class="fas fa-file-excel me-1 text-warning"></i> Ekspor Jurnal (VLOOKUP)</span>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="pnb-mini-label text-white opacity-70">Mulai :</label>
+                            <input type="date" name="start_date" class="form-control form-control-sm border-0 bg-white bg-opacity-20 text-white custom-date-input" value="{{ date('Y-m-01') }}" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="pnb-mini-label text-white opacity-70">Sampai :</label>
+                            <input type="date" name="end_date" class="form-control form-control-sm border-0 bg-white bg-opacity-20 text-white custom-date-input" value="{{ date('Y-m-d') }}" required>
+                        </div>
+                        <div class="col-12 mt-2">
+                            <button type="submit" class="btn btn-warning text-dark btn-sm fw-bold w-100 rounded-pill shadow-sm">
+                                <i class="fas fa-download me-1"></i> Unduh Jurnal Excel
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="col-lg-3 text-lg-end d-flex flex-column justify-content-lg-center gap-2">
+                <a href="{{ route('finance.download_report', ['tahun' => $tahun ?? date('Y'), 'bulan' => $bulan]) }}" class="btn btn-light rounded-pill px-4 fw-bold shadow-sm w-100" target="_blank">
                     <i class="fas fa-file-pdf me-2 text-danger"></i> PDF Laporan
                 </a>
 
-                <a href="{{ route('penjualan.create') }}" class="btn btn-warning text-dark rounded-pill px-4 fw-bold shadow-sm">
-                    <i class="fas fa-cash-register me-2"></i> Catat Penjualan
+                <a href="{{ route('penjualan.create') }}" class="btn btn-outline-light text-white rounded-pill px-4 fw-bold shadow-sm w-100" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">
+                    <i class="fas fa-cash-register me-2 text-warning"></i> Catat Penjualan
                 </a>
 
-                <button class="btn btn-white bg-white text-primary rounded-pill px-4 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalTr">
+                <button class="btn btn-white bg-white text-primary rounded-pill px-4 fw-bold shadow-sm w-100" data-bs-toggle="modal" data-bs-target="#modalTr">
                     <i class="fas fa-plus-circle me-2"></i> Transaksi
                 </button>
             </div>
@@ -447,6 +470,24 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
     .hero-purple { background: var(--primary-gradient); border-radius: 20px; color: white; padding: 40px; position: relative; overflow: hidden; }
     .badge-category { background: rgba(79, 70, 229, 0.1); color: #4F46E5; font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; font-weight: 600; }
     .filter-card { background: var(--bg-card); border-radius: 12px; padding: 6px 12px; border: 1px solid var(--border-color); }
+
+    /* Custom Styling tambahan agar date input serasi dengan tema Dashboard */
+    .custom-date-input {
+        color-scheme: dark; /* Supaya icon kalender bawaan browser ikut berubah putih tipis */
+        font-size: 0.8rem !important;
+        height: 32px;
+    }
+    .custom-date-input:focus {
+        background-color: rgba(255,255,255,0.3) !important;
+        color: #fff !important;
+        box-shadow: none;
+    }
+    .pnb-mini-label {
+        font-size: 0.7rem;
+        text-uppercase: true;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
 </style>
 
 <script>

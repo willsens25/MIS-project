@@ -302,6 +302,83 @@ class FinanceController extends Controller
         return $pdf->stream("Laporan_Keuangan_{$bulan}_{$tahun}.pdf");
     }
 
+    // --- FITUR EKSPOR JURNAL FLATTEN UNTUK BENDAHARA (REQUEST PM) ---
+    // DIUBAH: Menggunakan format tabel HTML Spreadsheet agar file langsung memiliki struktur border tabel rapi saat dibuka di Excel (.xls)
+    public function exportJurnalExcel(Request $request)
+    {
+        // 1. Validasi filter range tanggal dari form web
+        $request->validate([
+            'start_date' => 'required|date',
+            'end_date'   => 'required|date',
+        ]);
+
+        $startDate = $request->start_date;
+        $endDate = $request->end_date;
+
+        // Nama file diubah menjadi ekstensi .xls agar langsung dibaca sebagai spreadsheet berstruktur
+        $fileName = 'Jurnal_Mutasi_' . $startDate . '_ke_' . $endDate . '.xls';
+
+        // 2. Ambil data rekap penjualan lunas
+        $penjualans = Penjualan::whereBetween('tanggal_penjualan', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            ->orderBy('tanggal_penjualan', 'asc')
+            ->get();
+
+        // 3. Generate output tabel bergaris (border) yang kompatibel dengan Excel
+        $output = '
+        <html xmlns:x="urn:schemas-microsoft-com:office:excel">
+        <head>
+            <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+            <style>
+                table { border-collapse: collapse; font-family: sans-serif; }
+                th { background-color: #4F81BD; color: white; font-weight: bold; text-align: center; }
+                th, td { border: 1px solid #7F7F7F; padding: 6px; }
+                .text-center { text-align: center; }
+                .text-right { text-align: right; }
+            </style>
+        </head>
+        <body>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 150px;">Tanggal mutasi masuk</th>
+                        <th style="width: 350px;">Buku/ongkir/dana</th>
+                        <th style="width: 120px;">Nominal</th>
+                    </tr>
+                </thead>
+                <tbody>';
+
+        if ($penjualans->isEmpty()) {
+            $output .= '<tr><td colspan="3" class="text-center" style="color: #999;">Tidak ada data mutasi pada periode ini</td></tr>';
+        } else {
+            foreach ($penjualans as $penjualan) {
+                $tanggalFormatted = \Carbon\Carbon::parse($penjualan->tanggal_penjualan)->translatedFormat('j F Y');
+                $keterangan = "Penjualan Buku - Invoice: " . $penjualan->no_invoice . " (Pelanggan: " . $penjualan->nama_pelanggan . ")";
+
+                $output .= '
+                    <tr>
+                        <td class="text-center">' . $tanggalFormatted . '</td>
+                        <td>' . htmlspecialchars($keterangan) . '</td>
+                        <td class="text-right">' . number_format($penjualan->total_bayar, 0, ',', '.') . '</td>
+                    </tr>';
+            }
+        }
+
+        $output .= '
+                </tbody>
+            </table>
+        </body>
+        </html>';
+
+        // 📝 AUDIT LOG
+        ActivityLog::record('Ekspor Jurnal', 'Penjualan', 'Mengunduh Jurnal Mutasi Excel Berformat Tabel Berwarna, periode: ' . $startDate . ' s/d ' . $endDate);
+
+        // 4. Return response download dengan content type spreadsheet asli
+        return response($output)
+            ->header('Content-Type', 'application/vnd.ms-excel; charset=utf-8')
+            ->header('Content-Disposition', 'attachment; filename="' . $fileName . '"')
+            ->header('Cache-Control', 'max-age=0');
+    }
+
     // --- INTEGRASI PENERBITAN (PNB) ---
 
     public function persetujuanCetak()
