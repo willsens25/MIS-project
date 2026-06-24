@@ -13,6 +13,7 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
 
 <div class="container pb-5">
 
+    {{-- Alert Antrean --}}
     <div class="alert shadow-sm border-0 d-flex justify-content-between align-items-center mb-4" style="background: var(--bg-card); border-left: 5px solid {{ $countPengajuan > 0 ? '#EF4444' : '#4F46E5' }} !important;">
         <div class="d-flex align-items-center">
             <div class="rounded-circle {{ $countPengajuan > 0 ? 'bg-danger' : 'bg-primary' }} bg-opacity-10 p-3 me-3">
@@ -44,6 +45,7 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
         </div>
     @endif
 
+    {{-- Filter Bulan & Tahun --}}
     <div class="d-flex justify-content-between align-items-center mb-4">
         <form action="{{ route('finance.index') }}" method="GET" class="filter-card d-flex align-items-center gap-2 shadow-sm">
             <i class="fas fa-filter text-muted small"></i>
@@ -62,6 +64,7 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
         </form>
     </div>
 
+    {{-- Hero Section Finansial --}}
     <div class="hero-purple mb-4 shadow-sm">
         <div class="row align-items-center">
             <div class="col-lg-5">
@@ -79,18 +82,18 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
                 </div>
             </div>
 
-            {{-- TAMBAHAN BARU: Form Rentang Tanggal Ekspor Jurnal Bendahara --}}
+            {{-- Form Rentang Tanggal Ekspor Jurnal --}}
             <div class="col-lg-4 my-3 my-lg-0 border-start border-white border-opacity-10 px-lg-4">
                 <form action="{{ route('finance.export_jurnal') }}" method="GET" target="_blank" class="text-white">
                     <span class="text-uppercase small fw-bold opacity-75 mb-2 d-block"><i class="fas fa-file-excel me-1 text-warning"></i> Ekspor Jurnal (VLOOKUP)</span>
                     <div class="row g-2">
                         <div class="col-6">
                             <label class="pnb-mini-label text-white opacity-70">Mulai :</label>
-                            <input type="date" name="start_date" class="form-control form-control-sm border-0 bg-white bg-opacity-20 text-white custom-date-input" value="{{ date('Y-m-01') }}" required>
+                            <input type="date" name="start_date" class="form-control form-control-sm border-0 bg-white bg-opacity-10 text-white custom-date-input" value="{{ date('Y-m-01') }}" required>
                         </div>
                         <div class="col-6">
                             <label class="pnb-mini-label text-white opacity-70">Sampai :</label>
-                            <input type="date" name="end_date" class="form-control form-control-sm border-0 bg-white bg-opacity-20 text-white custom-date-input" value="{{ date('Y-m-d') }}" required>
+                            <input type="date" name="end_date" class="form-control form-control-sm border-0 bg-white bg-opacity-10 text-white custom-date-input" value="{{ date('Y-m-d') }}" required>
                         </div>
                         <div class="col-12 mt-2">
                             <button type="submit" class="btn btn-warning text-dark btn-sm fw-bold w-100 rounded-pill shadow-sm">
@@ -117,7 +120,7 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
         </div>
     </div>
 
-    {{-- TAMBAHAN BARU: DAFTAR KELOLA AKUN KEUANGAN (Daftar Kas/Bank) --}}
+    {{-- DAFTAR KELOLA AKUN KEUANGAN --}}
     <div class="table-container mb-4 p-4 shadow-sm" style="background: var(--bg-card); border-radius: 16px;">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h6 class="fw-bold text-muted text-uppercase small mb-0"><i class="fas fa-wallet me-2 text-info"></i>Daftar Akun Keuangan</h6>
@@ -161,6 +164,7 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
         </div>
     </div>
 
+    {{-- Visualisasi Arus Kas --}}
     <div class="table-container mb-4 p-4 shadow-sm" style="background: var(--bg-card); border-radius: 16px;">
         <h6 class="fw-bold mb-4 text-muted text-uppercase small"><i class="fas fa-chart-area me-2 text-primary"></i>Visualisasi Arus Kas</h6>
         <div style="height: 300px; position: relative;">
@@ -356,7 +360,7 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
     </div>
 </div>
 
-{{-- MODAL TAMBAH AKUN ONLY (Dipanggil via Tombol Atas Tabel Daftar Akun) --}}
+{{-- MODAL TAMBAH AKUN ONLY --}}
 <div class="modal fade" id="modalTambahAkunOnly" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content shadow-lg border-0">
@@ -380,7 +384,7 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
     </div>
 </div>
 
-{{-- TAMBAHAN BARU: MODAL EDIT/UPDATE AKUN LOOP --}}
+{{-- MODAL EDIT/UPDATE AKUN LOOP --}}
 @foreach($accounts as $acc)
 <div class="modal fade" id="modalEditAkun{{ $acc->id }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -457,7 +461,6 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
 </div>
 @endforeach
 
-{{-- GLOBAL REKOMENDASI DATALIST --}}
 <datalist id="categories_list">
     @foreach($categories as $cat)
         <option value="{{ $cat->nama_kategori }}">
@@ -471,28 +474,49 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
     .badge-category { background: rgba(79, 70, 229, 0.1); color: #4F46E5; font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; font-weight: 600; }
     .filter-card { background: var(--bg-card); border-radius: 12px; padding: 6px 12px; border: 1px solid var(--border-color); }
 
-    /* Custom Styling tambahan agar date input serasi dengan tema Dashboard */
+    /* Custom Styling untuk Date Input di Hero Section */
     .custom-date-input {
-        color-scheme: dark; /* Supaya icon kalender bawaan browser ikut berubah putih tipis */
+        color-scheme: dark !important; /* Memaksa ikon kalender browser menyesuaikan dengan tema gelap */
         font-size: 0.8rem !important;
         height: 32px;
+        background-color: rgba(255, 255, 255, 0.15) !important;
+        color: #ffffff !important; /* Warna teks saat input tidak aktif */
     }
+
+    /* Memperbaiki bug text-white menyatu dengan background putih saat pop-up kalender aktif/diklik */
+    .custom-date-input::-webkit-calendar-picker-indicator {
+        cursor: pointer;
+        filter: invert(1); /* Memastikan ikon kalender kecil berwarna putih agar kontras */
+    }
+
     .custom-date-input:focus {
-        background-color: rgba(255,255,255,0.3) !important;
-        color: #fff !important;
+        background-color: rgba(255, 255, 255, 0.3) !important;
+        color: #ffffff !important;
         box-shadow: none;
     }
+
+    /* Khusus pengguna Google Chrome / Edge / Safari untuk mencegah isi text input nge-blend putih */
+    .custom-date-input::-webkit-datetime-edit-fields-wrapper {
+        color: #ffffff !important;
+    }
+
+    /* Jika browser memaksa background field menjadi putih saat di-render */
+    .custom-date-input:active, .custom-date-input:focus-within {
+        color: #ffffff !important;
+    }
+
     .pnb-mini-label {
         font-size: 0.7rem;
-        text-uppercase: true;
+        text-transform: uppercase;
         font-weight: 700;
         letter-spacing: 0.5px;
     }
 </style>
 
 <script>
-    function initCleave() {
-        document.querySelectorAll('.input-nominal-display').forEach(function(el) {
+    // Dioptimasi agar menerima parameter scope elemen kontainer (untuk efisiensi modal)
+    function initCleave(context = document) {
+        context.querySelectorAll('.input-nominal-display').forEach(function(el) {
             if (el.dataset.cleaveInited) return;
             const container = el.closest('div');
             const realInput = container.querySelector('.input-nominal-real');
@@ -521,6 +545,7 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
     document.addEventListener('DOMContentLoaded', function() {
         initCleave();
 
+        // Inisialisasi Grafik Arus Kas
         const ctx = document.getElementById('cashflowChart').getContext('2d');
         new Chart(ctx, {
             type: 'line',
@@ -554,7 +579,8 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
         });
     });
 
-    document.addEventListener('shown.bs.modal', function () {
-        initCleave();
+    // PERBAIKAN BUG: Listener terspesifikasi hanya pada target modal saat terbuka
+    document.addEventListener('shown.bs.modal', function (event) {
+        initCleave(event.target);
     });
 </script>

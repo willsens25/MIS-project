@@ -13,7 +13,7 @@ use App\Models\Penjualan;
 use App\Models\ActivityLog;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str; // Ditambahkan untuk normalisasi teks kategori
+use Illuminate\Support\Str;
 
 class FinanceController extends Controller
 {
@@ -25,19 +25,15 @@ class FinanceController extends Controller
         $accounts = Account::all();
         $categories = Category::all();
 
-        // 1. Query Utama Mutasi (Tetap hitung SEMUA termasuk INVOICE agar SALDO & GRAFIK akurat)
         $query = Mutasi::with(['category', 'account'])->whereYear('tanggal', $tahun);
         if ($bulan) { $query->whereMonth('tanggal', $bulan); }
 
-        // Untuk list Riwayat Transaksi di view, kita FILTER hanya yang jenisnya MANUAL
         $mutasis = (clone $query)->where('jenis', 'MANUAL')->latest()->get();
 
-        // Summary Keuangan (Tetap hitung total keseluruhan agar tidak selisih uang)
         $totalMasuk = (clone $query)->where('tipe', 'Masuk')->sum('nominal');
         $totalKeluar = (clone $query)->where('tipe', 'Keluar')->sum('nominal');
         $total_saldo = $totalMasuk - $totalKeluar;
 
-        // 2. LOGIC GRAFIK DINAMIS (Menggunakan semua data agar grafik naik)
         $days = collect();
         $masukHarian = collect();
         $keluarHarian = collect();
@@ -68,10 +64,7 @@ class FinanceController extends Controller
             }
         }
 
-        // 3. Ambil data pengajuan cetak
         $pengajuans = PengajuanCetak::with('buku')->where('status', 'pending')->get();
-
-        // 4. DATA REKAP PENJUALAN: Mengambil data gabungan operasional kasir + limpahan invoice
         $penjualans = Penjualan::orderBy('tanggal_penjualan', 'desc')->take(15)->get();
 
         return view('pages.finance', compact(
@@ -80,7 +73,6 @@ class FinanceController extends Controller
         ));
     }
 
-    // DIUBAH: Mendukung Find or Create kategori otomatis berdasarkan text input
     public function store_transaction(Request $request) {
         $request->validate([
             'account_id'    => 'required',
@@ -91,18 +83,15 @@ class FinanceController extends Controller
         ]);
 
         $nominalBersih = preg_replace('/[^0-9]/', '', $request->nominal);
-
-        // Bersihkan spasi & ubah teks jadi format kapital awal kata (contoh: "operasional kantor")
         $namaKategoriClean = Str::title(trim($request->nama_kategori));
 
-        // Cari kategori berdasarkan nama, jika tidak ada maka otomatis buat baru
         $category = Category::firstOrCreate(
             ['nama_kategori' => $namaKategoriClean]
         );
 
         $mutasi = Mutasi::create([
             'account_id'  => $request->account_id,
-            'category_id' => $category->id, // Menggunakan ID Kategori yang ditemukan/baru dibuat
+            'category_id' => $category->id,
             'user_id'     => auth()->id(),
             'tipe'        => $request->tipe,
             'nominal'     => $nominalBersih,
@@ -111,13 +100,11 @@ class FinanceController extends Controller
             'jenis'       => 'MANUAL',
         ]);
 
-        // 📝 AUDIT LOG
         ActivityLog::record('Tambah Transaksi', 'Mutasi', 'Membuat transaksi ' . $mutasi->tipe . ' manual: ' . $mutasi->keterangan . ' (Rp ' . number_format($nominalBersih, 0, ',', '.') . ')');
 
         return redirect()->back()->with('success', 'Transaksi berhasil disimpan pada kategori: ' . $category->nama_kategori);
     }
 
-    // DIUBAH: Proses Edit data mutasi juga mendukung Find or Create kategori teks otomatis
     public function update(Request $request, $id) {
         $request->validate([
             'nama_kategori' => 'required|string|max:255',
@@ -127,24 +114,20 @@ class FinanceController extends Controller
         ]);
 
         $nominalBersih = preg_replace('/[^0-9]/', '', $request->nominal);
-
-        // Bersihkan spasi & ubah teks jadi format kapital awal kata
         $namaKategoriClean = Str::title(trim($request->nama_kategori));
 
-        // Ambil atau buat baru kategori di belakang layar
         $category = Category::firstOrCreate(
             ['nama_kategori' => $namaKategoriClean]
         );
 
         $mutasi = Mutasi::findOrFail($id);
         $mutasi->update([
-            'category_id' => $category->id, // Mengikat ke ID hasil pengecekan teks di atas
+            'category_id' => $category->id,
             'tipe'        => $request->tipe,
             'nominal'     => $nominalBersih,
             'keterangan'  => $request->keterangan,
         ]);
 
-        // 📝 AUDIT LOG
         ActivityLog::record('Update Transaksi', 'Mutasi', 'Mengubah data transaksi ID #' . $id . ' menjadi: ' . $mutasi->keterangan . ' (Rp ' . number_format($nominalBersih, 0, ',', '.') . ')');
 
         return back()->with('success', 'Transaksi berhasil diperbarui!');
@@ -152,15 +135,11 @@ class FinanceController extends Controller
 
     public function destroy($id) {
         $mutasi = Mutasi::findOrFail($id);
-
-        // 📝 AUDIT LOG (Dicatat sebelum data dihapus agar datanya masih bisa dibaca sistem)
         ActivityLog::record('Hapus Transaksi', 'Mutasi', 'Menghapus transaksi ' . $mutasi->tipe . ': ' . $mutasi->keterangan . ' sebesar Rp ' . number_format($mutasi->nominal, 0, ',', '.'));
-
         $mutasi->delete();
         return back()->with('success', 'Transaksi berhasil dihapus!');
     }
 
-    // CREATE - Simpan Akun Baru (Tanpa Saldo)
     public function simpanAkun(Request $request) {
         $request->validate([
             'nama_akun' => 'required|string|max:255|unique:accounts,nama_akun'
@@ -171,13 +150,11 @@ class FinanceController extends Controller
             'kode_akun'  => 'ACC-'.strtoupper(substr(uniqid(),-5)),
         ]);
 
-        // 📝 AUDIT LOG
         ActivityLog::record('Tambah Akun', 'Account', 'Menambahkan akun keuangan baru: ' . $account->nama_akun . ' (' . $account->kode_akun . ')');
 
         return back()->with('success', 'Akun ditambahkan!');
     }
 
-    // UPDATE - Ubah Nama Akun
     public function updateAkun(Request $request, $id) {
         $request->validate([
             'nama_akun' => 'required|string|max:255|unique:accounts,nama_akun,' . $id
@@ -190,23 +167,19 @@ class FinanceController extends Controller
             'nama_akun' => $request->nama_akun
         ]);
 
-        // 📝 AUDIT LOG
         ActivityLog::record('Update Akun', 'Account', 'Mengubah nama akun "' . $namaLama . '" menjadi "' . $account->nama_akun . '"');
 
         return back()->with('success', 'Nama akun berhasil diperbarui!');
     }
 
-    // DELETE - Hapus Akun dengan Proteksi Transaksi
     public function hapusAkun($id) {
         $account = Account::findOrFail($id);
 
-        // Proteksi: Cegah hapus data jika akun sudah memiliki riwayat mutasi keuangan
         $terpakai = Mutasi::where('account_id', $id)->exists();
         if ($terpakai) {
             return back()->with('error', 'Gagal menghapus! Akun "' . $account->nama_akun . '" sudah memiliki riwayat transaksi keuangan.');
         }
 
-        // 📝 AUDIT LOG
         ActivityLog::record('Hapus Akun', 'Account', 'Menghapus akun keuangan: ' . $account->nama_akun . ' (' . $account->kode_akun . ')');
 
         $account->delete();
@@ -225,7 +198,6 @@ class FinanceController extends Controller
                                 ->orWhere('nama_kategori', 'like', '%Invoice%')
                                 ->first();
 
-            // 1. Masuk ke database mutasi (Agar saldo & grafik bertambah)
             Mutasi::create([
                 'account_id'  => $request->account_id,
                 'category_id' => $pemasukanCategory->id ?? null,
@@ -234,10 +206,9 @@ class FinanceController extends Controller
                 'nominal'     => $nominal,
                 'keterangan'  => 'Terima Pembayaran #'.$invoice->no_invoice,
                 'tanggal'     => now(),
-                'jenis'       => 'INVOICE' // Ditandai INVOICE agar tidak lolos ke tabel riwayat harian
+                'jenis'       => 'INVOICE'
             ]);
 
-            // 2. Masuk ke database rekap penjualan operasional
             Penjualan::create([
                 'no_invoice'        => $invoice->no_invoice,
                 'nama_pelanggan'    => $invoice->nama_pelanggan ?? 'Pelanggan Invoice #' . $invoice->no_invoice,
@@ -246,10 +217,8 @@ class FinanceController extends Controller
                 'tanggal_penjualan' => now(),
             ]);
 
-            // Update Status Pelacakan Invoice
             $invoice->update(['tercatat_finance' => 1]);
 
-            // 📝 AUDIT LOG
             ActivityLog::record('Konfirmasi Invoice', 'Invoice', 'Memproses pelunasan Invoice #' . $invoice->no_invoice . ' ke kasir sebesar Rp ' . number_format($nominal, 0, ',', '.'));
 
             DB::commit();
@@ -282,7 +251,6 @@ class FinanceController extends Controller
         $totalKeluar = $mutasis->where('tipe', 'Keluar')->sum('nominal');
         $saldo = $totalMasuk - $totalKeluar;
 
-        // 📝 AUDIT LOG
         $namaBulanIndoText = $bulan ? [1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'][$bulan] : 'Semua Bulan';
         ActivityLog::record('Unduh PDF', 'Report', 'Mengunduh Laporan Keuangan PDF Periode: ' . $namaBulanIndoText . ' ' . $tahun);
 
@@ -302,11 +270,9 @@ class FinanceController extends Controller
         return $pdf->stream("Laporan_Keuangan_{$bulan}_{$tahun}.pdf");
     }
 
-    // --- FITUR EKSPOR JURNAL FLATTEN UNTUK BENDAHARA (REQUEST PM) ---
-    // DIUBAH: Menggunakan format tabel HTML Spreadsheet agar file langsung memiliki struktur border tabel rapi saat dibuka di Excel (.xls)
+    // --- FITUR EKSPOR JURNAL PISAH KOLOM (TIDAK DIGABUNG) ---
     public function exportJurnalExcel(Request $request)
     {
-        // 1. Validasi filter range tanggal dari form web
         $request->validate([
             'start_date' => 'required|date',
             'end_date'   => 'required|date',
@@ -315,23 +281,21 @@ class FinanceController extends Controller
         $startDate = $request->start_date;
         $endDate = $request->end_date;
 
-        // Nama file diubah menjadi ekstensi .xls agar langsung dibaca sebagai spreadsheet berstruktur
-        $fileName = 'Jurnal_Mutasi_' . $startDate . '_ke_' . $endDate . '.xls';
+        $fileName = 'Jurnal_Mutasi_Terpisah_' . $startDate . '_ke_' . $endDate . '.xls';
 
-        // 2. Ambil data rekap penjualan lunas
         $penjualans = Penjualan::whereBetween('tanggal_penjualan', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
             ->orderBy('tanggal_penjualan', 'asc')
             ->get();
 
-        // 3. Generate output tabel bergaris (border) yang kompatibel dengan Excel
+        // Diubah: Memisahkan kolom No Invoice dan Nama Pelanggan agar tersendiri
         $output = '
         <html xmlns:x="urn:schemas-microsoft-com:office:excel">
         <head>
             <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
             <style>
                 table { border-collapse: collapse; font-family: sans-serif; }
-                th { background-color: #4F81BD; color: white; font-weight: bold; text-align: center; }
-                th, td { border: 1px solid #7F7F7F; padding: 6px; }
+                th { background-color: #366092; color: white; font-weight: bold; text-align: center; }
+                th, td { border: 1px solid #A6A6A6; padding: 6px; }
                 .text-center { text-align: center; }
                 .text-right { text-align: right; }
             </style>
@@ -340,24 +304,27 @@ class FinanceController extends Controller
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 150px;">Tanggal mutasi masuk</th>
-                        <th style="width: 350px;">Buku/ongkir/dana</th>
-                        <th style="width: 120px;">Nominal</th>
+                        <th style="width: 130px;">Tanggal Masuk</th>
+                        <th style="width: 140px;">No Invoice</th>
+                        <th style="width: 220px;">Nama Pelanggan</th>
+                        <th style="width: 120px;">Total Item</th>
+                        <th style="width: 130px;">Nominal (Rp)</th>
                     </tr>
                 </thead>
                 <tbody>';
 
         if ($penjualans->isEmpty()) {
-            $output .= '<tr><td colspan="3" class="text-center" style="color: #999;">Tidak ada data mutasi pada periode ini</td></tr>';
+            $output .= '<tr><td colspan="5" class="text-center" style="color: #999;">Tidak ada data mutasi pada periode ini</td></tr>';
         } else {
             foreach ($penjualans as $penjualan) {
                 $tanggalFormatted = \Carbon\Carbon::parse($penjualan->tanggal_penjualan)->translatedFormat('j F Y');
-                $keterangan = "Penjualan Buku - Invoice: " . $penjualan->no_invoice . " (Pelanggan: " . $penjualan->nama_pelanggan . ")";
 
                 $output .= '
                     <tr>
                         <td class="text-center">' . $tanggalFormatted . '</td>
-                        <td>' . htmlspecialchars($keterangan) . '</td>
+                        <td class="text-center">' . htmlspecialchars($penjualan->no_invoice) . '</td>
+                        <td>' . htmlspecialchars($penjualan->nama_pelanggan) . '</td>
+                        <td class="text-center">' . $penjualan->total_item . '</td>
                         <td class="text-right">' . number_format($penjualan->total_bayar, 0, ',', '.') . '</td>
                     </tr>';
             }
@@ -369,17 +336,13 @@ class FinanceController extends Controller
         </body>
         </html>';
 
-        // 📝 AUDIT LOG
-        ActivityLog::record('Ekspor Jurnal', 'Penjualan', 'Mengunduh Jurnal Mutasi Excel Berformat Tabel Berwarna, periode: ' . $startDate . ' s/d ' . $endDate);
+        ActivityLog::record('Ekspor Jurnal', 'Penjualan', 'Mengunduh Jurnal Excel Terpisah Kolom, periode: ' . $startDate . ' s/d ' . $endDate);
 
-        // 4. Return response download dengan content type spreadsheet asli
         return response($output)
             ->header('Content-Type', 'application/vnd.ms-excel; charset=utf-8')
             ->header('Content-Disposition', 'attachment; filename="' . $fileName . '"')
             ->header('Cache-Control', 'max-age=0');
     }
-
-    // --- INTEGRASI PENERBITAN (PNB) ---
 
     public function persetujuanCetak()
     {
@@ -411,7 +374,6 @@ class FinanceController extends Controller
             $buku->increment('stok_gudang', $pengajuan->jumlah_pengajuan);
             $pengajuan->update(['status' => 'approved']);
 
-            // 📝 AUDIT LOG
             ActivityLog::record('Setujui Cetak Buku', 'PengajuanCetak', 'Menyetujui cetak ulang buku: ' . $buku->judul . ' sejumlah ' . $pengajuan->jumlah_pengajuan . ' Eks (Biaya: Rp ' . number_format($biayaCetak, 0, ',', '.') . ')');
 
             return back()->with('success', 'Pengajuan disetujui, kas berkurang dan stok buku bertambah!');
@@ -422,7 +384,6 @@ class FinanceController extends Controller
             'catatan_bendahara' => $request->catatan
         ]);
 
-        // 📝 AUDIT LOG
         ActivityLog::record('Tolak Cetak Buku', 'PengajuanCetak', 'Menolak pengajuan cetak ulang buku: ' . $buku->judul . ' dengan alasan: ' . $request->catatan);
 
         return back()->with('info', 'Pengajuan cetak ditolak.');
