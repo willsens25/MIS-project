@@ -271,6 +271,7 @@ class FinanceController extends Controller
     }
 
     // --- FITUR EKSPOR JURNAL PISAH KOLOM (TIDAK DIGABUNG) ---
+    // SUDAH FIX: Mencegah angka ribuan terpotong di Microsoft Excel lokal client
     public function exportJurnalExcel(Request $request)
     {
         $request->validate([
@@ -287,7 +288,6 @@ class FinanceController extends Controller
             ->orderBy('tanggal_penjualan', 'asc')
             ->get();
 
-        // Diubah: Memisahkan kolom No Invoice dan Nama Pelanggan agar tersendiri
         $output = '
         <html xmlns:x="urn:schemas-microsoft-com:office:excel">
         <head>
@@ -325,7 +325,7 @@ class FinanceController extends Controller
                         <td class="text-center">' . htmlspecialchars($penjualan->no_invoice) . '</td>
                         <td>' . htmlspecialchars($penjualan->nama_pelanggan) . '</td>
                         <td class="text-center">' . $penjualan->total_item . '</td>
-                        <td class="text-right">' . number_format($penjualan->total_bayar, 0, ',', '.') . '</td>
+                        <td class="text-right" style="mso-number-format:\'#,##0\';">' . (float)$penjualan->total_bayar . '</td>
                     </tr>';
             }
         }

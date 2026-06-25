@@ -513,74 +513,80 @@ $countPengajuan = isset($pengajuans) ? $pengajuans->count() : 0;
     }
 </style>
 
-<script>
-    // Dioptimasi agar menerima parameter scope elemen kontainer (untuk efisiensi modal)
-    function initCleave(context = document) {
-        context.querySelectorAll('.input-nominal-display').forEach(function(el) {
-            if (el.dataset.cleaveInited) return;
-            const container = el.closest('div');
-            const realInput = container.querySelector('.input-nominal-real');
+{{-- PUSH LIBRARY & LOGIKA GRAPH VIA STACK BLADE --}}
+@push('scripts')
+    <!-- CDN Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-            const cleave = new Cleave(el, {
-                numeral: true,
-                numeralThousandsGroupStyle: 'thousand',
-                numeralDecimalScale: 0,
-                prefix: 'Rp ',
-                rawValueTrimPrefix: true
+    <script>
+        // Dioptimasi agar menerima parameter scope elemen kontainer (untuk efisiensi modal)
+        function initCleave(context = document) {
+            context.querySelectorAll('.input-nominal-display').forEach(function(el) {
+                if (el.dataset.cleaveInited) return;
+                const container = el.closest('div');
+                const realInput = container.querySelector('.input-nominal-real');
+
+                const cleave = new Cleave(el, {
+                    numeral: true,
+                    numeralThousandsGroupStyle: 'thousand',
+                    numeralDecimalScale: 0,
+                    prefix: 'Rp ',
+                    rawValueTrimPrefix: true
+                });
+
+                if (realInput && realInput.value) {
+                    cleave.setRawValue(realInput.value);
+                } else if (el.value) {
+                    cleave.setRawValue(el.value);
+                }
+
+                el.addEventListener('input', () => {
+                    if(realInput) realInput.value = cleave.getRawValue();
+                });
+                el.dataset.cleaveInited = "true";
             });
+        }
 
-            if (realInput && realInput.value) {
-                cleave.setRawValue(realInput.value);
-            } else if (el.value) {
-                cleave.setRawValue(el.value);
-            }
+        document.addEventListener('DOMContentLoaded', function() {
+            initCleave();
 
-            el.addEventListener('input', () => {
-                if(realInput) realInput.value = cleave.getRawValue();
+            // Inisialisasi Grafik Arus Kas
+            const ctx = document.getElementById('cashflowChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: {!! json_encode($days ?? []) !!},
+                    datasets: [
+                        {
+                            label: 'Masuk',
+                            data: {!! json_encode($masukHarian ?? []) !!},
+                            borderColor: '#10B981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Keluar',
+                            data: {!! json_encode($keluarHarian ?? []) !!},
+                            borderColor: '#EF4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxSize: 6, color: '#888' } } },
+                    scales: { y: { beginAtZero: true, grid: { color: 'rgba(150,150,150,0.1)' } }, x: { grid: { display: false } } }
+                }
             });
-            el.dataset.cleaveInited = "true";
         });
-    }
 
-    document.addEventListener('DOMContentLoaded', function() {
-        initCleave();
-
-        // Inisialisasi Grafik Arus Kas
-        const ctx = document.getElementById('cashflowChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: {!! json_encode($days ?? []) !!},
-                datasets: [
-                    {
-                        label: 'Masuk',
-                        data: {!! json_encode($masukHarian ?? []) !!},
-                        borderColor: '#10B981',
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    },
-                    {
-                        label: 'Keluar',
-                        data: {!! json_encode($keluarHarian ?? []) !!},
-                        borderColor: '#EF4444',
-                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxSize: 6, color: '#888' } } },
-                scales: { y: { beginAtZero: true, grid: { color: 'rgba(150,150,150,0.1)' } }, x: { grid: { display: false } } }
-            }
+        // PERBAIKAN BUG: Listener terspesifikasi hanya pada target modal saat terbuka
+        document.addEventListener('shown.bs.modal', function (event) {
+            initCleave(event.target);
         });
-    });
-
-    // PERBAIKAN BUG: Listener terspesifikasi hanya pada target modal saat terbuka
-    document.addEventListener('shown.bs.modal', function (event) {
-        initCleave(event.target);
-    });
-</script>
+    </script>
+@endpush
