@@ -19,7 +19,7 @@ class MarketingOrderController extends Controller
 {
     public function index(Request $request)
     {
-        // Ambal keyword pencarian atau filter status jika ada
+        // Ambil keyword pencarian atau filter status jika ada
         $search = $request->get('search');
         $status = $request->get('status');
 
@@ -71,20 +71,20 @@ class MarketingOrderController extends Controller
         $request->validate([
             'tanggal_pesan'   => 'required|date',
             'nama_agen'       => 'required|string|exists:identitas,nama_lengkap',
-            'via'             => 'required|string',
-            'ekspedisi'       => 'required|string',
-            'ongkir'          => 'required|numeric|min:0',
+            'via'             => 'nullable|string',
+            'ekspedisi'       => 'nullable|string',
+            'ongkir'          => 'nullable|numeric|min:0',
             'nama_penerima'   => 'nullable|string',
             'alamat_penerima' => 'required_without:sama_penerima|nullable|string',
             'buku_id'         => 'required|array|min:1',
-            'buku_id.*'       => ['required', \Illuminate\Validation\Rule::exists(\App\Models\Book::class, 'id')],
+            'buku_id.*'       => ['required', \Illuminate\Validation\Rule::exists(\App\Models\Book::class, 'id')], // <-- Menggunakan model agar otomatis mendeteksi nama tabel yang benar
             'qty'             => 'required|array|min:1',
             'qty.*'           => 'required|integer|min:1',
         ], [
             'nama_agen.exists'                 => 'Nama agen/pembeli tidak ditemukan di sistem.',
-            'via.required'                     => 'Pilih sumber pesanan (WA/Shopee/dll).',
             'qty.*.min'                        => 'Jumlah pesanan (QTY) minimal harus 1.',
             'buku_id.required'                 => 'Minimal pilih satu buku.',
+            'buku_id.*.exists'                 => 'Buku yang dipilih tidak valid atau tidak terdaftar.',
             'ongkir.numeric'                   => 'Ongkir harus berupa angka.',
             'alamat_penerima.required_without' => 'Alamat pengiriman wajib diisi jika tidak dicentang sama dengan penerima.',
         ]);
@@ -116,7 +116,7 @@ class MarketingOrderController extends Controller
                     $lockedBooks[$key] = $book;
                 }
 
-                // 2. Generate Nomor Invoice (Menggunakan substr standar php aman)
+                // 2. Generate Nomor Invoice
                 $tanggal = date('Ymd');
                 $lastOrder = Order::whereDate('created_at', today())
                                   ->orderBy('id', 'desc')
@@ -133,7 +133,7 @@ class MarketingOrderController extends Controller
                 $noInvoice = "INV-" . $tanggal . "-" . str_pad($urutanBaru, 4, '0', STR_PAD_LEFT);
 
                 // 3. Logika Penentuan Alamat & Penerima
-                $isSama = $request->has('sama_penerima');
+                $isSama = $request->has('sama_penerima') || $request->input('sama_penerima') == '1';
                 $namaPenerima = $isSama ? $request->nama_agen : ($request->nama_penerima ?? $request->nama_agen);
 
                 if ($isSama) {
@@ -148,7 +148,6 @@ class MarketingOrderController extends Controller
                     $alamatFinal = $request->alamat_penerima;
                 }
 
-                // Pengaman ekstra jika variabel tetap kosong
                 if (empty($alamatFinal)) {
                     $alamatFinal = 'Alamat tidak terisi / kosong';
                 }
@@ -157,11 +156,11 @@ class MarketingOrderController extends Controller
                 $order = Order::create([
                     'no_invoice'        => $noInvoice,
                     'tanggal_pesan'     => $request->tanggal_pesan,
-                    'via'               => $request->via,
+                    'via'               => $request->via ?? 'Offline',
                     'nama_pembeli'      => $request->nama_agen,
                     'nama_penerima'     => $namaPenerima,
                     'alamat_penerima'   => $alamatFinal,
-                    'ekspedisi'         => $request->ekspedisi,
+                    'ekspedisi'         => $request->ekspedisi ?? '-',
                     'ongkir'            => $request->ongkir ?? 0,
                     'status'            => 'Pending',
                     'total_tagihan'     => 0,
@@ -175,14 +174,13 @@ class MarketingOrderController extends Controller
                 foreach ($request->buku_id as $key => $idBuku) {
                     if (!$idBuku) continue;
 
-                    // Ambil kembali objek buku yang sudah ter-lock di langkah awal
                     $book = $lockedBooks[$key];
                     $jumlahPesanan = $request->qty[$key] ?? 1;
 
                     // Mengurangi stok pada record yang sedang dikunci
                     $book->decrement('stok_gudang', $jumlahPesanan);
 
-                    $hargaSatuan = $book->harga_jual ?? 0;
+                    $hargaSatuan = $book->harga_jual ?? $book->harga ?? 0;
                     $subtotal = $hargaSatuan * $jumlahPesanan;
 
                     OrderDetail::create([
@@ -219,7 +217,6 @@ class MarketingOrderController extends Controller
     {
         try {
             return DB::transaction(function () use ($id) {
-                // Eager loading relasi details demi performa query loop yang optimal
                 $orderRaw = Order::with('details')->findOrFail($id);
 
                 if ($orderRaw->status == 'Lunas') {
@@ -238,9 +235,7 @@ class MarketingOrderController extends Controller
                     $nomorInvoiceFix = 'INV-' . date('Ymd') . '-' . str_pad($order->id, 4, '0', STR_PAD_LEFT);
                 }
 
-                // =================================================================
-                // 🚚 INTEGRASI KE DIVISI LOGISTIK (DIVISI 6)
-                // =================================================================
+                // 🚚 INTEGRASI KE DIVISI LOGISTIK
                 $orderDetails = $order->details ?? [];
                 foreach ($orderDetails as $detail) {
                     \App\Models\Penyaluran::create([
@@ -248,10 +243,9 @@ class MarketingOrderController extends Controller
                         'buku_id'    => $detail->buku_id,
                         'qty'        => $detail->jumlah,
                         'nama_agen'  => $order->nama_penerima ?? $order->nama_pembeli,
-                        'status'     => 'proses packing', // Masuk ke antrean logistik
+                        'status'     => 'proses packing',
                     ]);
                 }
-                // =================================================================
 
                 $category = Category::where('nama_kategori', 'like', '%Penjualan%')
                                     ->orWhere('nama_kategori', 'like', '%Invoice%')
@@ -259,9 +253,7 @@ class MarketingOrderController extends Controller
                                     ->first();
 
                 if (!$category) {
-                    $category = Category::create([
-                        'nama_kategori' => 'Penjualan & Invoice'
-                    ]);
+                    $category = Category::create(['nama_kategori' => 'Penjualan & Invoice']);
                 }
 
                 $account = Account::where('nama_akun', 'like', '%Kas%')->first() ?? Account::first();
@@ -291,7 +283,6 @@ class MarketingOrderController extends Controller
                     'tanggal_penjualan' => now(),
                 ]);
 
-                // 📝 AUDIT LOG
                 ActivityLog::record('Konfirmasi Lunas', 'Order', 'Mengubah status invoice ' . $nomorInvoiceFix . ' menjadi LUNAS. Data otomatis disinkronkan ke Finance & Logistik.');
 
                 return redirect()->back()->with('success', 'Invoice berhasil dilunasi, data diteruskan ke Logistik, rekap penjualan terisi, dan kas finance otomatis bertambah!');
@@ -302,53 +293,40 @@ class MarketingOrderController extends Controller
     }
 
     /**
-     * Membatalkan Invoice (Cancel Order), Mengembalikan Stok (VERSI AMAN ANTI-RACE CONDITION),
-     * dan Membersihkan Data Keuangan
+     * Membatalkan Invoice (Cancel Order), Mengembalikan Stok, dan Membersihkan Data Keuangan
      */
     public function hapusInvoice($id)
     {
         try {
             return DB::transaction(function () use ($id) {
-                // 1. Ambil data order beserta relasi detail itemnya
                 $order = Order::with('details')->findOrFail($id);
 
-                // Validasi: Jika status sudah Cancelled, batalkan eksekusi
                 if ($order->status === 'Cancelled') {
                     throw new \Exception("Invoice ini sudah dibatalkan sebelumnya.");
                 }
 
-                // 2. KEMBALIKAN STOK BARANG KE GUDANG (RESTOCK DENGAN ROW LOCKING)
                 $orderDetails = $order->details ?? [];
                 foreach ($orderDetails as $detail) {
                     $book = Book::lockForUpdate()->find($detail->buku_id);
-
                     if ($book) {
-                        // Tambahkan kembali stok gudang berdasarkan jumlah pesanan yang dibatalkan
                         $book->increment('stok_gudang', $detail->jumlah);
                     }
                 }
 
-                // 3. SINKRONISASI FINANCE (Hapus log finansial jika sebelumnya orderan ini sudah Lunas)
                 if ($order->tercatat_finance == 1 || strtolower($order->status) == 'lunas') {
-
                     $nomorInvoiceFix = $order->no_invoice ?? $order->nomor_invoice ?? $order->invoice_no ?? $order->invoice;
 
                     if (!empty($nomorInvoiceFix)) {
-                        // Hapus otomatis pencatatan mutasi kas masuk terkait invoice ini
                         Mutasi::where('keterangan', 'like', '%' . $nomorInvoiceFix . '%')->delete();
-
-                        // Hapus rekap tabel penjualan di finance agar omset bulanan akurat
                         Penjualan::where('no_invoice', $nomorInvoiceFix)->delete();
                     }
                 }
 
-                // 4. SOFT UPDATE STATUS ORDER UTAMA (Data histori tetap ada di tabel orders)
                 $order->update([
                     'status' => 'Cancelled',
-                    'tercatat_finance' => 0 // Set kembali ke 0 karena uang batal masuk
+                    'tercatat_finance' => 0
                 ]);
 
-                // 📝 AUDIT LOG
                 ActivityLog::record('Batalkan Invoice', 'Order', 'Membatalkan (Cancel) Invoice ' . $order->no_invoice . '. Stok seluruh buku pesanan otomatis dikembalikan ke gudang.');
 
                 return redirect()->back()->with('success', "Invoice #{$order->no_invoice} berhasil dibatalkan (Cancelled) & stok buku telah dikembalikan ke gudang!");
@@ -358,18 +336,12 @@ class MarketingOrderController extends Controller
         }
     }
 
-    /**
-     * Menampilkan Halaman Cetak Nota/Invoice
-     */
     public function printInvoice($id)
     {
         $order = Order::findOrFail($id);
         return view('marketing.print_invoice', compact('order'));
     }
 
-    /**
-     * Mengambil alamat agen secara real-time untuk fitur Auto-Suggest via AJAX
-     */
     public function getAlamatAgen($nama)
     {
         $pembeli = Identitas::where('nama_lengkap', $nama)->first();
@@ -387,9 +359,6 @@ class MarketingOrderController extends Controller
         ], 404);
     }
 
-    /**
-     * Mengunduh berkas rekap Excel menggunakan HTML Stream (Rupiah & Invoice Fixed)
-     */
     public function eksporExcel(Request $request)
     {
         $search = $request->get('search');
@@ -417,31 +386,18 @@ class MarketingOrderController extends Controller
             "Expires"             => "0"
         ];
 
-        // 📝 AUDIT LOG
-        ActivityLog::record('Ekspor Excel Marketing', 'Order', 'Mengekspor rekap data order penjualan ke berkas Excel. Filter Status: ' . ($status ?? 'Semua') . ', Cari: ' . ($search ?? 'Tidak ada'));
+        ActivityLog::record('Ekspor Excel Marketing', 'Order', 'Mengekspor rekap data order penjualan ke berkas Excel.');
 
         $callback = function() use($orders) {
             $file = fopen('php://output', 'w');
 
-            // Set up format HTML Table agar dimengerti Microsoft Excel dengan sempurna
             echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
             echo '<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"></head>';
             echo '<body>';
             echo '<table border="1">';
 
-            // Render Header Kolom dengan style warna background abu-abu tipis
             echo '<tr style="background-color: #f2f2f2; font-weight: bold; text-align: center;">';
-            echo '<th>No Invoice</th>';
-            echo '<th>Tanggal Pesan</th>';
-            echo '<th>Via / Platform</th>';
-            echo '<th>Nama Pembeli (Agen)</th>';
-            echo '<th>Nama Penerima</th>';
-            echo '<th>Alamat Pengiriman</th>';
-            echo '<th>Ekspedisi</th>';
-            echo '<th>Ongkir</th>';
-            echo '<th>Total Tagihan</th>';
-            echo '<th>Status Nota</th>';
-            echo '<th>Rincian Buku (Judul x QTY)</th>';
+            echo '<th>No Invoice</th><th>Tanggal Pesan</th><th>Via / Platform</th><th>Nama Pembeli (Agen)</th><th>Nama Penerima</th><th>Alamat Pengiriman</th><th>Ekspedisi</th><th>Ongkir</th><th>Total Tagihan</th><th>Status Nota</th><th>Rincian Buku (Judul x QTY)</th>';
             echo '</tr>';
 
             foreach ($orders as $order) {
@@ -453,14 +409,10 @@ class MarketingOrderController extends Controller
                     $rincianBuku[] = $judul . " (" . $detail->jumlah . " pcs)";
                 }
 
-                // Gunakan tag <br> untuk memisahkan baris buku di dalam satu sel Excel
                 $teksRincian = implode('<br>', $rincianBuku);
-
-                // Fallback pencarian field invoice jika ada inkonsistensi nama kolom database
                 $invoiceTerpilih = $order->no_invoice ?? $order->nomor_invoice ?? $order->invoice_no ?? $order->invoice;
 
                 echo '<tr>';
-                // Menjaga No Invoice tetap bertipe teks agar digit / strip (-) tidak dirusak Excel
                 echo '<td style="vnd.ms-excel.numberformat:@">' . e($invoiceTerpilih) . '</td>';
                 echo '<td>' . e($order->tanggal_pesan) . '</td>';
                 echo '<td>' . e($order->via) . '</td>';
@@ -468,20 +420,14 @@ class MarketingOrderController extends Controller
                 echo '<td>' . e($order->nama_penerima) . '</td>';
                 echo '<td>' . e($order->alamat_penerima) . '</td>';
                 echo '<td>' . e($order->ekspedisi) . '</td>';
-
-                // Format Akuntansi Rupiah Resmi Excel asli (Tetap bisa dijumlahkan pakai rumus matematika)
                 echo '<td style="vnd.ms-excel.numberformat:\'Rp \'#,##0; text-align: right;">' . (int)$order->ongkir . '</td>';
                 echo '<td style="vnd.ms-excel.numberformat:\'Rp \'#,##0; text-align: right; font-weight: bold;">' . (int)$order->total_tagihan . '</td>';
-
                 echo '<td style="text-align: center;">' . e($order->status ?? 'Pending') . '</td>';
                 echo '<td>' . $teksRincian . '</td>';
                 echo '</tr>';
             }
 
-            echo '</table>';
-            echo '<body>';
-            echo '</html>';
-
+            echo '</table></body></html>';
             fclose($file);
         };
 
