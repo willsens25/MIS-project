@@ -12,6 +12,7 @@ use App\Models\Account;
 use App\Models\Category;
 use App\Models\Penjualan;
 use App\Models\ActivityLog;
+use App\Models\Promo;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
@@ -63,7 +64,7 @@ class MarketingOrderController extends Controller
     }
 
     /**
-     * Menyimpan Data Pesanan Baru & Potong Stok Otomatis (VERSI AMAN ANTI-RACE CONDITION)
+     * Menyimpan Data Pesanan Baru, Validasi Kode Promo, & Potong Stok Otomatis
      */
     public function store(Request $request)
     {
@@ -77,9 +78,10 @@ class MarketingOrderController extends Controller
             'nama_penerima'   => 'nullable|string',
             'alamat_penerima' => 'required_without:sama_penerima|nullable|string',
             'buku_id'         => 'required|array|min:1',
-            'buku_id.*'       => ['required', \Illuminate\Validation\Rule::exists(\App\Models\Book::class, 'id')], // <-- Menggunakan model agar otomatis mendeteksi nama tabel yang benar
+            'buku_id.*'       => ['required', \Illuminate\Validation\Rule::exists(\App\Models\Book::class, 'id')],
             'qty'             => 'required|array|min:1',
             'qty.*'           => 'required|integer|min:1',
+            'promo_code'      => 'nullable|string|max:50',
         ], [
             'nama_agen.exists'                 => 'Nama agen/pembeli tidak ditemukan di sistem.',
             'qty.*.min'                        => 'Jumlah pesanan (QTY) minimal harus 1.',
@@ -91,7 +93,6 @@ class MarketingOrderController extends Controller
 
         try {
             $noInvoice = '';
-
             DB::transaction(function () use ($request, &$noInvoice) {
 
                 // Array penampung objek buku yang berhasil dikunci secara eksklusif
@@ -112,7 +113,6 @@ class MarketingOrderController extends Controller
                         throw new \Exception("Stok buku '{$book->judul}' tidak mencukupi di database. Sisa stok riil: {$book->stok_gudang} pcs. Mohon sesuaikan kembali.");
                     }
 
-                    // Simpan objek yang terkunci agar tidak query ulang di looping potong stok
                     $lockedBooks[$key] = $book;
                 }
 
@@ -138,7 +138,6 @@ class MarketingOrderController extends Controller
 
                 if ($isSama) {
                     $agen = Identitas::where('nama_lengkap', $request->nama_agen)->first();
-
                     if ($agen && !empty($agen->alamat)) {
                         $alamatFinal = $agen->alamat;
                     } else {
@@ -152,7 +151,61 @@ class MarketingOrderController extends Controller
                     $alamatFinal = 'Alamat tidak terisi / kosong';
                 }
 
-                // 4. Simpan Header Order
+                // 4. Hitung Subtotal Buku untuk Memvalidasi Diskon di Backend
+                $totalSemuaBuku = 0;
+                $detailsData = [];
+
+                foreach ($request->buku_id as $key => $idBuku) {
+                    if (!$idBuku) continue;
+                    $book = $lockedBooks[$key];
+                    $jumlahPesanan = $request->qty[$key] ?? 1;
+
+                    $hargaSatuan = $book->harga_jual ?? $book->harga ?? 0;
+                    $subtotal = $hargaSatuan * $jumlahPesanan;
+
+                    $totalSemuaBuku += $subtotal;
+                    $detailsData[] = [
+                        'book' => $book,
+                        'buku_id' => $idBuku,
+                        'jumlah' => $jumlahPesanan,
+                        'harga_satuan' => $hargaSatuan,
+                        'subtotal' => $subtotal
+                    ];
+                }
+
+                // 5. Logika Verifikasi Kode Promo Sisi Backend (Proteksi Data)
+                $potonganDiskon = 0;
+                $promoIdApplied = null;
+
+                if ($request->filled('promo_code')) {
+                    $promo = Promo::where('code', strtoupper($request->promo_code))->first();
+
+                    if ($promo) {
+                        $isExpired = $promo->expiry_date && $promo->expiry_date < date('Y-m-d');
+                        $isQuotaHabis = $promo->used_count >= $promo->max_uses;
+
+                        if (!$isExpired && !$isQuotaHabis) {
+                            if ($promo->type === 'percentage') {
+                                $potonganDiskon = ($totalSemuaBuku * $promo->reward_value) / 100;
+                            } else {
+                                $potonganDiskon = $promo->reward_value;
+                            }
+
+                            // Batasi agar diskon tidak melebihi harga total buku
+                            $potonganDiskon = min($potonganDiskon, $totalSemuaBuku);
+                            $promoIdApplied = $promo->id;
+
+                            // Naikkan jumlah pemakaian kupon
+                            $promo->increment('used_count');
+                        }
+                    }
+                }
+
+                // Perhitungan Akhir Grand Total Tagihan
+                $grandTotal = ($totalSemuaBuku - $potonganDiskon) + ($request->ongkir ?? 0);
+                $grandTotal = max(0, $grandTotal);
+
+                // 6. Simpan Header Order (Menambahkan data tracking promo jika fieldnya tersedia di tabel orders)
                 $order = Order::create([
                     'no_invoice'        => $noInvoice,
                     'tanggal_pesan'     => $request->tanggal_pesan,
@@ -163,48 +216,28 @@ class MarketingOrderController extends Controller
                     'ekspedisi'         => $request->ekspedisi ?? '-',
                     'ongkir'            => $request->ongkir ?? 0,
                     'status'            => 'Pending',
-                    'total_tagihan'     => 0,
-                    'total_semau_buku'  => 0,
+                    'total_tagihan'     => $grandTotal,
                     'user_id'           => Auth::id()
                 ]);
 
-                $totalSemuaBuku = 0;
-
-                // 5. Simpan Detail Item & Eksekusi Potong Stok Aman
-                foreach ($request->buku_id as $key => $idBuku) {
-                    if (!$idBuku) continue;
-
-                    $book = $lockedBooks[$key];
-                    $jumlahPesanan = $request->qty[$key] ?? 1;
-
-                    // Mengurangi stok pada record yang sedang dikunci
-                    $book->decrement('stok_gudang', $jumlahPesanan);
-
-                    $hargaSatuan = $book->harga_jual ?? $book->harga ?? 0;
-                    $subtotal = $hargaSatuan * $jumlahPesanan;
+                // 7. Eksekusi Pengurangan Stok & Simpan Detail Item
+                foreach ($detailsData as $data) {
+                    $data['book']->decrement('stok_gudang', $data['jumlah']);
 
                     OrderDetail::create([
                         'order_id'     => $order->id,
-                        'buku_id'      => $idBuku,
-                        'jumlah'       => $jumlahPesanan,
-                        'harga_satuan' => $hargaSatuan,
-                        'subtotal'     => $subtotal,
+                        'buku_id'      => $data['buku_id'],
+                        'jumlah'       => $data['jumlah'],
+                        'harga_satuan' => $data['harga_satuan'],
+                        'subtotal'     => $data['subtotal'],
                     ]);
-
-                    $totalSemuaBuku += $subtotal;
                 }
-
-                // 6. Update Total Akhir
-                $order->update([
-                    'total_tagihan' => $totalSemuaBuku + ($request->ongkir ?? 0)
-                ]);
 
                 // 📝 AUDIT LOG
                 ActivityLog::record('Tambah Pesanan', 'Order', 'Membuat pesanan baru ' . $order->no_invoice . ' untuk agen: ' . $order->nama_pembeli . ' via ' . $order->via . ' (Total: Rp ' . number_format($order->total_tagihan, 0, ',', '.') . ')');
             });
 
             return redirect()->back()->with('success', "Invoice #{$noInvoice} berhasil disimpan & stok dipotong!");
-
         } catch (\Exception $e) {
             return redirect()->back()->withInput()->with('error', 'Gagal Simpan: ' . $e->getMessage());
         }
@@ -251,7 +284,6 @@ class MarketingOrderController extends Controller
                                     ->orWhere('nama_kategori', 'like', '%Invoice%')
                                     ->orWhere('nama_kategori', 'like', '%Penjualan & Invoice%')
                                     ->first();
-
                 if (!$category) {
                     $category = Category::create(['nama_kategori' => 'Penjualan & Invoice']);
                 }
@@ -284,7 +316,6 @@ class MarketingOrderController extends Controller
                 ]);
 
                 ActivityLog::record('Konfirmasi Lunas', 'Order', 'Mengubah status invoice ' . $nomorInvoiceFix . ' menjadi LUNAS. Data otomatis disinkronkan ke Finance & Logistik.');
-
                 return redirect()->back()->with('success', 'Invoice berhasil dilunasi, data diteruskan ke Logistik, rekap penjualan terisi, dan kas finance otomatis bertambah!');
             });
         } catch (\Exception $e) {
@@ -293,7 +324,7 @@ class MarketingOrderController extends Controller
     }
 
     /**
-     * Membatalkan Invoice (Cancel Order), Mengembalikan Stok, dan Membersihkan Data Keuangan
+     * Membatalkan Invoice (Cancel Order), Mengembangkan Stok, dan Membersihkan Data Keuangan
      */
     public function hapusInvoice($id)
     {
@@ -328,7 +359,6 @@ class MarketingOrderController extends Controller
                 ]);
 
                 ActivityLog::record('Batalkan Invoice', 'Order', 'Membatalkan (Cancel) Invoice ' . $order->no_invoice . '. Stok seluruh buku pesanan otomatis dikembalikan ke gudang.');
-
                 return redirect()->back()->with('success', "Invoice #{$order->no_invoice} berhasil dibatalkan (Cancelled) & stok buku telah dikembalikan ke gudang!");
             });
         } catch (\Exception $e) {
@@ -345,7 +375,6 @@ class MarketingOrderController extends Controller
     public function getAlamatAgen($nama)
     {
         $pembeli = Identitas::where('nama_lengkap', $nama)->first();
-
         if ($pembeli) {
             return response()->json([
                 'status' => 'success',
@@ -390,12 +419,10 @@ class MarketingOrderController extends Controller
 
         $callback = function() use($orders) {
             $file = fopen('php://output', 'w');
-
             echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
             echo '<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"></head>';
             echo '<body>';
             echo '<table border="1">';
-
             echo '<tr style="background-color: #f2f2f2; font-weight: bold; text-align: center;">';
             echo '<th>No Invoice</th><th>Tanggal Pesan</th><th>Via / Platform</th><th>Nama Pembeli (Agen)</th><th>Nama Penerima</th><th>Alamat Pengiriman</th><th>Ekspedisi</th><th>Ongkir</th><th>Total Tagihan</th><th>Status Nota</th><th>Rincian Buku (Judul x QTY)</th>';
             echo '</tr>';
@@ -432,5 +459,70 @@ class MarketingOrderController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * AJAX Endpoint: Memvalidasi ketersediaan promo dari front-end
+     */
+    public function checkPromo($code)
+    {
+        $promo = \App\Models\Promo::where('code', $code)->first();
+        if (!$promo) {
+            return response()->json(['status' => 'error', 'message' => 'Kode promo tidak ditemukan.']);
+        }
+
+        if ($promo->expiry_date && $promo->expiry_date < date('Y-m-d')) {
+            return response()->json(['status' => 'error', 'message' => 'Kode promo sudah kedaluwarsa.']);
+        }
+
+        if ($promo->used_count >= $promo->max_uses) {
+            return response()->json(['status' => 'error', 'message' => 'Kuota kode promo sudah habis.']);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'type' => $promo->type,
+            'value' => $promo->reward_value
+        ]);
+    }
+
+    /**
+     * --- HALAMAN MANAJEMEN PROMO BACKEND ---
+     */
+    public function indexPromo()
+    {
+        // Mengambil semua data promo dari database
+        $promos = Promo::orderBy('created_at', 'desc')->get();
+        return view('marketing.promo', compact('promos'));
+    }
+
+    public function storePromo(Request $request)
+    {
+        $request->validate([
+            'code'         => 'required|unique:promos,code|string|max:50',
+            'type'         => 'required|in:percentage,nominal',
+            'reward_value' => 'required|numeric|min:1',
+            'max_uses'     => 'required|integer|min:1',
+            'expiry_date'  => 'nullable|date|after_or_equal:today',
+        ]);
+
+        Promo::create([
+            'code'         => strtoupper($request->code), // Otomatis simpan Kapital
+            'type'         => $request->type,
+            'reward_value' => $request->reward_value,
+            'max_uses'     => $request->max_uses,
+            'used_count'   => 0,
+            'expiry_date'  => $request->expiry_date,
+        ]);
+
+        return redirect()->back()->with('success', 'Kode Promo baru berhasil dibuat!');
+    }
+
+    public function hapusPromo($id)
+    {
+        $promo = Promo::findOrFail($id);
+        $promo->delete();
+
+        return redirect()->back()->with('success', 'Kode Promo berhasil dihapus!');
     }
 }

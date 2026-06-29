@@ -163,39 +163,49 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::middleware(['checkRole:4'])->group(function () {
-        Route::prefix('marketing')->name('marketing.')->group(function () {
+    Route::prefix('marketing')->name('marketing.')->group(function () {
 
-            // --- ROUTE ORDER & BACKEND CORE ---
-            Route::get('/', [MarketingOrderController::class, 'create'])->name('index');
-            Route::get('/order', [MarketingOrderController::class, 'index'])->name('order.list');
-            Route::post('/order/store', [MarketingOrderController::class, 'store'])->name('order.store');
-            Route::get('/order/print/{id}', [MarketingOrderController::class, 'printInvoice'])->name('order.print');
+        // --- ROUTE ORDER & BACKEND CORE ---
+        Route::get('/', [MarketingOrderController::class, 'create'])->name('index');
+        Route::get('/order', [MarketingOrderController::class, 'index'])->name('order.list');
+        Route::post('/order/store', [MarketingOrderController::class, 'store'])->name('order.store');
+        Route::get('/order/print/{id}', [MarketingOrderController::class, 'printInvoice'])->name('order.print');
 
-            // Auto-Suggest Alamat Pembeli secara Real-Time via AJAX
-            Route::get('/get-alamat-agen/{nama}', [MarketingOrderController::class, 'getAlamatAgen'])->name('getAlamatAgen');
+        // Route Cek Promo Otomatis via AJAX (Di Form Kasir)
+        Route::get('/check-promo/{code}', [MarketingOrderController::class, 'checkPromo'])->name('promo.check');
 
-            // Ekspor Rekap Penjualan ke Excel/CSV
-            Route::get('/ekspor', [MarketingOrderController::class, 'eksporExcel'])->name('ekspor');
+        // --- ROUTE MANAJEMEN KODE PROMO ---
+        Route::prefix('promo')->name('promo.')->group(function () {
+            Route::get('/', [MarketingOrderController::class, 'indexPromo'])->name('index');
+            Route::post('/store', [MarketingOrderController::class, 'storePromo'])->name('store');
+            Route::delete('/hapus/{id}', [MarketingOrderController::class, 'hapusPromo'])->name('hapus');
+        });
 
-            // --- ROUTE MANAJEMEN AGEN (MarketingController) ---
-            Route::prefix('agen')->name('agen.')->group(function () {
-                Route::post('/tambah', [MarketingController::class, 'tambahAgen'])->name('tambah');
-                Route::post('/update/{id}', [MarketingController::class, 'updateAgen'])->name('update');
-                Route::delete('/hapus/{id}', [MarketingController::class, 'hapusAgen'])->name('hapus');
-            });
+        // Auto-Suggest Alamat Pembeli secara Real-Time via AJAX
+        Route::get('/get-alamat-agen/{nama}', [MarketingOrderController::class, 'getAlamatAgen'])->name('getAlamatAgen');
 
-            Route::get('/clear-notif', [MarketingController::class, 'clearNotif'])->name('clear-notif');
+        // Ekspor Rekap Penjualan ke Excel/CSV
+        Route::get('/ekspor', [MarketingOrderController::class, 'eksporExcel'])->name('ekspor');
 
-            // --- ROUTE MANAJEMEN INVOICE ---
-            Route::prefix('invoice')->name('invoice.')->group(function () {
-                Route::get('/bayar/{id}', [MarketingController::class, 'bayarInvoice'])->name('bayar');
-                Route::get('/cetak/{id}', [MarketingController::class, 'cetakInvoice'])->name('cetak');
-                Route::post('/update/{id}', [MarketingController::class, 'updateInvoice'])->name('update');
-                Route::post('/lunas/{id}', [MarketingOrderController::class, 'tandaiLunas'])->name('lunas');
-                Route::delete('/hapus/{id}', [MarketingOrderController::class, 'hapusInvoice'])->name('hapus');
-            });
+        // --- ROUTE MANAJEMEN AGEN (MarketingController) ---
+        Route::prefix('agen')->name('agen.')->group(function () {
+            Route::post('/tambah', [MarketingController::class, 'tambahAgen'])->name('tambah');
+            Route::post('/update/{id}', [MarketingController::class, 'updateAgen'])->name('update');
+            Route::delete('/hapus/{id}', [MarketingController::class, 'hapusAgen'])->name('hapus');
+        });
+
+        Route::get('/clear-notif', [MarketingController::class, 'clearNotif'])->name('clear-notif');
+
+        // --- ROUTE MANAJEMEN INVOICE ---
+        Route::prefix('invoice')->name('invoice.')->group(function () {
+            Route::get('/bayar/{id}', [MarketingController::class, 'bayarInvoice'])->name('bayar');
+            Route::get('/cetak/{id}', [MarketingController::class, 'cetakInvoice'])->name('cetak');
+            Route::post('/update/{id}', [MarketingController::class, 'updateInvoice'])->name('update');
+            Route::post('/lunas/{id}', [MarketingOrderController::class, 'tandaiLunas'])->name('lunas');
+            Route::delete('/hapus/{id}', [MarketingOrderController::class, 'hapusInvoice'])->name('hapus');
         });
     });
+});
 
     /*
     |--------------------------------------------------------------------------
