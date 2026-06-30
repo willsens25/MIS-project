@@ -103,9 +103,13 @@
             <h1 class="h3 mb-0 text-gray-800 font-weight-bold">SAPA-ALL Marketing</h1>
             <p class="text-muted small mb-0">Input pesanan dan kelola invoice pelanggan</p>
         </div>
-        <div class="d-flex align-items-center gap-2">
-            <a href="{{ route('marketing.promo.index') }}" class="btn btn-primary rounded-pill px-4 font-weight-bold shadow-sm me-2">
-                <i class="fas fa-ticket-alt mr-2"></i> Kelola Kode Promo
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            {{-- TOMBOL BARU: LIHAT SEMUA INVOICE --}}
+            <a href="{{ route('marketing.order.list') }}" class="btn btn-outline-primary rounded-pill px-3 font-weight-bold shadow-sm">
+                <i class="fas fa-list mr-1"></i> Lihat Semua Invoice
+            </a>
+            <a href="{{ route('marketing.promo.index') }}" class="btn btn-primary rounded-pill px-4 font-weight-bold shadow-sm">
+                <i class="fas fa-ticket-alt mr-1"></i> Kelola Kode Promo
             </a>
             <div class="custom-date-box shadow-sm p-2 px-3 rounded-pill d-none d-sm-block">
                 <i class="far fa-calendar-alt mr-1"></i> {{ date('d F Y') }}
@@ -135,15 +139,21 @@
                                 <input type="text" name="via" class="form-control rounded-pill" list="viaList" placeholder="Tokopedia/Shopee...">
                                 <datalist id="viaList">
                                     <option value="Tokopedia"><option value="Shopee"><option value="WhatsApp"><option value="Event">
+                                    <option value="TikTok Shop"><option value="Lazada"><option value="Instagram DM">
                                 </datalist>
                             </div>
                             <div class="col-md-4 mb-2">
                                 <label class="small font-weight-bold text-danger">Kode Promo</label>
                                 <div class="input-group">
-                                    <input type="text" name="promo_code" class="form-control" placeholder="Contoh: DISKON10" x-model="promoCode" @keyup.enter.prevent="applyPromo()">
+                                    <input type="text" name="promo_code" class="form-control" placeholder="Contoh: DISKON10" x-model="promoCode" @input="promoCode = promoCode.toUpperCase()" @keyup.enter.prevent="applyPromo()">
                                     <button class="btn btn-outline-danger" type="button" @click="applyPromo()">Cek</button>
                                 </div>
-                                <small x-show="promoMessage" :class="promoStatus === 'success' ? 'text-success' : 'text-danger'" class="font-weight-bold d-block mt-1" x-text="promoMessage"></small>
+                                <div class="d-flex align-items-center justify-content-between mt-1 flex-wrap">
+                                    <small x-show="promoMessage" :class="promoStatus === 'success' ? 'text-success' : 'text-danger'" class="font-weight-bold mb-0" x-text="promoMessage"></small>
+                                    <button type="button" x-show="promoCodeApplied" @click="resetPromoBtn()" class="btn btn-link text-danger btn-sm p-0 font-weight-bold text-decoration-none shadow-none ms-auto small" style="font-size: 0.75rem;">
+                                        <i class="fas fa-times-circle"></i> Batal Promo
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -176,14 +186,19 @@
                                         <tr>
                                             <td>
                                                 <select name="buku_id[]" class="form-select shadow-sm select-buku-alpine" required style="border-radius: 20px;" @change="updateHarga(index, $event)">
-                                                    <option value="" data-harga="0">-- Pilih Buku --</option>
+                                                    <option value="" data-harga="0" data-stok="0">-- Pilih Buku --</option>
                                                     @foreach($books as $b)
-                                                        <option value="{{ $b->id }}" data-harga="{{ $b->harga_jual ?? $b->harga ?? 0 }}">{{ $b->judul }}</option>
+                                                        <option value="{{ $b->id }}" data-harga="{{ $b->harga_jual ?? $b->harga ?? 0 }}" data-stok="{{ $b->stok_gudang ?? 0 }}">{{ $b->judul }}</option>
                                                     @endforeach
                                                 </select>
                                             </td>
                                             <td width="130">
-                                                <input type="number" name="qty[]" class="form-control text-center shadow-sm" min="1" x-model.number="item.qty" style="border-radius: 20px;" placeholder="QTY">
+                                                <input type="number" name="qty[]" class="form-control text-center shadow-sm" min="1" :max="item.stok" x-model.number="item.qty" @input="validateQty(index)" style="border-radius: 20px;" placeholder="QTY">
+                                                <div class="text-center mt-1">
+                                                    <small class="font-weight-bold" :class="item.stok > 0 ? 'text-muted' : 'text-danger'" x-show="item.buku_id">
+                                                        Stok: <span x-text="item.stok">0</span>
+                                                    </small>
+                                                </div>
                                             </td>
                                             <td width="140" class="text-end px-2 text-muted small font-weight-bold">
                                                 Sub: Rp<span x-text="formatRupiah(item.qty * item.harga)">0</span>
@@ -211,7 +226,7 @@
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="small font-weight-bold text-dark">Ongkir (Rp)</label>
-                                <input type="number" name="ongkir" class="form-control rounded-pill" x-model.number="ongkir">
+                                <input type="number" name="ongkir" class="form-control rounded-pill" x-model.number="ongkir" @input="if(ongkir < 0) ongkir = 0">
                             </div>
                         </div>
 
@@ -321,9 +336,9 @@
         Alpine.data('orderSystem', () => ({
             samaPenerima: true,
             ongkir: 0,
-            items: [{ buku_id: '', qty: 1, harga: 0 }],
+            items: [{ buku_id: '', qty: 1, harga: 0, stok: 0 }],
 
-            // State Promo Tambahan
+            // State Promo
             promoCode: '',
             promoCodeApplied: '',
             promoStatus: '',
@@ -333,7 +348,7 @@
             discountAmount: 0,
 
             addItem() {
-                this.items.push({ buku_id: '', qty: 1, harga: 0 });
+                this.items.push({ buku_id: '', qty: 1, harga: 0, stok: 0 });
             },
 
             removeItem(index) {
@@ -344,9 +359,23 @@
             updateHarga(index, event) {
                 const selectedOption = event.target.options[event.target.selectedIndex];
                 const harga = parseFloat(selectedOption.getAttribute('data-harga')) || 0;
+                const stok = parseInt(selectedOption.getAttribute('data-stok')) || 0;
+
                 this.items[index].harga = harga;
+                this.items[index].stok = stok;
                 this.items[index].buku_id = event.target.value;
+
+                this.validateQty(index);
                 this.recalculateDiscount();
+            },
+
+            validateQty(index) {
+                let item = this.items[index];
+                if (item.qty < 1) item.qty = 1;
+                if (item.buku_id && item.qty > item.stok) {
+                    alert(`Stok tidak mencukupi! Sisa stok buku ini adalah ${item.stok}.`);
+                    item.qty = item.stok > 0 ? item.stok : 1;
+                }
             },
 
             async applyPromo() {
@@ -357,7 +386,6 @@
                 }
 
                 try {
-                    // Panggilan AJAX Fetch API mengarah ke named route baru yang sudah diletakkan di dalam prefix marketing
                     let response = await fetch(`/marketing/check-promo/${this.promoCode.toUpperCase()}`);
                     let data = await response.json();
 
@@ -394,6 +422,13 @@
                 this.discountValue = 0;
                 this.discountAmount = 0;
                 this.promoCodeApplied = '';
+            },
+
+            resetPromoBtn() {
+                this.resetPromo();
+                this.promoCode = '';
+                this.promoStatus = '';
+                this.promoMessage = '';
             },
 
             calculateTotalBuku() {
