@@ -11,8 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('invoices', function (Blueprint $table) {
-            $table->boolean('tercatat_finance')->default(false)->after('status');
+        // Ubah dari 'invoices' menjadi 'orders'
+        Schema::table('orders', function (Blueprint $table) {
+            $table->boolean('tercatat_finance')->default(0)->after('status');
         });
     }
 
@@ -21,7 +22,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('invoices', function (Blueprint $table) {
+        // Ubah dari 'invoices' menjadi 'orders'
+        Schema::table('orders', function (Blueprint $table) {
             $table->dropColumn('tercatat_finance');
         });
     }
