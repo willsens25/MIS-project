@@ -171,8 +171,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/order/store', [MarketingOrderController::class, 'store'])->name('order.store');
         Route::get('/order/print/{id}', [MarketingOrderController::class, 'printInvoice'])->name('order.print');
 
-        // Route Cek Promo Otomatis via AJAX (Di Form Kasir)
-        Route::get('/check-promo/{code}', [MarketingOrderController::class, 'checkPromo'])->name('promo.check');
+        // REQUEST PM BARU: Route Cek Promo per Baris Buku via AJAX POST (Mendukung pengiriman data buku_id dan code)
+        Route::post('/order/check-promo', [MarketingOrderController::class, 'checkPromo'])->name('order.check-promo');
 
         // --- ROUTE MANAJEMEN KODE PROMO ---
         Route::prefix('promo')->name('promo.')->group(function () {
@@ -182,7 +182,7 @@ Route::middleware('auth')->group(function () {
         });
 
         // Auto-Suggest Alamat Pembeli secara Real-Time via AJAX
-        Route::get('/get-alamat-agen/{nama}', [MarketingOrderController::class, 'getAlamatAgen'])->name('getAlamatAgen');
+        Route::get('/get-alamat-agen/{nama}', [MarketingOrderController::class, 'getAlamatAgen'])->name('order.alamat');
 
         // Ekspor Rekap Penjualan ke Excel/CSV
         Route::get('/ekspor', [MarketingOrderController::class, 'eksporExcel'])->name('ekspor');

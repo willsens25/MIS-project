@@ -64,11 +64,11 @@ class MarketingOrderController extends Controller
     }
 
     /**
-     * Menyimpan Data Pesanan Baru, Validasi Kode Promo, & Potong Stok Otomatis
+     * Menyimpan Data Pesanan Baru, Validasi Kode Promo Per Item Buku, & Potong Stok Otomatis
      */
     public function store(Request $request)
     {
-        // 1. Validasi Input yang Disesuaikan dengan Kondisi Form
+        // 1. Validasi Input yang Disesuaikan dengan Kondisi Form Baru
         $request->validate([
             'tanggal_pesan'   => 'required|date',
             'nama_agen'       => 'required|string|exists:identitas,nama_lengkap',
@@ -77,11 +77,21 @@ class MarketingOrderController extends Controller
             'ongkir'          => 'nullable|numeric|min:0',
             'nama_penerima'   => 'nullable|string',
             'alamat_penerima' => 'required_without:sama_penerima|nullable|string',
+
+            // Item Buku & Qty Array
             'buku_id'         => 'required|array|min:1',
-            'buku_id.*'       => ['required', \Illuminate\Validation\Rule::exists(\App\Models\Book::class, 'id')],
+            'buku_id.*'       => 'required|exists:bukus,id',
             'qty'             => 'required|array|min:1',
             'qty.*'           => 'required|integer|min:1',
-            'promo_code'      => 'nullable|string|max:50',
+
+            // REQUEST PM BARU: Kode promo dan nilai diskon dikirim dalam bentuk array per baris buku
+            'item_promo_code' => 'nullable|array',
+            'item_promo_code.*'=> 'nullable|string|max:50',
+            'item_discount'   => 'nullable|array',
+            'item_discount.*' => 'nullable|numeric|min:0',
+
+            // PM REQUEST: Input "Kode Promo atas" diganti jadi teks "Keterangan"
+            'keterangan_order'=> 'nullable|string|max:500',
         ], [
             'nama_agen.exists'                 => 'Nama agen/pembeli tidak ditemukan di sistem.',
             'qty.*.min'                        => 'Jumlah pesanan (QTY) minimal harus 1.',
@@ -95,7 +105,6 @@ class MarketingOrderController extends Controller
             $noInvoice = '';
             DB::transaction(function () use ($request, &$noInvoice) {
 
-                // Array penampung objek buku yang berhasil dikunci secara eksklusif
                 $lockedBooks = [];
 
                 // --- LANGKAH PERLINDUNGAN AWAL: Cek ketersediaan seluruh stok & Row Locking ---
@@ -151,61 +160,52 @@ class MarketingOrderController extends Controller
                     $alamatFinal = 'Alamat tidak terisi / kosong';
                 }
 
-                // 4. Hitung Subtotal Buku untuk Memvalidasi Diskon di Backend
-                $totalSemuaBuku = 0;
+                // 4. Hitung Detail Buku & Validasi Potongan Diskon Per Baris Item
+                $totalBersihSemuaBuku = 0;
                 $detailsData = [];
 
                 foreach ($request->buku_id as $key => $idBuku) {
                     if (!$idBuku) continue;
+
                     $book = $lockedBooks[$key];
                     $jumlahPesanan = $request->qty[$key] ?? 1;
-
                     $hargaSatuan = $book->harga_jual ?? $book->harga ?? 0;
-                    $subtotal = $hargaSatuan * $jumlahPesanan;
+                    $subtotalKotor = $hargaSatuan * $jumlahPesanan;
 
-                    $totalSemuaBuku += $subtotal;
-                    $detailsData[] = [
-                        'book' => $book,
-                        'buku_id' => $idBuku,
-                        'jumlah' => $jumlahPesanan,
-                        'harga_satuan' => $hargaSatuan,
-                        'subtotal' => $subtotal
-                    ];
-                }
+                    // Mengambil data kode promo & nilai diskon yang dikirim per baris item
+                    $kodePromoTerpakai = $request->item_promo_code[$key] ?? null;
+                    $nilaiPotonganDiskon = $request->item_discount[$key] ?? 0;
 
-                // 5. Logika Verifikasi Kode Promo Sisi Backend (Proteksi Data)
-                $potonganDiskon = 0;
-                $promoIdApplied = null;
+                    // Batasi agar diskon per item tidak melebihi subtotal kotor buku tersebut
+                    $nilaiPotonganDiskon = min($nilaiPotonganDiskon, $subtotalKotor);
+                    $subtotalBersih = $subtotalKotor - $nilaiPotonganDiskon;
 
-                if ($request->filled('promo_code')) {
-                    $promo = Promo::where('code', strtoupper($request->promo_code))->first();
+                    $totalBersihSemuaBuku += $subtotalBersih;
 
-                    if ($promo) {
-                        $isExpired = $promo->expiry_date && $promo->expiry_date < date('Y-m-d');
-                        $isQuotaHabis = $promo->used_count >= $promo->max_uses;
-
-                        if (!$isExpired && !$isQuotaHabis) {
-                            if ($promo->type === 'percentage') {
-                                $potonganDiskon = ($totalSemuaBuku * $promo->reward_value) / 100;
-                            } else {
-                                $potonganDiskon = $promo->reward_value;
-                            }
-
-                            // Batasi agar diskon tidak melebihi harga total buku
-                            $potonganDiskon = min($potonganDiskon, $totalSemuaBuku);
-                            $promoIdApplied = $promo->id;
-
-                            // Naikkan jumlah pemakaian kupon
+                    // Pasang trigger pemakaian kupon ke master data promo (jika kode diisi)
+                    if (!empty($kodePromoTerpakai)) {
+                        $promo = Promo::where('code', strtoupper($kodePromoTerpakai))->first();
+                        if ($promo) {
                             $promo->increment('used_count');
                         }
                     }
+
+                    $detailsData[] = [
+                        'book'                => $book,
+                        'buku_id'             => $idBuku,
+                        'jumlah'              => $jumlahPesanan,
+                        'harga_satuan'        => $hargaSatuan,
+                        'subtotal'            => $subtotalBersih, // Menyimpan subtotal bersih setelah diskon item
+                        'kode_promo_terpakai' => $kodePromoTerpakai,
+                        'potongan_diskon'     => $nilaiPotonganDiskon
+                    ];
                 }
 
-                // Perhitungan Akhir Grand Total Tagihan
-                $grandTotal = ($totalSemuaBuku - $potonganDiskon) + ($request->ongkir ?? 0);
+                // Perhitungan Akhir Grand Total Tagihan (Ditambah Ongkir)
+                $grandTotal = $totalBersihSemuaBuku + ($request->ongkir ?? 0);
                 $grandTotal = max(0, $grandTotal);
 
-                // 6. Simpan Header Order (Menambahkan data tracking promo jika fieldnya tersedia di tabel orders)
+                // 6. Simpan Header Order
                 $order = Order::create([
                     'no_invoice'        => $noInvoice,
                     'tanggal_pesan'     => $request->tanggal_pesan,
@@ -217,19 +217,23 @@ class MarketingOrderController extends Controller
                     'ongkir'            => $request->ongkir ?? 0,
                     'status'            => 'Pending',
                     'total_tagihan'     => $grandTotal,
-                    'user_id'           => Auth::id()
+                    'user_id'           => Auth::id(),
+                    'keterangan'        => $request->keterangan_order // Ganti kode promo atas jadi keterangan order
                 ]);
 
-                // 7. Eksekusi Pengurangan Stok & Simpan Detail Item
+                // 7. Eksekusi Pengurangan Stok & Simpan Detail Item Beserta Kolom Promo Barunya
                 foreach ($detailsData as $data) {
                     $data['book']->decrement('stok_gudang', $data['jumlah']);
 
                     OrderDetail::create([
-                        'order_id'     => $order->id,
-                        'buku_id'      => $data['buku_id'],
-                        'jumlah'       => $data['jumlah'],
-                        'harga_satuan' => $data['harga_satuan'],
-                        'subtotal'     => $data['subtotal'],
+                        'order_id'            => $order->id,
+                        'buku_id'             => $data['buku_id'],
+                        'jumlah'              => $data['jumlah'],
+                        'harga_satuan'        => $data['harga_satuan'],
+                        'subtotal'            => $data['subtotal'],
+                        // Kolom baru hasil migrasi database berhasil diisi:
+                        'kode_promo_terpakai' => $data['kode_promo_terpakai'],
+                        'potongan_diskon'     => $data['potongan_diskon'],
                     ]);
                 }
 
@@ -416,7 +420,6 @@ class MarketingOrderController extends Controller
         ];
 
         ActivityLog::record('Ekspor Excel Marketing', 'Order', 'Mengekspor rekap data order penjualan ke berkas Excel.');
-
         $callback = function() use($orders) {
             $file = fopen('php://output', 'w');
             echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
@@ -462,11 +465,16 @@ class MarketingOrderController extends Controller
     }
 
     /**
-     * AJAX Endpoint: Memvalidasi ketersediaan promo dari front-end
+     * REQUEST PM BARU (MENGGANTIKAN checkPromo LAMA)
+     * AJAX Endpoint: Memvalidasi ketersediaan promo spesifik berdasarkan ID buku dari frontend
      */
-    public function checkPromo($code)
+    public function checkPromo(Request $request)
     {
-        $promo = \App\Models\Promo::where('code', $code)->first();
+        $code = $request->input('code');
+        $bukuId = $request->input('buku_id');
+
+        $promo = Promo::where('code', strtoupper($code))->first();
+
         if (!$promo) {
             return response()->json(['status' => 'error', 'message' => 'Kode promo tidak ditemukan.']);
         }
@@ -479,9 +487,14 @@ class MarketingOrderController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Kuota kode promo sudah habis.']);
         }
 
+        // Pengecekan opsional jika tabel promo memiliki kolom pengunci buku (misal: buku_id_khusus)
+        if (isset($promo->buku_id_khusus) && $promo->buku_id_khusus && $promo->buku_id_khusus != $bukuId) {
+            return response()->json(['status' => 'error', 'message' => 'Kode ini tidak berlaku untuk buku yang dipilih.']);
+        }
+
         return response()->json([
             'status' => 'success',
-            'type' => $promo->type,
+            'type'  => $promo->type,
             'value' => $promo->reward_value
         ]);
     }
@@ -491,7 +504,6 @@ class MarketingOrderController extends Controller
      */
     public function indexPromo()
     {
-        // Mengambil semua data promo dari database
         $promos = Promo::orderBy('created_at', 'desc')->get();
         return view('marketing.promo', compact('promos'));
     }
@@ -507,7 +519,7 @@ class MarketingOrderController extends Controller
         ]);
 
         Promo::create([
-            'code'         => strtoupper($request->code), // Otomatis simpan Kapital
+            'code'         => strtoupper($request->code),
             'type'         => $request->type,
             'reward_value' => $request->reward_value,
             'max_uses'     => $request->max_uses,
