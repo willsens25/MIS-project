@@ -15,8 +15,9 @@ return new class extends Migration
         $table->id();
         $table->foreignId('order_id')->constrained()->onDelete('cascade');
         $table->foreignId('buku_id')->constrained('bukus');
-        $table->integer('qty');
+        $table->integer('jumlah');
         $table->integer('harga_satuan');
+        $table->integer('subtotal');
         $table->timestamps();
     });
     }
