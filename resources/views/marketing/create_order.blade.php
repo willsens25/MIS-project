@@ -79,7 +79,6 @@
             <div class="card shadow border-0 rounded-lg">
                 <div class="card-header bg-white py-3 d-flex align-items-center justify-content-between">
                     <h5 class="m-0 font-weight-bold text-primary"><i class="fas fa-shopping-cart mr-2"></i>Input Pesanan Baru</h5>
-                    <!-- Tombol Navigasi ke Halaman Utama Promo -->
                     <a href="{{ route('marketing.promo.index') }}" class="btn btn-sm btn-outline-primary font-weight-bold rounded-pill shadow-sm">
                         <i class="fas fa-ticket-alt mr-1"></i> Lihat / Kelola Promo
                     </a>
@@ -152,12 +151,11 @@
                                 <span class="small font-weight-bold text-dark" x-text="alamatAgenAuto ? alamatAgenAuto : 'Memilih agen akan otomatis memuat alamat di sini...'"></span>
                             </div>
                         </div>
-                    </form> <!-- Batas Form Atas -->
+                    </form>
 
                     <!-- Kirim form order lanjutan -->
                     <form action="{{ route('marketing.order.store') }}" method="POST" id="realOrderForm">
                         @csrf
-                        <!-- Copy data form atas otomatis via JS pas di-submit -->
                         <div id="hiddenFieldsContainer"></div>
 
                         <!-- Keterangan Order -->
@@ -171,10 +169,10 @@
                             <table class="table mb-0">
                                 <thead class="bg-gradient-primary text-white text-center small font-weight-bold">
                                     <tr>
-                                        <th style="width: 35%;">Pilih Judul Buku</th>
-                                        <th style="width: 15%;">Jumlah (QTY)</th>
-                                        <th style="width: 30%;">Kode Promo Per Buku</th>
-                                        <th style="width: 15%;">Subtotal</th>
+                                        <th style="width: 32%;">Pilih Judul Buku</th>
+                                        <th style="width: 18%;">Jumlah (QTY)</th>
+                                        <th style="width: 28%;">Kode Promo Per Buku</th>
+                                        <th style="width: 17%;">Subtotal</th>
                                         <th style="width: 5%;"></th>
                                     </tr>
                                 </thead>
@@ -193,13 +191,11 @@
                                                 </select>
                                             </td>
 
-                                            <!-- Qty -->
+                                            <!-- Qty (Dibuat Fleksibel & Tidak Gepeng Lagi) -->
                                             <td class="p-2">
-                                                <div class="input-group input-group-sm">
-                                                    <input type="number" :name="'qty['+index+']'" class="form-control text-center" min="1" x-model.number="item.qty" @input="calculateItemSubtotal(item)">
-                                                    <div class="input-group-append">
-                                                        <span class="input-group-text bg-light text-xs font-weight-bold">Pcs</span>
-                                                    </div>
+                                                <div class="d-flex align-items-center">
+                                                    <input type="number" :name="'qty['+index+']'" class="form-control form-control-sm text-center" min="1" style="min-width: 65px;" x-model.number="item.qty" @input="calculateItemSubtotal(item)">
+                                                    <span class="ml-2 small font-weight-bold text-muted">Pcs</span>
                                                 </div>
                                             </td>
 
@@ -212,10 +208,7 @@
                                                         <button class="btn btn-danger" type="button" @click="resetItemPromo(item)" x-show="item.promoApplied" x-cloak><i class="fas fa-times"></i></button>
                                                     </div>
                                                 </div>
-                                                <!-- Hasil diskon dikirim ke controller -->
                                                 <input type="hidden" :name="'item_discount['+index+']'" x-model="item.discountAmount">
-
-                                                <!-- Status Alert Promo Item -->
                                                 <span class="d-block text-xs font-weight-bold" :class="item.promoStatus === 'success' ? 'text-success' : 'text-danger'" x-text="item.promoMessage" x-show="item.promoMessage" x-cloak></span>
                                             </td>
 
@@ -446,7 +439,6 @@
 
             fetchAlamat(namaAgen) {
                 if (!namaAgen) return;
-                // Sudah disesuaikan ke nama route yang aktif di web.php milikmu
                 fetch("{{ route('marketing.order.alamat', ':nama') }}".replace(':nama', encodeURIComponent(namaAgen)))
                     .then(res => res.json())
                     .then(data => {

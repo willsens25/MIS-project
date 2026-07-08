@@ -69,48 +69,56 @@ class LogistikController extends Controller
             return redirect()->back()->with('error', 'Data antrean invoice tidak ditemukan!');
         }
 
-        return DB::transaction(function () use ($items, $no_invoice) {
+        // 🔒 Dibungkus try-catch agar jika stok kurang, error dilempar ke alert danger, bukan ke halaman error merah Laravel
+        try {
+            return DB::transaction(function () use ($items, $no_invoice) {
 
-            foreach ($items as $antrean) {
-                $jumlahKeluar = $antrean->qty;
-                $judulBuku = $antrean->book->judul ?? 'Buku ID: ' . $antrean->buku_id;
+                foreach ($items as $antrean) {
+                    $jumlahKeluar = $antrean->qty;
+                    $judulBuku = $antrean->book->judul ?? 'Buku ID: ' . $antrean->buku_id;
 
-                // 1. Validasi kecukupan stok gudang untuk item ini sebelum diproses
-                if ($antrean->book) {
-                    if ($antrean->book->stok_gudang < $jumlahKeluar) {
-                        throw new \Exception("Stok gudang untuk buku '{$judulBuku}' tidak mencukupi untuk memproses invoice ini!");
+                    // 1. Validasi kecukupan stok gudang untuk item ini sebelum diproses
+                    if ($antrean->book) {
+                        if ($antrean->book->stok_gudang < $jumlahKeluar) {
+                            // Memicu Exception agar DB::transaction otomatis melakukan ROLLBACK (batal potong semua item)
+                            throw new \Exception("Stok gudang untuk buku '{$judulBuku}' tidak mencukupi untuk memproses invoice ini!");
+                        }
+                        // Potong stok gudang secara otomatis
+                        $antrean->book->decrement('stok_gudang', $jumlahKeluar);
                     }
-                    // Potong stok gudang secara otomatis
-                    $antrean->book->decrement('stok_gudang', $jumlahKeluar);
+
+                    // 2. Update status item penyaluran menjadi dikirim
+                    $antrean->update(['status' => 'dikirim']);
+
+                    // 3. Catat log keluar logistik untuk masing-masing item buku
+                    \App\Models\LogisticLog::create([
+                        'buku_id'    => $antrean->buku_id,
+                        'qty_keluar' => $jumlahKeluar,
+                        'tujuan'     => $antrean->nama_agen ?? 'Marketing',
+                    ]);
+
+                    // 4. 📝 AUDIT LOG per item buku
+                    ActivityLog::record(
+                        'Kirim Pesanan Marketing',
+                        'Penyaluran',
+                        'Memproses antrean logistik untuk Invoice #' . $antrean->no_invoice . '. Status diubah menjadi DIKIRIM. Barang: "' . $judulBuku . '" sejumlah ' . $jumlahKeluar . ' pcs ke penerima: ' . ($antrean->nama_agen ?? 'Marketing')
+                    );
                 }
 
-                // 2. Update status item penyaluran menjadi dikirim
-                $antrean->update(['status' => 'dikirim']);
+                return redirect()->route('logistik')->with('success', 'Seluruh barang di dalam Invoice #' . $no_invoice . ' berhasil dikirim!');
+            });
 
-                // 3. Catat log keluar logistik untuk masing-masing item buku
-                \App\Models\LogisticLog::create([
-                    'buku_id'    => $antrean->buku_id,
-                    'qty_keluar' => $jumlahKeluar,
-                    'tujuan'     => $antrean->nama_agen ?? 'Marketing',
-                ]);
-
-                // 4. 📝 AUDIT LOG per item buku
-                ActivityLog::record(
-                    'Kirim Pesanan Marketing',
-                    'Penyaluran',
-                    'Memproses antrean logistik untuk Invoice #' . $antrean->no_invoice . '. Status diubah menjadi DIKIRIM. Barang: "' . $judulBuku . '" sejumlah ' . $jumlahKeluar . ' pcs ke penerima: ' . ($antrean->nama_agen ?? 'Marketing')
-                );
-            }
-
-            return redirect()->route('logistik')->with('success', 'Seluruh barang di dalam Invoice #' . $no_invoice . ' berhasil dikirim!');
-        });
+        } catch (\Exception $e) {
+            // Menangkap pesan error di atas dan mengembalikannya dalam bentuk flash notification danger
+            return redirect()->back()->with('error', $e->getMessage());
+        }
     }
 
     public function simpanKeluar(Request $request)
     {
         $request->validate([
             'buku_id' => 'required',
-            'jumlah' => 'required|numeric|min:1', // Mengubah 'qty_keluar' menjadi 'jumlah' menyesuaikan input Blade
+            'jumlah' => 'required|numeric|min:1',
             'tujuan' => 'required|string',
         ]);
 
