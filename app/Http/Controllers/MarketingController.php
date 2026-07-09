@@ -189,4 +189,37 @@ class MarketingController extends Controller
 
         return back()->with('success', 'Jumlah pesanan & stok diperbarui!');
     }
+
+    public function getInvoiceDetail($id)
+    {
+        try {
+            // Memuat data invoice beserta relasi buku terkait
+            $invoice = Invoice::with('book')->findOrFail($id);
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'no_invoice'   => $invoice->no_invoice,
+                    'nama_pembeli' => $invoice->nama_agen,
+                    'nama_penerima'=> $invoice->nama_penerima ?? $invoice->nama_agen,
+                    'alamat'       => $invoice->alamat_penerima ?? '-',
+                    'via'          => $invoice->via ?? 'WhatsApp',
+                    'ekspedisi'    => $invoice->ekspedisi ?? '-',
+                    'ongkir'       => $invoice->ongkir ?? 0,
+                    'status'       => $invoice->status,
+                    'keterangan'   => $invoice->keterangan_order ?? '-',
+                    // Detail Item Buku
+                    'buku'         => $invoice->book ? $invoice->book->judul : 'Buku Terhapus / Tidak Ditemukan',
+                    'qty'          => $invoice->jumlah,
+                    'harga_satuan' => $invoice->harga_satuan,
+                    'total_tagihan'=> $invoice->total_tagihan,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal memuat detail invoice: ' . $e->getMessage()
+            ], 404);
+        }
+    }
 }
