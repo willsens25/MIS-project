@@ -537,4 +537,61 @@ class MarketingOrderController extends Controller
 
         return redirect()->back()->with('success', 'Kode Promo berhasil dihapus!');
     }
+
+    public function detail($id)
+{
+    try {
+        // 1. Cari berdasarkan ID utama terlebih dahulu tanpa 'with' agar pasti ketemu jika datanya ada
+        $invoice = \App\Models\Invoice::find($id);
+
+        // 2. JALUR CADANGAN: Jika tidak ketemu, coba cari berdasarkan kolom 'no_invoice'
+        // (siapa tahu yang terkirim dari depan adalah nomor nota, bukan ID auto-increment)
+        if (!$invoice) {
+            $invoice = \App\Models\Invoice::where('no_invoice', $id)->first();
+        }
+
+        // Jika setelah dua metode di atas tetap tidak ada di database
+        if (!$invoice) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invoice dengan ID/Nomor ' . $id . ' benar-benar tidak terdaftar di database.'
+            ], 404);
+        }
+
+        // Ambil judul buku secara aman (manual query atau fallback)
+        $judulBuku = 'Detail Buku';
+        if (isset($invoice->book)) {
+            $judulBuku = $invoice->book->judul ?? 'Buku Temuan';
+        } elseif (isset($invoice->buku_id)) {
+            // Ambil manual jika relasi bermasalah
+            $bukuLokal = \DB::table('books')->where('id', $invoice->buku_id)->first();
+            $judulBuku = $bukuLokal->judul ?? 'Buku ID: ' . $invoice->buku_id;
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'no_invoice'    => $invoice->no_invoice ?? '-',
+                'status'        => $invoice->status ?? 'Pending',
+                'nama_pembeli'  => $invoice->nama_pembeli ?? $invoice->nama_agen ?? '-',
+                'nama_penerima' => $invoice->nama_penerima ?? '-',
+                'alamat'        => $invoice->alamat_penerima ?? '-',
+                'via'           => $invoice->via ?? '-',
+                'ekspedisi'     => $invoice->ekspedisi ?? '-',
+                'ongkir'        => $invoice->ongkir ?? 0,
+                'total_tagihan' => $invoice->total_tagihan ?? 0,
+                'keterangan'    => $invoice->keterangan_order ?? '-',
+                'buku'          => $judulBuku,
+                'qty'           => $invoice->qty ?? 0,
+                'harga_satuan'  => $invoice->harga_satuan ?? 0,
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Server Error: ' . $e->getMessage()
+        ], 500);
+    }
+}
 }

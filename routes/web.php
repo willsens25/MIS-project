@@ -198,12 +198,12 @@ Route::middleware('auth')->group(function () {
 
         // --- ROUTE MANAJEMEN INVOICE ---
         Route::prefix('invoice')->name('invoice.')->group(function () {
-            Route::get('/bayar/{id}', [MarketingController::class, 'bayarInvoice'])->name('bayar');
-            Route::get('/cetak/{id}', [MarketingController::class, 'cetakInvoice'])->name('cetak');
-            Route::post('/update/{id}', [MarketingController::class, 'updateInvoice'])->name('update');
-            Route::post('/lunas/{id}', [MarketingOrderController::class, 'tandaiLunas'])->name('lunas');
-            Route::delete('/hapus/{id}', [MarketingOrderController::class, 'hapusInvoice'])->name('hapus');
-            Route::get('/{id}/detail', [\App\Http\Controllers\InvoiceController::class, 'detail'])->name('detail');
+        Route::get('/detail/{id}', [MarketingOrderController::class, 'detail'])->name('detail');
+        Route::get('/bayar/{id}', [MarketingController::class, 'bayarInvoice'])->name('bayar');
+        Route::get('/cetak/{id}', [MarketingController::class, 'cetakInvoice'])->name('cetak');
+        Route::post('/update/{id}', [MarketingController::class, 'updateInvoice'])->name('update');
+        Route::post('/lunas/{id}', [MarketingOrderController::class, 'tandaiLunas'])->name('lunas');
+        Route::delete('/hapus/{id}', [MarketingOrderController::class, 'hapusInvoice'])->name('hapus');
         });
     });
 });

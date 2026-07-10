@@ -54,23 +54,22 @@
                     </a>
                 </div>
                 <div class="card-body">
-
                     <form action="{{ route('marketing.order.store') }}" method="POST" id="mainOrderForm">
                         @csrf
 
                         <div class="row mb-3">
                             <div class="col-md-6 mb-2">
                                 <label class="small font-weight-bold text-dark">Nama Agen / Pembeli <span class="text-danger">*</span></label>
-                                <input type="hidden" name="nama_agen" id="hidden_nama_agen" value="{{ old('nama_agen') }}">
-                                <select id="select_pembeli" class="form-control select2" required>
-                                    <option value="">-- Pilih Agen / Pembeli --</option>
-                                    @foreach($identitas as $idnt)
-                                        <option value="{{ $idnt->nama_lengkap }}" {{ old('nama_agen') == $idnt->nama_lengkap ? 'selected' : '' }}>
-                                            {{ $idnt->nama_lengkap }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
+
+                            <select name="nama_agen" id="select_pembeli" class="form-control select2" required>
+                            <option value="">-- Pilih Agen / Pembeli --</option>
+                            @foreach($identitas as $idnt)
+                                <option value="{{ $idnt->nama_lengkap }}" {{ old('nama_agen') == $idnt->nama_lengkap ? 'selected' : '' }}>
+                                    {{ $idnt->nama_lengkap }}
+                                </option>
+                            @endforeach
+                            </select>
+                        </div>
                             <div class="col-md-6 mb-2">
                                 <label class="small font-weight-bold text-dark">Tanggal Pesan <span class="text-danger">*</span></label>
                                 <input type="date" name="tanggal_pesan" class="form-control" value="{{ old('tanggal_pesan', date('Y-m-d')) }}" required>
@@ -228,7 +227,6 @@
                             </div>
                         </div>
                     </form>
-
                 </div>
             </div>
         </div>
@@ -278,7 +276,7 @@
                             const jsonErr = await err.json();
                             if(jsonErr.message) errMsg = jsonErr.message;
                         } catch(e){}
-                        alert('Detail Error: ' + errMsg);
+                        alert('Gagal memuat detail invoice: ' + errMsg);
                         this.isLoading = false;
                         this.closeModalVanilla();
                     });
@@ -315,7 +313,7 @@
                                     </div>
 
                                     <h6 class="font-weight-bold mb-1 font-mono text-primary" style="cursor: pointer; text-decoration: underline;" @click="openQuickView({{ $inv->id }})">
-                                        <i class="fas fa-search-plus text-xs mr-1 text-secondary"></i>{{ $inv->no_invoice }}
+                                        {{ $inv->no_invoice }}
                                     </h6>
 
                                     <p class="mb-1 text-xs font-weight-bold text-dark">
@@ -359,7 +357,7 @@
                         <div class="modal-body p-4 text-dark">
                             <div class="text-center py-4" x-show="isLoading">
                                 <div class="spinner-border text-primary" role="status"></div>
-                                <p class="text-muted small font-weight-bold mt-2">Menjemput data buku...</p>
+                                <p class="text-muted small font-weight-bold mt-2">Menjemput data...</p>
                             </div>
 
                             <div x-show="!isLoading && selectedInvoice" x-transition x-cloak>
@@ -568,7 +566,6 @@
         }));
     });
 
-    // AMAN DAN MANDIRI: Interval checker untuk memastikan Select2 diinisialisasi kapan pun library-nya siap dimuat
     var checkSelect2Ready = setInterval(function() {
         if (window.jQuery && $.fn.select2) {
             clearInterval(checkSelect2Ready);
@@ -579,10 +576,7 @@
             }).on('select2:select', function (e) {
                 var selectedVal = e.params.data.id;
 
-                // 1. Amankan value ke input hidden cadangan agar PASTI terbaca Laravel saat submit form
-                document.getElementById('hidden_nama_agen').value = selectedVal;
-
-                // 2. Kabari Alpine.js secara paksa
+                // Kabari Alpine.js secara paksa untuk fetch alamat otomatis
                 var alpineEl = document.querySelector('[x-data="orderForm()"]');
                 if (alpineEl) {
                     Alpine.$data(alpineEl).fetchAlamat(selectedVal);
