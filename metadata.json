@@ -1,0 +1,6 @@
+{
+  "name": "SAPA-ALL MIS - Lamrimnesia",
+  "description": "Sistem Informasi Manajemen Terpadu Lamrimnesia: Direktorat, Finance, Penerbitan, Marketing, Produksi, dan Logistik.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

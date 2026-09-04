@@ -1,0 +1,1024 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import {
+  Divisi,
+  User,
+  Book,
+  Promo,
+  Identitas,
+  Account,
+  Category,
+  Mutasi,
+  PengajuanCetak,
+  Penjualan,
+  Penyaluran,
+  LogisticLog,
+  ProductionLog,
+  ActivityLog,
+  Order,
+  DivisionId
+} from '../types';
+import {
+  INITIAL_DIVISI,
+  INITIAL_USERS,
+  INITIAL_CATEGORIES,
+  INITIAL_ACCOUNTS,
+  INITIAL_BOOKS,
+  INITIAL_PROMOS,
+  INITIAL_IDENTITAS,
+  INITIAL_ORDERS,
+  INITIAL_MUTASI,
+  INITIAL_PENGAJUAN,
+  INITIAL_PENJUALAN,
+  INITIAL_PENYALURAN,
+  INITIAL_LOGISTIC_LOGS,
+  INITIAL_PRODUCTION_LOGS,
+  INITIAL_ACTIVITY_LOGS
+} from '../lib/initialData';
+
+interface AppContextType {
+  currentUser: User;
+  setCurrentUser: (user: User) => void;
+  switchDivision: (divisiId: DivisionId) => void;
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
+  
+  // Auth state & methods
+  isAuthenticated: boolean;
+  setIsAuthenticated: (val: boolean) => void;
+  login: (email: string, password?: string) => { success: boolean; message: string; user?: User };
+  register: (data: { name: string; email: string; password: string; divisi_id: DivisionId; role?: string; phone?: string; createIdentitas?: boolean }) => { success: boolean; message: string; user?: User };
+  logout: () => void;
+  quickLoginAs: (userId: number) => void;
+  isAuthModalOpen: boolean;
+  setIsAuthModalOpen: (open: boolean) => void;
+  authModalMode: 'login' | 'register';
+  setAuthModalMode: (mode: 'login' | 'register') => void;
+  openLoginModal: () => void;
+  openRegisterModal: () => void;
+
+  // Master lists
+  divisiList: Divisi[];
+  usersList: User[];
+  categories: Category[];
+  accounts: Account[];
+  books: Book[];
+  promos: Promo[];
+  identitasList: Identitas[];
+  orders: Order[];
+  mutasis: Mutasi[];
+  pengajuans: PengajuanCetak[];
+  penjualans: Penjualan[];
+  penyalurans: Penyaluran[];
+  logisticLogs: LogisticLog[];
+  productionLogs: ProductionLog[];
+  activityLogs: ActivityLog[];
+
+  // Helper & Mutation Actions
+  recordActivity: (aksi: string, model: string, keterangan: string, customDivisiId?: DivisionId, customUserName?: string) => void;
+  
+  // Book actions
+  addBook: (judul: string, penulis: string, harga_jual: number, stok?: number) => Book;
+  updateBook: (id: number, judul: string, penulis: string, harga_jual: number) => void;
+  deleteBook: (id: number) => void;
+  bulkDeleteBooks: (ids: number[]) => void;
+  ajukanCetak: (bookId: number, jumlah: number) => void;
+
+  // Order & Marketing actions
+  createOrder: (orderData: Omit<Order, 'id' | 'created_at'>) => { success: boolean; message: string; invoice?: string };
+  tandaiLunasOrder: (orderId: number) => void;
+  cancelOrder: (orderId: number) => void;
+  bulkDeleteOrders: (ids: number[]) => void;
+  checkPromoCode: (code: string, bookId?: number) => { valid: boolean; type?: 'percentage' | 'nominal'; value?: number; message?: string };
+  addPromo: (promo: Omit<Promo, 'id' | 'used_count' | 'created_at'>) => void;
+  deletePromo: (id: number) => void;
+  bulkDeletePromos: (ids: number[]) => void;
+
+  // Finance actions
+  addMutasi: (account_id: number, nama_kategori: string, tipe: 'Masuk' | 'Keluar', nominal: number, keterangan: string, tanggal?: string) => void;
+  updateMutasi: (id: number, nama_kategori: string, tipe: 'Masuk' | 'Keluar', nominal: number, keterangan: string) => void;
+  deleteMutasi: (id: number) => void;
+  bulkDeleteMutasi: (ids: number[]) => void;
+  addAccount: (nama_akun: string) => void;
+  updateAccount: (id: number, nama_akun: string) => void;
+  deleteAccount: (id: number) => { success: boolean; message: string };
+  approvePengajuanCetak: (pengajuanId: number, accountId: number) => void;
+  rejectPengajuanCetak: (pengajuanId: number, catatan: string) => void;
+  bulkDeletePengajuanCetak: (ids: number[]) => void;
+
+  // Production actions
+  addProductionOutput: (bookId: number, jumlah: number) => void;
+  bulkDeleteProductionLogs: (ids: number[]) => void;
+
+  // Logistics actions
+  dispatchShipment: (no_invoice: string) => { success: boolean; message: string };
+  addManualLogisticLog: (bookId: number, jumlah: number, tujuan: string, keterangan?: string) => { success: boolean; message: string };
+  bulkDeleteLogisticLogs: (ids: number[]) => void;
+  bulkDeletePenyalurans: (ids: number[]) => void;
+
+  // Identitas / Anggota actions
+  addIdentitas: (identitas: Omit<Identitas, 'id' | 'created_at'>) => Identitas;
+  updateIdentitas: (id: number, identitas: Partial<Identitas>) => void;
+  deleteIdentitas: (id: number) => void;
+  bulkDeleteIdentitas: (ids: number[]) => void;
+
+  // User management
+  addUser: (name: string, email: string, divisi_id: DivisionId, role?: string, password?: string, phone?: string) => void;
+  updateUser: (id: number, name: string, email: string, divisi_id: DivisionId, role?: string, password?: string, phone?: string) => void;
+  updateUserProfile: (data: { name: string; avatar?: string; phone?: string }) => void;
+  deleteUser: (id: number) => void;
+  bulkDeleteUsers: (ids: number[]) => void;
+
+  // Reset database state
+  resetToDefault: () => void;
+}
+
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
+function getStoredItem<T>(key: string, defaultVal: T): T {
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : defaultVal;
+  } catch {
+    return defaultVal;
+  }
+}
+
+function setStoredItem<T>(key: string, val: T): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(val));
+  } catch (e) {
+    console.error('Storage quota exceeded or error:', e);
+  }
+}
+
+export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    try {
+      const stored = localStorage.getItem('mis_theme');
+      if (stored === 'light' || stored === 'dark') {
+        return stored;
+      }
+      if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+    } catch (e) {
+      console.warn('Error reading theme from storage:', e);
+    }
+    return 'light';
+  });
+
+  const [divisiList] = useState<Divisi[]>(INITIAL_DIVISI);
+  const [usersList, setUsersList] = useState<User[]>(() => getStoredItem('mis_users', INITIAL_USERS));
+  const [currentUser, setCurrentUser] = useState<User>(() => {
+    const saved = getStoredItem<User | null>('mis_current_user', null);
+    return saved || INITIAL_USERS[0];
+  });
+
+  // Authentication states
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    const stored = localStorage.getItem('mis_is_auth');
+    return stored !== null ? stored === 'true' : true;
+  });
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
+
+  const openLoginModal = () => {
+    setAuthModalMode('login');
+    setIsAuthModalOpen(true);
+  };
+
+  const openRegisterModal = () => {
+    setAuthModalMode('register');
+    setIsAuthModalOpen(true);
+  };
+
+  const [categories, setCategories] = useState<Category[]>(() => getStoredItem('mis_categories', INITIAL_CATEGORIES));
+  const [accounts, setAccounts] = useState<Account[]>(() => getStoredItem('mis_accounts', INITIAL_ACCOUNTS));
+  const [books, setBooks] = useState<Book[]>(() => getStoredItem('mis_books', INITIAL_BOOKS));
+  const [promos, setPromos] = useState<Promo[]>(() => getStoredItem('mis_promos', INITIAL_PROMOS));
+  const [identitasList, setIdentitasList] = useState<Identitas[]>(() => getStoredItem('mis_identitas', INITIAL_IDENTITAS));
+  const [orders, setOrders] = useState<Order[]>(() => getStoredItem('mis_orders', INITIAL_ORDERS));
+  const [mutasis, setMutasis] = useState<Mutasi[]>(() => getStoredItem('mis_mutasis', INITIAL_MUTASI));
+  const [pengajuans, setPengajuans] = useState<PengajuanCetak[]>(() => getStoredItem('mis_pengajuans', INITIAL_PENGAJUAN));
+  const [penjualans, setPenjualans] = useState<Penjualan[]>(() => getStoredItem('mis_penjualans', INITIAL_PENJUALAN));
+  const [penyalurans, setPenyalurans] = useState<Penyaluran[]>(() => getStoredItem('mis_penyalurans', INITIAL_PENYALURAN));
+  const [logisticLogs, setLogisticLogs] = useState<LogisticLog[]>(() => getStoredItem('mis_logistic_logs', INITIAL_LOGISTIC_LOGS));
+  const [productionLogs, setProductionLogs] = useState<ProductionLog[]>(() => getStoredItem('mis_production_logs', INITIAL_PRODUCTION_LOGS));
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(() => {
+    const stored = getStoredItem<ActivityLog[]>('mis_activity_logs', INITIAL_ACTIVITY_LOGS);
+    if (!stored || stored.length === 0) {
+      return INITIAL_ACTIVITY_LOGS;
+    }
+    // Ensure all stored logs have divisi_id populated
+    const fixedStored = stored.map(log => {
+      if (!log.divisi_id && log.divisi_name) {
+        const matchedDiv = INITIAL_DIVISI.find(d => d.nama_divisi.toLowerCase() === log.divisi_name?.toLowerCase());
+        if (matchedDiv) return { ...log, divisi_id: matchedDiv.id };
+      }
+      return log;
+    });
+    // If stored items are fewer than our default rich set (e.g. from previous run), merge non-duplicated initial logs
+    const existingIds = new Set(fixedStored.map(l => l.id));
+    const missingInitials = INITIAL_ACTIVITY_LOGS.filter(l => !existingIds.has(l.id));
+    return [...fixedStored, ...missingInitials];
+  });
+
+  // Sync to localStorage
+  useEffect(() => { setStoredItem('mis_users', usersList); }, [usersList]);
+  useEffect(() => { setStoredItem('mis_current_user', currentUser); }, [currentUser]);
+  useEffect(() => { setStoredItem('mis_categories', categories); }, [categories]);
+  useEffect(() => { setStoredItem('mis_accounts', accounts); }, [accounts]);
+  useEffect(() => { setStoredItem('mis_books', books); }, [books]);
+  useEffect(() => { setStoredItem('mis_promos', promos); }, [promos]);
+  useEffect(() => { setStoredItem('mis_identitas', identitasList); }, [identitasList]);
+  useEffect(() => { setStoredItem('mis_orders', orders); }, [orders]);
+  useEffect(() => { setStoredItem('mis_mutasis', mutasis); }, [mutasis]);
+  useEffect(() => { setStoredItem('mis_pengajuans', pengajuans); }, [pengajuans]);
+  useEffect(() => { setStoredItem('mis_penjualans', penjualans); }, [penjualans]);
+  useEffect(() => { setStoredItem('mis_penyalurans', penyalurans); }, [penyalurans]);
+  useEffect(() => { setStoredItem('mis_logistic_logs', logisticLogs); }, [logisticLogs]);
+  useEffect(() => { setStoredItem('mis_production_logs', productionLogs); }, [productionLogs]);
+  useEffect(() => { setStoredItem('mis_activity_logs', activityLogs); }, [activityLogs]);
+
+  // Synchronize theme to DOM and localStorage
+  useEffect(() => {
+    try {
+      const root = document.documentElement;
+      root.setAttribute('data-theme', theme);
+      root.style.colorScheme = theme;
+      if (theme === 'dark') {
+        root.classList.add('dark');
+        document.body.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+        document.body.classList.remove('dark');
+      }
+      localStorage.setItem('mis_theme', theme);
+    } catch (e) {
+      console.warn('Error saving theme to localStorage:', e);
+    }
+  }, [theme]);
+
+  // Listen to external theme changes across tabs/windows
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'mis_theme' && (e.newValue === 'light' || e.newValue === 'dark')) {
+        setTheme(e.newValue);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
+  const switchDivision = (divisiId: DivisionId) => {
+    const userForDivisi = usersList.find(u => u.divisi_id === divisiId) || {
+      id: 99,
+      name: `User ${divisiList.find(d => d.id === divisiId)?.nama_divisi || 'Divisi'}`,
+      email: `user.${divisiId}@lamrimnesia.org`,
+      divisi_id: divisiId,
+      role: 'Staff'
+    };
+    setCurrentUser(userForDivisi);
+    recordActivity('Ganti Divisi', 'User', `Beralih ke divisi: ${divisiList.find(d => d.id === divisiId)?.nama_divisi}`);
+  };
+
+  const recordActivity = (aksi: string, model: string, keterangan: string, customDivisiId?: DivisionId, customUserName?: string) => {
+    const targetDivisiId = customDivisiId || currentUser.divisi_id;
+    const currentDivisi = divisiList.find(d => d.id === targetDivisiId);
+    const currentDivisiName = currentDivisi?.nama_divisi || 'Umum';
+    const newLog: ActivityLog = {
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      user_id: currentUser.id,
+      user_name: customUserName || currentUser.name,
+      divisi_id: targetDivisiId,
+      divisi_name: currentDivisiName,
+      aksi,
+      model,
+      keterangan,
+      ip_address: '127.0.0.1 (Local AI Studio)',
+      created_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setActivityLogs(prev => [newLog, ...prev]);
+  };
+
+  // Book CRUD
+  const addBook = (judul: string, penulis: string, harga_jual: number, stok: number = 0): Book => {
+    const newBook: Book = {
+      id: Date.now(),
+      judul,
+      penulis,
+      harga_jual,
+      stok_gudang: stok,
+      created_at: new Date().toISOString()
+    };
+    setBooks(prev => [newBook, ...prev]);
+    recordActivity('Tambah Buku', 'Book', `Mendaftarkan buku baru: "${judul}" karya ${penulis} (Harga: Rp ${harga_jual.toLocaleString('id-ID')})`);
+    return newBook;
+  };
+
+  const updateBook = (id: number, judul: string, penulis: string, harga_jual: number) => {
+    setBooks(prev => prev.map(b => (b.id === id ? { ...b, judul, penulis, harga_jual, updated_at: new Date().toISOString() } : b)));
+    recordActivity('Update Informasi Buku', 'Book', `Mengubah informasi buku ID #${id}: "${judul}" (${penulis}) - Rp ${harga_jual.toLocaleString('id-ID')}`);
+  };
+
+  const deleteBook = (id: number) => {
+    const target = books.find(b => b.id === id);
+    setBooks(prev => prev.filter(b => b.id !== id));
+    setPengajuans(prev => prev.filter(p => p.buku_id !== id));
+    recordActivity('Hapus Buku', 'Book', `Menghapus buku "${target?.judul || id}" dari katalog penerbitan.`);
+  };
+
+  const bulkDeleteBooks = (ids: number[]) => {
+    const deletedNames = books.filter(b => ids.includes(b.id)).map(b => b.judul).join(', ');
+    setBooks(prev => prev.filter(b => !ids.includes(b.id)));
+    setPengajuans(prev => prev.filter(p => !ids.includes(p.buku_id)));
+    recordActivity('Hapus Massal Buku', 'Book', `Menghapus ${ids.length} buku massal: [${deletedNames}]`);
+  };
+
+  const ajukanCetak = (bookId: number, jumlah: number) => {
+    const book = books.find(b => b.id === bookId);
+    const newPengajuan: PengajuanCetak = {
+      id: Date.now(),
+      buku_id: bookId,
+      buku: book,
+      jumlah_pengajuan: jumlah,
+      status: 'pending',
+      created_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setPengajuans(prev => [newPengajuan, ...prev]);
+    recordActivity('Ajukan Cetak Buku', 'PengajuanCetak', `Mengajukan cetak ulang buku "${book?.judul}" sebanyak ${jumlah} Eks. Menunggu persetujuan Finance.`);
+  };
+
+  // Promo Check
+  const checkPromoCode = (code: string, bookId?: number) => {
+    const cleanCode = code.trim().toUpperCase();
+    const promo = promos.find(p => p.code.toUpperCase() === cleanCode);
+    if (!promo) {
+      return { valid: false, message: 'Kode promo tidak ditemukan.' };
+    }
+    if (promo.expiry_date && new Date(promo.expiry_date) < new Date()) {
+      return { valid: false, message: 'Kode promo telah kedaluwarsa.' };
+    }
+    if (promo.used_count >= promo.max_uses) {
+      return { valid: false, message: 'Kuota pemakaian kode promo telah habis.' };
+    }
+    if (promo.buku_id_khusus && bookId && promo.buku_id_khusus !== bookId) {
+      return { valid: false, message: 'Kode promo tidak berlaku untuk buku ini.' };
+    }
+    return { valid: true, type: promo.type, value: promo.reward_value };
+  };
+
+  const addPromo = (promoData: Omit<Promo, 'id' | 'used_count' | 'created_at'>) => {
+    const newPromo: Promo = {
+      ...promoData,
+      id: Date.now(),
+      code: promoData.code.trim().toUpperCase(),
+      used_count: 0,
+      created_at: new Date().toISOString()
+    };
+    setPromos(prev => [newPromo, ...prev]);
+    recordActivity('Tambah Promo', 'Promo', `Membuat kode promo baru: ${newPromo.code} (${newPromo.type === 'percentage' ? `${newPromo.reward_value}%` : `Rp ${newPromo.reward_value.toLocaleString('id-ID')}`})`);
+  };
+
+  const deletePromo = (id: number) => {
+    const promo = promos.find(p => p.id === id);
+    setPromos(prev => prev.filter(p => p.id !== id));
+    recordActivity('Hapus Promo', 'Promo', `Menghapus kode promo: ${promo?.code}`);
+  };
+
+  const bulkDeletePromos = (ids: number[]) => {
+    if (ids.length === 0) return;
+    const codes = promos.filter(p => ids.includes(p.id)).map(p => p.code).join(', ');
+    setPromos(prev => prev.filter(p => !ids.includes(p.id)));
+    recordActivity('Hapus Massal Promo', 'Promo', `Menghapus ${ids.length} kode promo: [${codes}]`);
+  };
+
+  // Order & POS
+  const createOrder = (orderData: Omit<Order, 'id' | 'created_at'>) => {
+    // 1. Check stocks
+    for (const item of orderData.items) {
+      const book = books.find(b => b.id === item.buku_id);
+      if (!book) {
+        return { success: false, message: `Buku dengan ID ${item.buku_id} tidak ditemukan.` };
+      }
+      if (book.stok_gudang < item.jumlah) {
+        return { success: false, message: `Stok buku "${book.judul}" tidak mencukupi. Sisa stok: ${book.stok_gudang} pcs.` };
+      }
+    }
+
+    // 2. Decrement stock
+    setBooks(prev => prev.map(b => {
+      const matched = orderData.items.find(it => it.buku_id === b.id);
+      return matched ? { ...b, stok_gudang: Math.max(0, b.stok_gudang - matched.jumlah) } : b;
+    }));
+
+    // 3. Increment promo usages if any
+    orderData.items.forEach(it => {
+      if (it.kode_promo_terpakai) {
+        setPromos(prev => prev.map(p => p.code === it.kode_promo_terpakai?.toUpperCase() ? { ...p, used_count: p.used_count + 1 } : p));
+      }
+    });
+
+    const newOrder: Order = {
+      ...orderData,
+      id: Date.now(),
+      created_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+
+    setOrders(prev => [newOrder, ...prev]);
+    recordActivity('Tambah Pesanan', 'Order', `Membuat pesanan baru ${newOrder.no_invoice} untuk agen ${newOrder.nama_pembeli} via ${newOrder.via} (Total: Rp ${newOrder.total_tagihan.toLocaleString('id-ID')})`);
+    return { success: true, message: `Invoice #${newOrder.no_invoice} berhasil disimpan dan stok gudang terpotong!`, invoice: newOrder.no_invoice };
+  };
+
+  const tandaiLunasOrder = (orderId: number) => {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+    if (order.status === 'Lunas') return;
+
+    // 1. Update Order status
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'Lunas', tercatat_finance: 1 } : o));
+
+    // 2. Push items to Penyaluran (Logistik packing queue)
+    const newPenyalurans: Penyaluran[] = order.items.map(it => ({
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      no_invoice: order.no_invoice,
+      buku_id: it.buku_id,
+      book: books.find(b => b.id === it.buku_id),
+      qty: it.jumlah,
+      nama_agen: order.nama_penerima || order.nama_pembeli,
+      status: 'proses packing',
+      created_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    }));
+    setPenyalurans(prev => [...newPenyalurans, ...prev]);
+
+    // 3. Mutasi Kas Masuk di Finance
+    const kasAccount = accounts.find(a => a.nama_akun.toLowerCase().includes('kas')) || accounts[0];
+    const categoryPenjualan = categories.find(c => c.nama_kategori.toLowerCase().includes('penjualan')) || categories[0];
+
+    const newMutasi: Mutasi = {
+      id: Date.now() + 1,
+      account_id: kasAccount.id,
+      account: kasAccount,
+      category_id: categoryPenjualan.id,
+      category: categoryPenjualan,
+      user_id: currentUser.id,
+      tipe: 'Masuk',
+      nominal: order.total_tagihan,
+      keterangan: `Otomatis: Pelunasan #${order.no_invoice} (${order.nama_pembeli})`,
+      tanggal: new Date().toISOString().substring(0, 10),
+      jenis: 'INVOICE'
+    };
+    setMutasis(prev => [newMutasi, ...prev]);
+
+    // 4. Rekap Penjualan
+    const totalItems = order.items.reduce((sum, it) => sum + it.jumlah, 0);
+    const newPenjualan: Penjualan = {
+      id: Date.now() + 2,
+      no_invoice: order.no_invoice,
+      nama_pelanggan: order.nama_pembeli,
+      total_item: totalItems,
+      total_bayar: order.total_tagihan,
+      tanggal_penjualan: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setPenjualans(prev => [newPenjualan, ...prev]);
+
+    recordActivity('Konfirmasi Lunas', 'Order', `Mengubah status invoice ${order.no_invoice} menjadi LUNAS. Sinkron otomatis ke Finance & antrean Logistik.`);
+  };
+
+  const cancelOrder = (orderId: number) => {
+    const order = orders.find(o => o.id === orderId);
+    if (!order || order.status === 'Cancelled') return;
+
+    // 1. Restore book stocks
+    setBooks(prev => prev.map(b => {
+      const match = order.items.find(it => it.buku_id === b.id);
+      return match ? { ...b, stok_gudang: b.stok_gudang + match.jumlah } : b;
+    }));
+
+    // 2. Delete linked Mutasi & Penjualan if previously paid
+    if (order.tercatat_finance || order.status === 'Lunas') {
+      setMutasis(prev => prev.filter(m => !m.keterangan.includes(order.no_invoice)));
+      setPenjualans(prev => prev.filter(p => p.no_invoice !== order.no_invoice));
+      setPenyalurans(prev => prev.filter(p => p.no_invoice !== order.no_invoice));
+    }
+
+    // 3. Mark status as Cancelled
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'Cancelled', tercatat_finance: 0 } : o));
+    recordActivity('Batalkan Invoice', 'Order', `Membatalkan (Cancel) Invoice ${order.no_invoice}. Stok buku otomatis dikembalikan ke gudang.`);
+  };
+
+  const bulkDeleteOrders = (ids: number[]) => {
+    if (ids.length === 0) return;
+    const targetOrders = orders.filter(o => ids.includes(o.id));
+    const invoiceNos = targetOrders.map(o => o.no_invoice);
+    
+    // Clean up related mutasi & packing items
+    setMutasis(prev => prev.filter(m => !invoiceNos.some(inv => m.keterangan.includes(inv))));
+    setPenjualans(prev => prev.filter(p => !invoiceNos.includes(p.no_invoice)));
+    setPenyalurans(prev => prev.filter(p => !invoiceNos.includes(p.no_invoice)));
+    
+    setOrders(prev => prev.filter(o => !ids.includes(o.id)));
+    recordActivity('Hapus Massal Invoice', 'Order', `Menghapus ${ids.length} invoice/pesanan massal: [${invoiceNos.join(', ')}]`);
+  };
+
+  // Finance Mutasi & Accounts
+  const addMutasi = (account_id: number, nama_kategori: string, tipe: 'Masuk' | 'Keluar', nominal: number, keterangan: string, tanggal?: string) => {
+    let cat = categories.find(c => c.nama_kategori.toLowerCase() === nama_kategori.trim().toLowerCase());
+    if (!cat) {
+      cat = { id: Date.now() + Math.floor(Math.random() * 100), nama_kategori: nama_kategori.trim(), jenis: tipe };
+      setCategories(prev => [...prev, cat!]);
+    }
+    const acc = accounts.find(a => a.id === account_id);
+    const newMutasi: Mutasi = {
+      id: Date.now(),
+      account_id,
+      account: acc,
+      category_id: cat.id,
+      category: cat,
+      user_id: currentUser.id,
+      tipe,
+      nominal,
+      keterangan,
+      tanggal: tanggal || new Date().toISOString().substring(0, 10),
+      jenis: 'MANUAL'
+    };
+    setMutasis(prev => [newMutasi, ...prev]);
+    recordActivity('Tambah Transaksi', 'Mutasi', `Membuat transaksi ${tipe}: "${keterangan}" (Rp ${nominal.toLocaleString('id-ID')}) pada akun ${acc?.nama_akun}`);
+  };
+
+  const updateMutasi = (id: number, nama_kategori: string, tipe: 'Masuk' | 'Keluar', nominal: number, keterangan: string) => {
+    let cat = categories.find(c => c.nama_kategori.toLowerCase() === nama_kategori.trim().toLowerCase());
+    if (!cat) {
+      cat = { id: Date.now() + Math.floor(Math.random() * 100), nama_kategori: nama_kategori.trim(), jenis: tipe };
+      setCategories(prev => [...prev, cat!]);
+    }
+    setMutasis(prev => prev.map(m => m.id === id ? { ...m, category_id: cat!.id, category: cat, tipe, nominal, keterangan } : m));
+    recordActivity('Update Transaksi', 'Mutasi', `Mengubah data mutasi ID #${id}: "${keterangan}" (Rp ${nominal.toLocaleString('id-ID')})`);
+  };
+
+  const deleteMutasi = (id: number) => {
+    const mut = mutasis.find(m => m.id === id);
+    setMutasis(prev => prev.filter(m => m.id !== id));
+    recordActivity('Hapus Transaksi', 'Mutasi', `Menghapus transaksi ${mut?.tipe}: ${mut?.keterangan} sebesar Rp ${(mut?.nominal || 0).toLocaleString('id-ID')}`);
+  };
+
+  const bulkDeleteMutasi = (ids: number[]) => {
+    if (ids.length === 0) return;
+    setMutasis(prev => prev.filter(m => !ids.includes(m.id)));
+    recordActivity('Hapus Massal Mutasi', 'Mutasi', `Menghapus ${ids.length} transaksi mutasi kas & bank secara massal.`);
+  };
+
+  const addAccount = (nama_akun: string) => {
+    const newAcc: Account = {
+      id: Date.now(),
+      nama_akun,
+      kode_akun: `ACC-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
+      saldo_awal: 0
+    };
+    setAccounts(prev => [...prev, newAcc]);
+    recordActivity('Tambah Akun', 'Account', `Menambahkan akun keuangan: ${nama_akun} (${newAcc.kode_akun})`);
+  };
+
+  const updateAccount = (id: number, nama_akun: string) => {
+    setAccounts(prev => prev.map(a => a.id === id ? { ...a, nama_akun } : a));
+    recordActivity('Update Akun', 'Account', `Mengubah nama akun ID #${id} menjadi "${nama_akun}"`);
+  };
+
+  const deleteAccount = (id: number) => {
+    const isUsed = mutasis.some(m => m.account_id === id);
+    if (isUsed) {
+      return { success: false, message: 'Gagal! Akun ini sudah memiliki riwayat mutasi transaksi keuangan.' };
+    }
+    const acc = accounts.find(a => a.id === id);
+    setAccounts(prev => prev.filter(a => a.id !== id));
+    recordActivity('Hapus Akun', 'Account', `Menghapus akun keuangan: ${acc?.nama_akun}`);
+    return { success: true, message: 'Akun kas/bank berhasil dihapus!' };
+  };
+
+  const approvePengajuanCetak = (pengajuanId: number, accountId: number) => {
+    const pengajuan = pengajuans.find(p => p.id === pengajuanId);
+    if (!pengajuan) return;
+    const book = books.find(b => b.id === pengajuan.buku_id);
+    if (!book) return;
+
+    const biayaCetak = pengajuan.jumlah_pengajuan * 20000;
+    const acc = accounts.find(a => a.id === accountId) || accounts[0];
+
+    // 1. Mutasi Kas Keluar
+    const newMutasi: Mutasi = {
+      id: Date.now(),
+      account_id: acc.id,
+      account: acc,
+      category_id: 6, // Biaya Cetak Buku
+      category: categories.find(c => c.id === 6),
+      user_id: currentUser.id,
+      tipe: 'Keluar',
+      nominal: biayaCetak,
+      keterangan: `Biaya Cetak Ulang: ${book.judul} (${pengajuan.jumlah_pengajuan} Eks)`,
+      tanggal: new Date().toISOString().substring(0, 10),
+      jenis: 'MANUAL'
+    };
+    setMutasis(prev => [newMutasi, ...prev]);
+
+    // 2. Increment Book Warehouse Stock
+    setBooks(prev => prev.map(b => b.id === book.id ? { ...b, stok_gudang: b.stok_gudang + pengajuan.jumlah_pengajuan } : b));
+
+    // 3. Mark pengajuan approved
+    setPengajuans(prev => prev.map(p => p.id === pengajuanId ? { ...p, status: 'approved' } : p));
+
+    // 4. Log production
+    setProductionLogs(prev => [{
+      id: Date.now(),
+      buku_id: book.id,
+      book,
+      qty_produksi: pengajuan.jumlah_pengajuan,
+      tanggal_produksi: new Date().toISOString().substring(0, 10)
+    }, ...prev]);
+
+    recordActivity('Setujui Cetak Buku', 'PengajuanCetak', `Menyetujui cetak ulang "${book.judul}" (${pengajuan.jumlah_pengajuan} Eks). Biaya Rp ${biayaCetak.toLocaleString('id-ID')} dicairkan dari ${acc.nama_akun} & stok bertambah!`);
+  };
+
+  const rejectPengajuanCetak = (pengajuanId: number, catatan: string) => {
+    const pengajuan = pengajuans.find(p => p.id === pengajuanId);
+    const book = books.find(b => b.id === pengajuan?.buku_id);
+    setPengajuans(prev => prev.map(p => p.id === pengajuanId ? { ...p, status: 'rejected', catatan_bendahara: catatan } : p));
+    recordActivity('Tolak Cetak Buku', 'PengajuanCetak', `Menolak pengajuan cetak buku "${book?.judul}" dengan catatan: "${catatan}"`);
+  };
+
+  const bulkDeletePengajuanCetak = (ids: number[]) => {
+    if (ids.length === 0) return;
+    setPengajuans(prev => prev.filter(p => !ids.includes(p.id)));
+    recordActivity('Hapus Massal Pengajuan', 'PengajuanCetak', `Menghapus ${ids.length} pengajuan cetak buku secara massal.`);
+  };
+
+  // Production Output
+  const addProductionOutput = (bookId: number, jumlah: number) => {
+    const book = books.find(b => b.id === bookId);
+    if (!book) return;
+
+    setBooks(prev => prev.map(b => b.id === bookId ? { ...b, stok_gudang: b.stok_gudang + jumlah } : b));
+    setProductionLogs(prev => [{
+      id: Date.now(),
+      buku_id: bookId,
+      book,
+      qty_produksi: jumlah,
+      tanggal_produksi: new Date().toISOString().substring(0, 10)
+    }, ...prev]);
+
+    recordActivity('Tambah Hasil Produksi', 'ProductionLog', `Mencatat penyelesaian produksi buku "${book.judul}" sebanyak ${jumlah} Eks ke gudang.`);
+  };
+
+  const bulkDeleteProductionLogs = (ids: number[]) => {
+    if (ids.length === 0) return;
+    setProductionLogs(prev => prev.filter(p => !ids.includes(p.id)));
+    recordActivity('Hapus Massal Log Produksi', 'ProductionLog', `Menghapus ${ids.length} riwayat hasil cetak produksi massal.`);
+  };
+
+  // Logistics Dispatch
+  const dispatchShipment = (no_invoice: string) => {
+    const items = penyalurans.filter(p => p.no_invoice === no_invoice && p.status === 'proses packing');
+    if (items.length === 0) {
+      return { success: false, message: 'Tidak ada item antrean yang perlu dikirim untuk invoice ini.' };
+    }
+
+    // Mark items as 'dikirim' and create LogisticLogs
+    setPenyalurans(prev => prev.map(p => p.no_invoice === no_invoice ? { ...p, status: 'dikirim' } : p));
+    setOrders(prev => prev.map(o => o.no_invoice === no_invoice ? { ...o, status: 'Dikirim' } : o));
+
+    const newLogs: LogisticLog[] = items.map(it => ({
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      buku_id: it.buku_id,
+      book: it.book,
+      qty_keluar: it.qty,
+      tujuan: it.nama_agen || 'Marketing',
+      keterangan: `Pengiriman Invoice #${no_invoice}`,
+      created_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    }));
+
+    setLogisticLogs(prev => [...newLogs, ...prev]);
+    recordActivity('Kirim Pesanan Logistik', 'LogisticLog', `Memproses pengiriman barang untuk Invoice #${no_invoice} (${items.length} item buku) ke ${items[0]?.nama_agen}.`);
+    return { success: true, message: `Seluruh barang untuk Invoice #${no_invoice} berhasil dikirim!` };
+  };
+
+  const addManualLogisticLog = (bookId: number, jumlah: number, tujuan: string, keterangan?: string) => {
+    const book = books.find(b => b.id === bookId);
+    if (!book) return { success: false, message: 'Buku tidak ditemukan.' };
+    if (book.stok_gudang < jumlah) {
+      return { success: false, message: `Stok gudang tidak mencukupi! Sisa stok buku "${book.judul}" adalah ${book.stok_gudang} pcs.` };
+    }
+
+    setBooks(prev => prev.map(b => b.id === bookId ? { ...b, stok_gudang: b.stok_gudang - jumlah } : b));
+    const newLog: LogisticLog = {
+      id: Date.now(),
+      buku_id: bookId,
+      book,
+      qty_keluar: jumlah,
+      tujuan,
+      keterangan: keterangan || 'Pengeluaran Manual Gudang',
+      created_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setLogisticLogs(prev => [newLog, ...prev]);
+    recordActivity('Pengeluaran Manual Gudang', 'LogisticLog', `Mengeluarkan stok buku "${book.judul}" sebanyak ${jumlah} pcs untuk tujuan: ${tujuan}`);
+    return { success: true, message: 'Pengeluaran manual gudang berhasil dicatat!' };
+  };
+
+  const bulkDeleteLogisticLogs = (ids: number[]) => {
+    if (ids.length === 0) return;
+    setLogisticLogs(prev => prev.filter(l => !ids.includes(l.id)));
+    recordActivity('Hapus Massal Log Logistik', 'LogisticLog', `Menghapus ${ids.length} riwayat pengeluaran gudang logistik.`);
+  };
+
+  const bulkDeletePenyalurans = (ids: number[]) => {
+    if (ids.length === 0) return;
+    setPenyalurans(prev => prev.filter(p => !ids.includes(p.id)));
+    recordActivity('Hapus Massal Antrean Packing', 'Penyaluran', `Menghapus ${ids.length} antrean paket penyaluran gudang.`);
+  };
+
+  // Identitas / Anggota
+  const addIdentitas = (data: Omit<Identitas, 'id' | 'created_at'>): Identitas => {
+    const newIdentitas: Identitas = {
+      ...data,
+      id: Date.now(),
+      nama_lengkap: data.nama_lengkap.toUpperCase(),
+      created_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setIdentitasList(prev => [newIdentitas, ...prev]);
+    recordActivity('Tambah Identitas', 'Identitas', `Mendaftarkan anggota/umat baru: "${newIdentitas.nama_lengkap}" (${newIdentitas.jenis_identitas}: ${newIdentitas.nomor_identitas})`);
+    return newIdentitas;
+  };
+
+  const updateIdentitas = (id: number, data: Partial<Identitas>) => {
+    setIdentitasList(prev => prev.map(i => i.id === id ? { ...i, ...data, nama_lengkap: data.nama_lengkap ? data.nama_lengkap.toUpperCase() : i.nama_lengkap } : i));
+    recordActivity('Update Identitas', 'Identitas', `Memperbarui profil anggota ID #${id}: "${data.nama_lengkap || id}"`);
+  };
+
+  const deleteIdentitas = (id: number) => {
+    const target = identitasList.find(i => i.id === id);
+    setIdentitasList(prev => prev.filter(i => i.id !== id));
+    recordActivity('Hapus Identitas', 'Identitas', `Menghapus anggota "${target?.nama_lengkap || id}" dari sistem database.`);
+  };
+
+  const bulkDeleteIdentitas = (ids: number[]) => {
+    const names = identitasList.filter(i => ids.includes(i.id)).map(i => i.nama_lengkap).join(', ');
+    setIdentitasList(prev => prev.filter(i => !ids.includes(i.id)));
+    recordActivity('Hapus Massal Identitas', 'Identitas', `Menghapus ${ids.length} anggota secara massal: [${names}]`);
+  };
+
+  // Authentication Handlers
+  const login = (email: string, password?: string): { success: boolean; message: string; user?: User } => {
+    const cleanEmail = email.trim().toLowerCase();
+    const user = usersList.find(u => u.email.toLowerCase() === cleanEmail);
+    if (!user) {
+      return { success: false, message: 'Email tidak ditemukan dalam sistem. Pastikan email terdaftar.' };
+    }
+    if (user.password && password && user.password !== password) {
+      return { success: false, message: 'Password salah. Silakan periksa kembali kata sandi Anda.' };
+    }
+    setCurrentUser(user);
+    setIsAuthenticated(true);
+    localStorage.setItem('mis_is_auth', 'true');
+    recordActivity('Login User', 'Auth', `Pengguna "${user.name}" (${user.email}) berhasil masuk ke sistem SAPA-ALL.`);
+    return { success: true, message: `Selamat datang kembali, ${user.name}!`, user };
+  };
+
+  const register = (data: {
+    name: string;
+    email: string;
+    password: string;
+    divisi_id: DivisionId;
+    role?: string;
+    phone?: string;
+    createIdentitas?: boolean;
+  }): { success: boolean; message: string; user?: User } => {
+    const cleanEmail = data.email.trim().toLowerCase();
+    if (usersList.some(u => u.email.toLowerCase() === cleanEmail)) {
+      return { success: false, message: 'Email sudah terdaftar. Silakan login menggunakan akun tersebut.' };
+    }
+
+    let linkedIdentitasId: number | undefined = undefined;
+    if (data.createIdentitas) {
+      const newIdentitas = addIdentitas({
+        nama_lengkap: data.name,
+        jenis_identitas: 'KTP',
+        nomor_identitas: `ID-${Date.now().toString().slice(-8)}`,
+        nomor_hp_primary: data.phone || '0812' + Math.floor(10000000 + Math.random() * 90000000),
+        email: data.email,
+        status_keamanan: 'Normal',
+        jenis_umat: 'Anggota',
+        divisi_id: data.divisi_id
+      });
+      linkedIdentitasId = newIdentitas.id;
+    }
+
+    const newUser: User = {
+      id: Date.now(),
+      name: data.name.trim(),
+      email: cleanEmail,
+      password: data.password,
+      divisi_id: data.divisi_id,
+      role: data.role || divisiList.find(d => d.id === data.divisi_id)?.nama_divisi || 'Staff',
+      phone: data.phone,
+      identitas_id: linkedIdentitasId,
+      created_at: new Date().toISOString()
+    };
+
+    setUsersList(prev => [...prev, newUser]);
+    setCurrentUser(newUser);
+    setIsAuthenticated(true);
+    localStorage.setItem('mis_is_auth', 'true');
+    recordActivity('Registrasi User', 'Auth', `Akun baru terdaftar: "${newUser.name}" (${newUser.email}) pada divisi ${divisiList.find(d => d.id === data.divisi_id)?.nama_divisi}`);
+    return { success: true, message: `Akun berhasil didaftarkan! Selamat bertugas, ${newUser.name}.`, user: newUser };
+  };
+
+  const logout = () => {
+    recordActivity('Logout User', 'Auth', `Pengguna "${currentUser.name}" keluar dari sesi aplikasi.`);
+    setIsAuthenticated(false);
+    localStorage.setItem('mis_is_auth', 'false');
+  };
+
+  const quickLoginAs = (userId: number) => {
+    const user = usersList.find(u => u.id === userId);
+    if (user) {
+      setCurrentUser(user);
+      setIsAuthenticated(true);
+      localStorage.setItem('mis_is_auth', 'true');
+      recordActivity('Quick Login', 'Auth', `Beralih akun ke: "${user.name}" (${user.email})`);
+    }
+  };
+
+  // Users
+  const addUser = (name: string, email: string, divisi_id: DivisionId, role?: string, password?: string, phone?: string) => {
+    const newUser: User = {
+      id: Date.now(),
+      name,
+      email,
+      divisi_id,
+      password: password || 'password123',
+      phone,
+      role: role || divisiList.find(d => d.id === divisi_id)?.nama_divisi || 'Staff',
+      created_at: new Date().toISOString()
+    };
+    setUsersList(prev => [...prev, newUser]);
+    recordActivity('Tambah User', 'User', `Menambahkan user baru: "${name}" (${email}) pada divisi ${divisiList.find(d => d.id === divisi_id)?.nama_divisi}`);
+  };
+
+  const updateUser = (id: number, name: string, email: string, divisi_id: DivisionId, role?: string, password?: string, phone?: string) => {
+    setUsersList(prev => prev.map(u => {
+      if (u.id === id) {
+        return {
+          ...u,
+          name,
+          email,
+          divisi_id,
+          role: role !== undefined ? role : u.role,
+          password: password !== undefined ? password : u.password,
+          phone: phone !== undefined ? phone : u.phone
+        };
+      }
+      return u;
+    }));
+    recordActivity('Update User', 'User', `Mengubah data user ID #${id}: "${name}" (${email})`);
+  };
+
+  const updateUserProfile = (data: { name: string; avatar?: string; phone?: string }) => {
+    const updatedUser: User = {
+      ...currentUser,
+      name: data.name.trim() || currentUser.name,
+      avatar: data.avatar !== undefined ? data.avatar : currentUser.avatar,
+      phone: data.phone !== undefined ? data.phone : currentUser.phone
+    };
+
+    setCurrentUser(updatedUser);
+    setUsersList(prev => prev.map(u => (u.id === currentUser.id ? updatedUser : u)));
+    recordActivity('Update Profil', 'User', `Pengguna "${updatedUser.name}" memperbarui nama tampilan / foto profil.`);
+  };
+
+  const deleteUser = (id: number) => {
+    if (id === currentUser.id) return;
+    const target = usersList.find(u => u.id === id);
+    setUsersList(prev => prev.filter(u => u.id !== id));
+    recordActivity('Hapus User', 'User', `Menghapus user "${target?.name}"`);
+  };
+
+  const bulkDeleteUsers = (ids: number[]) => {
+    const safeIds = ids.filter(id => id !== currentUser.id && id !== 1);
+    if (safeIds.length === 0) return;
+    const names = usersList.filter(u => safeIds.includes(u.id)).map(u => u.name).join(', ');
+    setUsersList(prev => prev.filter(u => !safeIds.includes(u.id)));
+    recordActivity('Hapus Massal User', 'User', `Menghapus ${safeIds.length} pengguna sistem: [${names}]`);
+  };
+
+  const resetToDefault = () => {
+    setUsersList(INITIAL_USERS);
+    setCurrentUser(INITIAL_USERS[0]);
+    setIsAuthenticated(true);
+    setCategories(INITIAL_CATEGORIES);
+    setAccounts(INITIAL_ACCOUNTS);
+    setBooks(INITIAL_BOOKS);
+    setPromos(INITIAL_PROMOS);
+    setIdentitasList(INITIAL_IDENTITAS);
+    setOrders(INITIAL_ORDERS);
+    setMutasis(INITIAL_MUTASI);
+    setPengajuans(INITIAL_PENGAJUAN);
+    setPenjualans(INITIAL_PENJUALAN);
+    setPenyalurans(INITIAL_PENYALURAN);
+    setLogisticLogs(INITIAL_LOGISTIC_LOGS);
+    setProductionLogs(INITIAL_PRODUCTION_LOGS);
+    setActivityLogs(INITIAL_ACTIVITY_LOGS);
+    localStorage.clear();
+    recordActivity('Reset Database', 'System', 'Mengembalikan seluruh data MIS SAPA-ALL ke seed awal pabrik.');
+  };
+
+  return (
+    <AppContext.Provider
+      value={{
+        currentUser,
+        setCurrentUser,
+        switchDivision,
+        theme,
+        toggleTheme,
+        isAuthenticated,
+        setIsAuthenticated,
+        login,
+        register,
+        logout,
+        quickLoginAs,
+        isAuthModalOpen,
+        setIsAuthModalOpen,
+        authModalMode,
+        setAuthModalMode,
+        openLoginModal,
+        openRegisterModal,
+        divisiList,
+        usersList,
+        categories,
+        accounts,
+        books,
+        promos,
+        identitasList,
+        orders,
+        mutasis,
+        pengajuans,
+        penjualans,
+        penyalurans,
+        logisticLogs,
+        productionLogs,
+        activityLogs,
+        recordActivity,
+        addBook,
+        updateBook,
+        deleteBook,
+        bulkDeleteBooks,
+        ajukanCetak,
+        createOrder,
+        tandaiLunasOrder,
+        cancelOrder,
+        bulkDeleteOrders,
+        checkPromoCode,
+        addPromo,
+        deletePromo,
+        bulkDeletePromos,
+        addMutasi,
+        updateMutasi,
+        deleteMutasi,
+        bulkDeleteMutasi,
+        addAccount,
+        updateAccount,
+        deleteAccount,
+        approvePengajuanCetak,
+        rejectPengajuanCetak,
+        bulkDeletePengajuanCetak,
+        addProductionOutput,
+        bulkDeleteProductionLogs,
+        dispatchShipment,
+        addManualLogisticLog,
+        bulkDeleteLogisticLogs,
+        bulkDeletePenyalurans,
+        addIdentitas,
+        updateIdentitas,
+        deleteIdentitas,
+        bulkDeleteIdentitas,
+        addUser,
+        updateUser,
+        updateUserProfile,
+        deleteUser,
+        bulkDeleteUsers,
+        resetToDefault
+      }}
+    >
+      {children}
+    </AppContext.Provider>
+  );
+};
+
+export const useApp = () => {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useApp must be used within an AppProvider');
+  }
+  return context;
+};
