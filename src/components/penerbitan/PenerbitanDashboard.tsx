@@ -16,9 +16,11 @@ import {
   AlertTriangle,
   FileText,
   TrendingUp,
-  Layers
+  Layers,
+  Check
 } from 'lucide-react';
 import { PenerbitanCharts } from '../charts/PenerbitanCharts';
+import { ConfirmModal } from '../modals/ConfirmModal';
 
 export const PenerbitanDashboard: React.FC = () => {
   const {
@@ -29,7 +31,10 @@ export const PenerbitanDashboard: React.FC = () => {
     bulkDeleteBooks,
     ajukanCetak,
     pengajuans,
-    bulkDeletePengajuanCetak
+    bulkDeletePengajuanCetak,
+    approvePengajuanCetak,
+    accounts,
+    switchDivision
   } = useApp();
 
   const [searchBook, setSearchBook] = useState('');
@@ -37,6 +42,24 @@ export const PenerbitanDashboard: React.FC = () => {
   const [selectedBookIds, setSelectedBookIds] = useState<number[]>([]);
   const [selectedPengajuanIds, setSelectedPengajuanIds] = useState<number[]>([]);
   
+  // Toast & ConfirmModal states
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [confirmModalConfig, setConfirmModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant?: 'danger' | 'warning' | 'primary';
+    confirmText?: string;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    variant: 'danger',
+    confirmText: 'Ya, Lanjutkan'
+  });
+
   // Modals
   const [modalBookOpen, setModalBookOpen] = useState(false);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
@@ -69,10 +92,19 @@ export const PenerbitanDashboard: React.FC = () => {
 
   const handleBulkDelete = () => {
     if (selectedBookIds.length === 0) return;
-    if (confirm(`Yakin ingin menghapus ${selectedBookIds.length} judul buku terpilih dari katalog?`)) {
-      bulkDeleteBooks(selectedBookIds);
-      setSelectedBookIds([]);
-    }
+    setConfirmModalConfig({
+      isOpen: true,
+      title: 'Hapus Buku Terpilih',
+      message: `Yakin ingin menghapus ${selectedBookIds.length} judul buku terpilih dari katalog naskah?`,
+      variant: 'danger',
+      confirmText: 'Ya, Hapus Buku',
+      onConfirm: () => {
+        bulkDeleteBooks(selectedBookIds);
+        setSelectedBookIds([]);
+        setToastMessage(`${selectedBookIds.length} judul buku berhasil dihapus dari katalog.`);
+        setTimeout(() => setToastMessage(null), 3500);
+      }
+    });
   };
 
   const handleSelectAllPengajuan = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,10 +123,19 @@ export const PenerbitanDashboard: React.FC = () => {
 
   const handleBulkDeletePengajuan = () => {
     if (selectedPengajuanIds.length === 0) return;
-    if (confirm(`Yakin ingin menghapus ${selectedPengajuanIds.length} riwayat pengajuan cetak terpilih?`)) {
-      bulkDeletePengajuanCetak(selectedPengajuanIds);
-      setSelectedPengajuanIds([]);
-    }
+    setConfirmModalConfig({
+      isOpen: true,
+      title: 'Hapus Riwayat Pengajuan',
+      message: `Yakin ingin menghapus ${selectedPengajuanIds.length} riwayat pengajuan cetak terpilih?`,
+      variant: 'danger',
+      confirmText: 'Ya, Hapus Pengajuan',
+      onConfirm: () => {
+        bulkDeletePengajuanCetak(selectedPengajuanIds);
+        setSelectedPengajuanIds([]);
+        setToastMessage(`${selectedPengajuanIds.length} pengajuan cetak berhasil dihapus.`);
+        setTimeout(() => setToastMessage(null), 3500);
+      }
+    });
   };
 
   const handleSaveBook = (e: React.FormEvent) => {
@@ -310,11 +351,20 @@ export const PenerbitanDashboard: React.FC = () => {
                     </button>
                     <button
                       onClick={() => {
-                        if (confirm(`Hapus buku "${book.judul}"?`)) {
-                          deleteBook(book.id);
-                        }
+                        setConfirmModalConfig({
+                          isOpen: true,
+                          title: 'Hapus Buku dari Katalog',
+                          message: `Yakin ingin menghapus buku "${book.judul}" karya ${book.penulis}?`,
+                          variant: 'danger',
+                          confirmText: 'Ya, Hapus Buku',
+                          onConfirm: () => {
+                            deleteBook(book.id);
+                            setToastMessage(`Buku "${book.judul}" berhasil dihapus.`);
+                            setTimeout(() => setToastMessage(null), 3000);
+                          }
+                        });
                       }}
-                      className="p-1.5 text-slate-500 hover:text-rose-600 rounded-lg"
+                      className="p-1.5 text-slate-500 hover:text-rose-600 rounded-lg cursor-pointer"
                       title="Hapus"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -334,8 +384,11 @@ export const PenerbitanDashboard: React.FC = () => {
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100 dark:border-slate-800">
           <div>
-            <h3 className="font-bold text-sm text-slate-900 dark:text-white">Riwayat Status Pengajuan Cetak ke Bendahara</h3>
-            <p className="text-xs text-slate-500">Pantau proses persetujuan dan pencairan dana cetak ulang buku.</p>
+            <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center space-x-2">
+              <Printer className="w-4 h-4 text-indigo-500" />
+              <span>Riwayat Status Pengajuan Cetak ke Bendahara</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">Pantau proses persetujuan dan pencairan dana cetak ulang buku serta terbitkan persetujuan cetak.</p>
           </div>
           {selectedPengajuanIds.length > 0 && (
             <button
@@ -366,6 +419,7 @@ export const PenerbitanDashboard: React.FC = () => {
                 <th className="p-3 text-center">Jumlah Eks</th>
                 <th className="p-3">Status Bendahara</th>
                 <th className="p-3">Catatan Bendahara</th>
+                <th className="p-3 text-right">Aksi Persetujuan</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -399,6 +453,29 @@ export const PenerbitanDashboard: React.FC = () => {
                     </td>
                     <td className="p-3 text-slate-600 dark:text-slate-400">
                       {p.catatan_bendahara ? `"${p.catatan_bendahara}"` : '-'}
+                    </td>
+                    <td className="p-3 text-right whitespace-nowrap">
+                      {p.status === 'pending' ? (
+                        <button
+                          onClick={() => {
+                            approvePengajuanCetak(p.id, accounts[0]?.id || 1);
+                            setToastMessage(`Pengajuan cetak "${book?.judul || 'Buku'}" (${p.jumlah_pengajuan} Eks) berhasil disetujui! SPK otomatis diteruskan ke Produksi.`);
+                            setTimeout(() => setToastMessage(null), 4000);
+                          }}
+                          className="inline-flex items-center space-x-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                          title="Setujui Cetak dan Terbitkan SPK"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Setujui Cetak</span>
+                        </button>
+                      ) : p.status === 'approved' ? (
+                        <span className="inline-flex items-center space-x-1 text-emerald-600 dark:text-emerald-400 font-semibold text-[11px]">
+                          <Check className="w-3.5 h-3.5" />
+                          <span>SPK Produksi Aktif</span>
+                        </span>
+                      ) : (
+                        <span className="text-rose-500 text-[11px] font-medium">Ditolak Bendahara</span>
+                      )}
                     </td>
                   </tr>
                 );
@@ -561,6 +638,27 @@ export const PenerbitanDashboard: React.FC = () => {
           </div>
         </div>,
         document.body
+      )}
+
+      {/* Generic Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModalConfig.isOpen}
+        title={confirmModalConfig.title}
+        message={confirmModalConfig.message}
+        variant={confirmModalConfig.variant}
+        confirmText={confirmModalConfig.confirmText}
+        onConfirm={confirmModalConfig.onConfirm}
+        onClose={() => setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* Toast Notification Banner */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-3 duration-300">
+          <div className="flex items-center space-x-2.5 bg-slate-900 text-white dark:bg-white dark:text-slate-900 px-4 py-3 rounded-2xl shadow-xl border border-slate-700 dark:border-slate-200 text-xs font-semibold">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 dark:text-emerald-600 shrink-0" />
+            <span>{toastMessage}</span>
+          </div>
+        </div>
       )}
 
     </div>

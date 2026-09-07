@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
 import { Identitas, User, DivisionId } from '../../types';
@@ -19,13 +19,20 @@ import {
   Download,
   AlertTriangle,
   CheckCircle2,
-  Layers
+  Layers,
+  FileSpreadsheet,
+  Award
 } from 'lucide-react';
 import { IdentitasModal } from '../modals/IdentitasModal';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { DirektoratCharts } from '../charts/DirektoratCharts';
+import { AnnualReportModal } from '../modals/AnnualReportModal';
 
-export const DirektoratDashboard: React.FC = () => {
+interface DirektoratDashboardProps {
+  initialSubTab?: 'overview' | 'identitas' | 'users' | 'audit';
+}
+
+export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initialSubTab }) => {
   const {
     identitasList,
     deleteIdentitas,
@@ -44,16 +51,46 @@ export const DirektoratDashboard: React.FC = () => {
     activityLogs
   } = useApp();
 
-  const [activeSubTab, setActiveSubTab] = useState<'overview' | 'identitas' | 'users' | 'audit'>('overview');
+  const [activeSubTab, setActiveSubTab] = useState<'overview' | 'identitas' | 'users' | 'audit'>(
+    initialSubTab || 'overview'
+  );
+
+  useEffect(() => {
+    if (initialSubTab) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
+
   const [searchIdentitas, setSearchIdentitas] = useState('');
   const [filterUmat, setFilterUmat] = useState<string>('all');
   const [filterKeamanan, setFilterKeamanan] = useState<string>('all');
   const [selectedIdentitasIds, setSelectedIdentitasIds] = useState<number[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   
+  // Audit log search & division filter
+  const [auditSearch, setAuditSearch] = useState('');
+  const [auditFilterDivisi, setAuditFilterDivisi] = useState<string>('all');
+
+  const filteredActivityLogs = activityLogs.filter(log => {
+    const matchesSearch =
+      auditSearch.trim() === '' ||
+      (log.user_name || '').toLowerCase().includes(auditSearch.toLowerCase()) ||
+      (log.aksi || '').toLowerCase().includes(auditSearch.toLowerCase()) ||
+      (log.model || '').toLowerCase().includes(auditSearch.toLowerCase()) ||
+      (log.keterangan || '').toLowerCase().includes(auditSearch.toLowerCase()) ||
+      (log.divisi_name || '').toLowerCase().includes(auditSearch.toLowerCase());
+
+    const matchesDivisi =
+      auditFilterDivisi === 'all' ||
+      String(log.divisi_id) === auditFilterDivisi;
+
+    return matchesSearch && matchesDivisi;
+  });
+  
   const [modalIdentitasOpen, setModalIdentitasOpen] = useState(false);
   const [editingIdentitas, setEditingIdentitas] = useState<Identitas | null>(null);
   const [viewOnlyIdentitas, setViewOnlyIdentitas] = useState(false);
+  const [annualReportOpen, setAnnualReportOpen] = useState(false);
 
   // In-app Confirm Modal State
   const [confirmModal, setConfirmModal] = useState<{
@@ -283,6 +320,16 @@ export const DirektoratDashboard: React.FC = () => {
           </button>
         </div>
 
+        {activeSubTab === 'overview' && (
+          <button
+            onClick={() => setAnnualReportOpen(true)}
+            className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
+          >
+            <Award className="w-4 h-4" />
+            <span>Laporan Tahunan (Annual Report)</span>
+          </button>
+        )}
+
         {activeSubTab === 'identitas' && (
           <button
             onClick={() => {
@@ -385,6 +432,33 @@ export const DirektoratDashboard: React.FC = () => {
                 Dari {books.length} judul buku aktif
               </p>
             </div>
+          </div>
+
+          {/* Annual Report Quick Access Banner */}
+          <div className="p-4 sm:p-5 bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border border-amber-300/70 dark:border-amber-700/50 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+            <div className="flex items-center space-x-3.5">
+              <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shadow-sm shrink-0">
+                <Award className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  Laporan Pertanggungjawaban Tahunan Yayasan (Annual Report)
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/50">
+                    Resmi & Tervalidasi
+                  </span>
+                </h4>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                  Konsolidasi data kinerja keuangan berimbang, produksi naskah, logistik penyaluran, dan keanggotaan umat untuk Dewan Pembina.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setAnnualReportOpen(true)}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto flex items-center space-x-1.5"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Buka Laporan Tahunan</span>
+            </button>
           </div>
 
           {/* Performance & Financial Metrics Visualizations */}
@@ -778,15 +852,56 @@ export const DirektoratDashboard: React.FC = () => {
       {/* AUDIT LOG SUB TAB */}
       {activeSubTab === 'audit' && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-indigo-600" />
                 Audit Trail & Log Aktivitas Sistem MIS
               </h3>
-              <p className="text-xs text-slate-500">Mencatat seluruh aksi CRUD, perubahan status, pelunasan kas, dan persetujuan.</p>
+              <p className="text-xs text-slate-500">Mencatat seluruh aksi transaksi, perubahan status, pelunasan kas, dan persetujuan secara real-time.</p>
             </div>
-            <span className="text-xs font-mono text-slate-400">{activityLogs.length} Entri Log</span>
+            <div className="flex items-center space-x-2">
+              <span className="text-xs font-mono font-medium px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg">
+                {filteredActivityLogs.length} dari {activityLogs.length} Log
+              </span>
+            </div>
+          </div>
+
+          {/* Search & Filter Bar */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+            <div className="sm:col-span-2 relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={auditSearch}
+                onChange={e => setAuditSearch(e.target.value)}
+                placeholder="Cari user, aksi, modul, keterangan..."
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <select
+                value={auditFilterDivisi}
+                onChange={e => setAuditFilterDivisi(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
+              >
+                <option value="all">Semua Divisi</option>
+                {divisiList.map(d => (
+                  <option key={d.id} value={String(d.id)}>{d.nama_divisi}</option>
+                ))}
+              </select>
+              {(auditSearch || auditFilterDivisi !== 'all') && (
+                <button
+                  onClick={() => {
+                    setAuditSearch('');
+                    setAuditFilterDivisi('all');
+                  }}
+                  className="px-2.5 py-2 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl whitespace-nowrap font-medium transition-colors cursor-pointer"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -800,22 +915,30 @@ export const DirektoratDashboard: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {activityLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
-                    <td className="p-3 whitespace-nowrap text-slate-500 font-mono text-[11px]">{log.created_at}</td>
-                    <td className="p-3">
-                      <div className="font-bold text-slate-900 dark:text-white">{log.user_name}</div>
-                      <div className="text-[10px] text-slate-400">{log.divisi_name}</div>
+                {filteredActivityLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="p-8 text-center text-slate-400">
+                      Tidak ada catatan aktivitas sistem yang cocok dengan pencarian.
                     </td>
-                    <td className="p-3 whitespace-nowrap">
-                      <span className="px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 font-semibold text-[10px]">
-                        {log.aksi}
-                      </span>
-                      <span className="ml-1 text-[10px] text-slate-400 font-mono">[{log.model}]</span>
-                    </td>
-                    <td className="p-3 text-slate-700 dark:text-slate-300">{log.keterangan}</td>
                   </tr>
-                ))}
+                ) : (
+                  filteredActivityLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
+                      <td className="p-3 whitespace-nowrap text-slate-500 font-mono text-[11px]">{log.created_at}</td>
+                      <td className="p-3">
+                        <div className="font-bold text-slate-900 dark:text-white">{log.user_name}</div>
+                        <div className="text-[10px] text-slate-400">{log.divisi_name}</div>
+                      </td>
+                      <td className="p-3 whitespace-nowrap">
+                        <span className="px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 font-semibold text-[10px]">
+                          {log.aksi}
+                        </span>
+                        <span className="ml-1 text-[10px] text-slate-400 font-mono">[{log.model}]</span>
+                      </td>
+                      <td className="p-3 text-slate-700 dark:text-slate-300">{log.keterangan}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -958,6 +1081,12 @@ export const DirektoratDashboard: React.FC = () => {
         </div>,
         document.body
       )}
+
+      {/* Annual Executive Report Modal */}
+      <AnnualReportModal
+        isOpen={annualReportOpen}
+        onClose={() => setAnnualReportOpen(false)}
+      />
 
     </div>
   );

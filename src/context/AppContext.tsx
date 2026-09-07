@@ -85,7 +85,7 @@ interface AppContextType {
 
   // Order & Marketing actions
   createOrder: (orderData: Omit<Order, 'id' | 'created_at'>) => { success: boolean; message: string; invoice?: string };
-  tandaiLunasOrder: (orderId: number) => void;
+  tandaiLunasOrder: (orderId: number, targetAccountId?: number) => { success: boolean; message: string };
   cancelOrder: (orderId: number) => void;
   bulkDeleteOrders: (ids: number[]) => void;
   checkPromoCode: (code: string, bookId?: number) => { valid: boolean; type?: 'percentage' | 'nominal'; value?: number; message?: string };
@@ -110,7 +110,7 @@ interface AppContextType {
   bulkDeleteProductionLogs: (ids: number[]) => void;
 
   // Logistics actions
-  dispatchShipment: (no_invoice: string) => { success: boolean; message: string };
+  dispatchShipment: (no_invoice: string, noResi?: string) => { success: boolean; message: string };
   addManualLogisticLog: (bookId: number, jumlah: number, tujuan: string, keterangan?: string) => { success: boolean; message: string };
   bulkDeleteLogisticLogs: (ids: number[]) => void;
   bulkDeletePenyalurans: (ids: number[]) => void;
@@ -434,17 +434,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { success: true, message: `Invoice #${newOrder.no_invoice} berhasil disimpan dan stok gudang terpotong!`, invoice: newOrder.no_invoice };
   };
 
-  const tandaiLunasOrder = (orderId: number) => {
+  const tandaiLunasOrder = (orderId: number, targetAccountId?: number) => {
     const order = orders.find(o => o.id === orderId);
-    if (!order) return;
-    if (order.status === 'Lunas') return;
+    if (!order) return { success: false, message: 'Invoice tidak ditemukan.' };
+    if (order.status === 'Lunas') return { success: false, message: 'Invoice sudah berstatus Lunas.' };
 
     // 1. Update Order status
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'Lunas', tercatat_finance: 1 } : o));
 
     // 2. Push items to Penyaluran (Logistik packing queue)
-    const newPenyalurans: Penyaluran[] = order.items.map(it => ({
-      id: Date.now() + Math.floor(Math.random() * 1000),
+    const newPenyalurans: Penyaluran[] = order.items.map((it, idx) => ({
+      id: Date.now() + idx + Math.floor(Math.random() * 1000),
       no_invoice: order.no_invoice,
       buku_id: it.buku_id,
       book: books.find(b => b.id === it.buku_id),
@@ -456,16 +456,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPenyalurans(prev => [...newPenyalurans, ...prev]);
 
     // 3. Mutasi Kas Masuk di Finance
-    const kasAccount = accounts.find(a => a.nama_akun.toLowerCase().includes('kas')) || accounts[0];
-    const categoryPenjualan = categories.find(c => c.nama_kategori.toLowerCase().includes('penjualan')) || categories[0];
+    const selectedAcc = targetAccountId ? accounts.find(a => a.id === targetAccountId) : undefined;
+    const kasAccount = selectedAcc || accounts.find(a => a.nama_akun.toLowerCase().includes('bca')) || accounts.find(a => a.nama_akun.toLowerCase().includes('kas')) || accounts[0] || {
+      id: 1,
+      nama_akun: 'Bank BCA - Yayasan Lamrimnesia',
+      kode_akun: 'ACC-BCA-789',
+      saldo_awal: 0
+    };
+    const categoryPenjualan = categories.find(c => c.nama_kategori.toLowerCase().includes('penjualan')) || categories[0] || {
+      id: 1,
+      nama_kategori: 'Penjualan Buku',
+      jenis: 'Masuk'
+    };
 
     const newMutasi: Mutasi = {
-      id: Date.now() + 1,
+      id: Date.now() + 100,
       account_id: kasAccount.id,
       account: kasAccount,
       category_id: categoryPenjualan.id,
       category: categoryPenjualan,
-      user_id: currentUser.id,
+      user_id: currentUser?.id || 1,
       tipe: 'Masuk',
       nominal: order.total_tagihan,
       keterangan: `Otomatis: Pelunasan #${order.no_invoice} (${order.nama_pembeli})`,
@@ -477,7 +487,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 4. Rekap Penjualan
     const totalItems = order.items.reduce((sum, it) => sum + it.jumlah, 0);
     const newPenjualan: Penjualan = {
-      id: Date.now() + 2,
+      id: Date.now() + 200,
       no_invoice: order.no_invoice,
       nama_pelanggan: order.nama_pembeli,
       total_item: totalItems,
@@ -487,6 +497,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPenjualans(prev => [newPenjualan, ...prev]);
 
     recordActivity('Konfirmasi Lunas', 'Order', `Mengubah status invoice ${order.no_invoice} menjadi LUNAS. Sinkron otomatis ke Finance & antrean Logistik.`);
+    return { success: true, message: `Invoice #${order.no_invoice} berhasil ditandai LUNAS!` };
   };
 
   const cancelOrder = (orderId: number) => {
@@ -679,28 +690,82 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Logistics Dispatch
-  const dispatchShipment = (no_invoice: string) => {
-    const items = penyalurans.filter(p => p.no_invoice === no_invoice && p.status === 'proses packing');
-    if (items.length === 0) {
-      return { success: false, message: 'Tidak ada item antrean yang perlu dikirim untuk invoice ini.' };
+  const dispatchShipment = (no_invoice: string, noResi?: string) => {
+    const invClean = (no_invoice || '').trim().toUpperCase();
+    let items = penyalurans.filter(
+      p => (p.no_invoice || '').trim().toUpperCase() === invClean &&
+           (p.status?.toLowerCase() === 'proses packing' || !p.status)
+    );
+
+    const linkedOrder = orders.find(
+      o => (o.no_invoice || '').trim().toUpperCase() === invClean
+    );
+
+    // If no existing packing items found in state but linkedOrder exists, generate them
+    if (items.length === 0 && linkedOrder && linkedOrder.items && linkedOrder.items.length > 0) {
+      items = linkedOrder.items.map((it, idx) => ({
+        id: Date.now() + idx + Math.floor(Math.random() * 1000),
+        no_invoice: linkedOrder.no_invoice,
+        buku_id: it.buku_id,
+        book: books.find(b => b.id === it.buku_id),
+        qty: it.jumlah,
+        nama_agen: linkedOrder.nama_penerima || linkedOrder.nama_pembeli,
+        status: 'dikirim',
+        created_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
+      }));
+      setPenyalurans(prev => [...items, ...prev]);
+    } else if (items.length === 0) {
+      return { success: false, message: `Tidak ada item antrean yang perlu dikirim untuk invoice #${no_invoice}.` };
     }
 
-    // Mark items as 'dikirim' and create LogisticLogs
-    setPenyalurans(prev => prev.map(p => p.no_invoice === no_invoice ? { ...p, status: 'dikirim' } : p));
-    setOrders(prev => prev.map(o => o.no_invoice === no_invoice ? { ...o, status: 'Dikirim' } : o));
+    // Mark items as 'dikirim'
+    setPenyalurans(prev =>
+      prev.map(p =>
+        (p.no_invoice || '').trim().toUpperCase() === invClean
+          ? { ...p, status: 'dikirim' }
+          : p
+      )
+    );
 
-    const newLogs: LogisticLog[] = items.map(it => ({
-      id: Date.now() + Math.floor(Math.random() * 1000),
-      buku_id: it.buku_id,
-      book: it.book,
-      qty_keluar: it.qty,
-      tujuan: it.nama_agen || 'Marketing',
-      keterangan: `Pengiriman Invoice #${no_invoice}`,
-      created_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
-    }));
+    // Update order status to 'Dikirim'
+    setOrders(prev =>
+      prev.map(o => {
+        if ((o.no_invoice || '').trim().toUpperCase() === invClean) {
+          const resiTag = noResi?.trim() ? ` [Resi: ${noResi.trim()}]` : '';
+          return {
+            ...o,
+            status: 'Dikirim',
+            keterangan: o.keterangan ? `${o.keterangan}${resiTag}` : (noResi?.trim() ? `Resi: ${noResi.trim()}` : o.keterangan)
+          };
+        }
+        return o;
+      })
+    );
+
+    // Create LogisticLogs for warehouse history
+    const recipientName = items[0]?.nama_agen || linkedOrder?.nama_penerima || linkedOrder?.nama_pembeli || 'Pelanggan / Agen';
+    const newLogs: LogisticLog[] = items.map((it, idx) => {
+      const bookObj = it.book || books.find(b => b.id === it.buku_id);
+      return {
+        id: Date.now() + idx + Math.floor(Math.random() * 1000),
+        buku_id: it.buku_id,
+        book: bookObj,
+        qty_keluar: it.qty,
+        tujuan: recipientName,
+        keterangan: noResi?.trim()
+          ? `Pengiriman Invoice #${no_invoice} (Resi: ${noResi.trim()})`
+          : `Pengiriman Invoice #${no_invoice}`,
+        created_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
+      };
+    });
 
     setLogisticLogs(prev => [...newLogs, ...prev]);
-    recordActivity('Kirim Pesanan Logistik', 'LogisticLog', `Memproses pengiriman barang untuk Invoice #${no_invoice} (${items.length} item buku) ke ${items[0]?.nama_agen}.`);
+    recordActivity(
+      'Kirim Pesanan Logistik',
+      'LogisticLog',
+      `Memproses pengiriman pesanan #${no_invoice} (${items.length} jenis buku) ke ${recipientName}${noResi ? ` (Resi: ${noResi})` : ''}.`
+    );
+
     return { success: true, message: `Seluruh barang untuk Invoice #${no_invoice} berhasil dikirim!` };
   };
 

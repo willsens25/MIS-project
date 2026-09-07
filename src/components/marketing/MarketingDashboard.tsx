@@ -18,10 +18,13 @@ import {
   Package,
   Truck,
   Sparkles,
-  TrendingUp
+  TrendingUp,
+  Check,
+  X
 } from 'lucide-react';
 import { InvoicePrintModal } from '../modals/InvoicePrintModal';
 import { MarketingCharts } from '../charts/MarketingCharts';
+import { ConfirmModal } from '../modals/ConfirmModal';
 
 export const MarketingDashboard: React.FC = () => {
   const {
@@ -36,16 +39,39 @@ export const MarketingDashboard: React.FC = () => {
     deletePromo,
     bulkDeletePromos,
     checkPromoCode,
-    identitasList
+    identitasList,
+    accounts
   } = useApp();
 
   const [activeSubTab, setActiveSubTab] = useState<'pos' | 'grafik' | 'invoices' | 'promos' | 'agen'>('pos');
   const [invoiceSearch, setInvoiceSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  // Selection states for bulk delete
+  // Selection states for bulk delete & bulk lunas
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
   const [selectedPromoIds, setSelectedPromoIds] = useState<number[]>([]);
+
+  // Pelunasan Modal
+  const [pelunasanModalOrder, setPelunasanModalOrder] = useState<Order | null>(null);
+  const [pelunasanAccountId, setPelunasanAccountId] = useState<number>(accounts[0]?.id || 1);
+
+  // Toast & ConfirmModal states
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [confirmModalConfig, setConfirmModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant?: 'danger' | 'warning' | 'primary';
+    confirmText?: string;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    variant: 'danger',
+    confirmText: 'Ya, Lanjutkan'
+  });
 
   // Print Invoice Modal
   const [printingOrder, setPrintingOrder] = useState<Order | null>(null);
@@ -157,11 +183,13 @@ export const MarketingDashboard: React.FC = () => {
   const handleCreateOrderSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!pembeliName.trim()) {
-      alert('Nama Pembeli / Agen wajib diisi!');
+      setToastMessage('Peringatan: Nama Pembeli / Agen wajib diisi!');
+      setTimeout(() => setToastMessage(null), 3500);
       return;
     }
     if (orderItems.length === 0 || totalItemCount === 0) {
-      alert('Pesanan harus memiliki minimal 1 item buku!');
+      setToastMessage('Peringatan: Pesanan harus memiliki minimal 1 item buku!');
+      setTimeout(() => setToastMessage(null), 3500);
       return;
     }
 
@@ -188,7 +216,8 @@ export const MarketingDashboard: React.FC = () => {
 
     const res = createOrder(newOrderData);
     if (res.success) {
-      alert(res.message);
+      setToastMessage(res.message);
+      setTimeout(() => setToastMessage(null), 4000);
       // Reset form
       setPembeliName('');
       setPenerimaName('');
@@ -198,19 +227,23 @@ export const MarketingDashboard: React.FC = () => {
       setOrderItems([{ buku_id: books[0]?.id || 1, jumlah: 1, promo_code: '' }]);
       setActiveSubTab('invoices');
     } else {
-      alert(res.message);
+      setToastMessage(`Gagal: ${res.message}`);
+      setTimeout(() => setToastMessage(null), 4000);
     }
   };
 
   const handleSavePromo = (e: React.FormEvent) => {
     e.preventDefault();
     if (!promoForm.code.trim() || promoForm.reward_value <= 0) {
-      alert('Kode Promo dan Nilai Reward harus diisi dengan benar!');
+      setToastMessage('Kode Promo dan Nilai Reward harus diisi dengan benar!');
+      setTimeout(() => setToastMessage(null), 3500);
       return;
     }
     addPromo(promoForm);
     setModalPromoOpen(false);
     setPromoForm({ code: '', type: 'percentage', reward_value: 10, max_uses: 100, expiry_date: '2027-12-31' });
+    setToastMessage(`Kode promo "${promoForm.code}" berhasil ditambahkan!`);
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
   const filteredOrders = orders.filter(o => {
@@ -220,6 +253,8 @@ export const MarketingDashboard: React.FC = () => {
     const matchStatus = statusFilter === 'all' || o.status === statusFilter;
     return matchSearch && matchStatus;
   });
+
+  const pendingSelectedOrders = orders.filter(o => selectedOrderIds.includes(o.id) && o.status === 'Pending');
 
   const handleToggleSelectOrder = (id: number) => {
     setSelectedOrderIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
@@ -233,12 +268,41 @@ export const MarketingDashboard: React.FC = () => {
     }
   };
 
+  const handleBulkLunasOrders = () => {
+    if (pendingSelectedOrders.length === 0) return;
+    setConfirmModalConfig({
+      isOpen: true,
+      title: 'Tandai Lunas Invoice Terpilih',
+      message: `Yakin ingin mengonfirmasi pelunasan untuk ${pendingSelectedOrders.length} invoice pending terpilih? Mutasi kas masuk akan dicatat ke Finance dan item dialirkan ke antrean packing Logistik.`,
+      variant: 'primary',
+      confirmText: 'Ya, Tandai Lunas Semua',
+      onConfirm: () => {
+        const defaultAcc = accounts.find(a => a.nama_akun.toLowerCase().includes('bca'))?.id || accounts[0]?.id || 1;
+        pendingSelectedOrders.forEach(o => {
+          tandaiLunasOrder(o.id, defaultAcc);
+        });
+        setSelectedOrderIds([]);
+        setToastMessage(`${pendingSelectedOrders.length} invoice berhasil ditandai LUNAS!`);
+        setTimeout(() => setToastMessage(null), 4000);
+      }
+    });
+  };
+
   const handleBulkDeleteOrders = () => {
     if (selectedOrderIds.length === 0) return;
-    if (confirm(`Yakin ingin menghapus ${selectedOrderIds.length} invoice terpilih? Mutasi dan antrean logistik terkait akan otomatis dibersihkan.`)) {
-      bulkDeleteOrders(selectedOrderIds);
-      setSelectedOrderIds([]);
-    }
+    setConfirmModalConfig({
+      isOpen: true,
+      title: 'Hapus Invoice Terpilih',
+      message: `Yakin ingin menghapus ${selectedOrderIds.length} invoice terpilih? Mutasi dan antrean logistik terkait akan otomatis dibersihkan.`,
+      variant: 'danger',
+      confirmText: 'Ya, Hapus Invoice',
+      onConfirm: () => {
+        bulkDeleteOrders(selectedOrderIds);
+        setSelectedOrderIds([]);
+        setToastMessage(`${selectedOrderIds.length} invoice berhasil dihapus.`);
+        setTimeout(() => setToastMessage(null), 3500);
+      }
+    });
   };
 
   const handleToggleSelectPromo = (id: number) => {
@@ -255,10 +319,19 @@ export const MarketingDashboard: React.FC = () => {
 
   const handleBulkDeletePromos = () => {
     if (selectedPromoIds.length === 0) return;
-    if (confirm(`Yakin ingin menghapus ${selectedPromoIds.length} kode promo terpilih?`)) {
-      bulkDeletePromos(selectedPromoIds);
-      setSelectedPromoIds([]);
-    }
+    setConfirmModalConfig({
+      isOpen: true,
+      title: 'Hapus Kode Promo Terpilih',
+      message: `Yakin ingin menghapus ${selectedPromoIds.length} kode promo terpilih?`,
+      variant: 'danger',
+      confirmText: 'Ya, Hapus Promo',
+      onConfirm: () => {
+        bulkDeletePromos(selectedPromoIds);
+        setSelectedPromoIds([]);
+        setToastMessage(`${selectedPromoIds.length} kode promo berhasil dihapus.`);
+        setTimeout(() => setToastMessage(null), 3500);
+      }
+    });
   };
 
   const handleExportOrdersCSV = () => {
@@ -648,6 +721,16 @@ export const MarketingDashboard: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
+                {pendingSelectedOrders.length > 0 && (
+                  <button
+                    onClick={handleBulkLunasOrders}
+                    className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Tandai Lunas Terpilih ({pendingSelectedOrders.length})</span>
+                  </button>
+                )}
+
                 {selectedOrderIds.length > 0 && (
                   <button
                     onClick={handleBulkDeleteOrders}
@@ -752,27 +835,37 @@ export const MarketingDashboard: React.FC = () => {
                         {order.status === 'Pending' && (
                           <button
                             onClick={() => {
-                              if (confirm(`Konfirmasi pembayaran lunas untuk ${order.no_invoice}? Data akan otomatis masuk ke Jurnal Finance dan Antrean Packing Logistik.`)) {
-                                tandaiLunasOrder(order.id);
-                              }
+                              setPelunasanAccountId(accounts[0]?.id || 1);
+                              setPelunasanModalOrder(order);
                             }}
-                            className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-[11px]"
+                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-[11px] inline-flex items-center space-x-1 cursor-pointer shadow-xs transition-colors"
+                            title="Konfirmasi Pembayaran Lunas"
                           >
-                            Tandai Lunas
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>Tandai Lunas</span>
                           </button>
                         )}
 
                         {order.status !== 'Cancelled' && (
                           <button
                             onClick={() => {
-                              if (confirm(`Batalkan invoice ${order.no_invoice}? Stok buku akan dikembalikan ke gudang.`)) {
-                                cancelOrder(order.id);
-                              }
+                              setConfirmModalConfig({
+                                isOpen: true,
+                                title: 'Batalkan Invoice',
+                                message: `Yakin ingin membatalkan invoice #${order.no_invoice} (${order.nama_pembeli})? Stok buku pesanan otomatis dikembalikan ke gudang.`,
+                                variant: 'danger',
+                                confirmText: 'Ya, Batalkan Invoice',
+                                onConfirm: () => {
+                                  cancelOrder(order.id);
+                                  setToastMessage(`Invoice #${order.no_invoice} berhasil dibatalkan dan stok dikembalikan.`);
+                                  setTimeout(() => setToastMessage(null), 3500);
+                                }
+                              });
                             }}
-                            className="p-1 text-slate-400 hover:text-rose-600 rounded"
+                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer transition-colors"
                             title="Batalkan Invoice"
                           >
-                            <XCircle className="w-3.5 h-3.5" />
+                            <XCircle className="w-4 h-4" />
                           </button>
                         )}
                       </td>
@@ -854,9 +947,20 @@ export const MarketingDashboard: React.FC = () => {
                 <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex justify-end">
                   <button
                     onClick={() => {
-                      if (confirm(`Hapus kode promo ${p.code}?`)) deletePromo(p.id);
+                      setConfirmModalConfig({
+                        isOpen: true,
+                        title: 'Hapus Kode Promo',
+                        message: `Yakin ingin menghapus kode promo "${p.code}"?`,
+                        variant: 'danger',
+                        confirmText: 'Ya, Hapus Promo',
+                        onConfirm: () => {
+                          deletePromo(p.id);
+                          setToastMessage(`Kode promo "${p.code}" berhasil dihapus.`);
+                          setTimeout(() => setToastMessage(null), 3000);
+                        }
+                      });
                     }}
-                    className="text-rose-600 hover:underline font-semibold text-[11px]"
+                    className="text-rose-600 hover:underline font-semibold text-[11px] cursor-pointer"
                   >
                     Hapus Kode
                   </button>
@@ -1016,6 +1120,160 @@ export const MarketingDashboard: React.FC = () => {
                 </div>
               </form>
             </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Dedicated Pelunasan Invoice Modal */}
+      {pelunasanModalOrder && createPortal(
+        <div
+          className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setPelunasanModalOrder(null)}
+        >
+          <div className="flex min-h-full items-center justify-center p-3 sm:p-4 text-center">
+            <div
+              className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl text-left animate-in zoom-in-95 duration-150 space-y-4"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-11 h-11 rounded-2xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                      Konfirmasi Pelunasan Invoice
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Pencatatan kas masuk & aktivasi antrean packing gudang
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setPelunasanModalOrder(null)}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl space-y-2.5 text-xs border border-slate-100 dark:border-slate-700/60">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">No. Invoice:</span>
+                  <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                    {pelunasanModalOrder.no_invoice}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Pelanggan / Agen:</span>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {pelunasanModalOrder.nama_pembeli}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Saluran Pemesanan:</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">
+                    {pelunasanModalOrder.via}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Total Tagihan:</span>
+                  <span className="font-extrabold text-sm text-emerald-600 dark:text-emerald-400">
+                    Rp {pelunasanModalOrder.total_tagihan.toLocaleString('id-ID')}
+                  </span>
+                </div>
+
+                <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+                  <label className="block text-slate-600 dark:text-slate-300 font-semibold mb-1.5">
+                    Pilih Rekening Kas / Bank Penerima:
+                  </label>
+                  <select
+                    value={pelunasanAccountId}
+                    onChange={e => setPelunasanAccountId(parseInt(e.target.value))}
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                  >
+                    {accounts.map(a => (
+                      <option key={a.id} value={a.id}>
+                        {a.nama_akun} ({a.kode_akun})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="p-3.5 bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-xl text-[11px] text-emerald-900 dark:text-emerald-200 space-y-1.5">
+                <p className="font-bold flex items-center space-x-1.5">
+                  <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Dampak Otomatis Sistem setelah Pelunasan:</span>
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-slate-600 dark:text-slate-300 pl-1 leading-relaxed">
+                  <li>
+                    Status invoice berubah menjadi <strong className="text-emerald-600 dark:text-emerald-400">LUNAS</strong>.
+                  </li>
+                  <li>
+                    Otomatis mencatat <strong className="text-slate-900 dark:text-white">Kas Masuk</strong> senilai <strong>Rp {pelunasanModalOrder.total_tagihan.toLocaleString('id-ID')}</strong> di Divisi Finance.
+                  </li>
+                  <li>
+                    Item pesanan otomatis dialirkan ke <strong className="text-slate-900 dark:text-white">Antrean Packing</strong> Divisi Logistik untuk dikemas dan dikirim.
+                  </li>
+                </ul>
+              </div>
+
+              <div className="flex items-center justify-end space-x-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setPelunasanModalOrder(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold cursor-pointer transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const res = tandaiLunasOrder(pelunasanModalOrder.id, pelunasanAccountId);
+                    setToastMessage(res?.message || `Invoice #${pelunasanModalOrder.no_invoice} berhasil ditandai LUNAS!`);
+                    setTimeout(() => setToastMessage(null), 4000);
+                    setPelunasanModalOrder(null);
+                  }}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm shadow-emerald-600/20 cursor-pointer flex items-center space-x-1.5 transition-all"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Konfirmasi Lunas & Sinkronkan</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModalConfig.isOpen}
+        onClose={() => setConfirmModalConfig(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={() => {
+          confirmModalConfig.onConfirm();
+          setConfirmModalConfig(prev => ({ ...prev, isOpen: false }));
+        }}
+        title={confirmModalConfig.title}
+        message={confirmModalConfig.message}
+        variant={confirmModalConfig.variant}
+        confirmText={confirmModalConfig.confirmText}
+      />
+
+      {/* Floating Toast Notification */}
+      {toastMessage && createPortal(
+        <div className="fixed bottom-5 right-5 z-50 animate-in fade-in slide-in-from-bottom-5 duration-200">
+          <div className="flex items-center space-x-2.5 px-4 py-3 bg-slate-900 text-white dark:bg-white dark:text-slate-900 rounded-2xl shadow-xl text-xs font-semibold border border-slate-700 dark:border-slate-200">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 dark:text-emerald-600 shrink-0" />
+            <span>{toastMessage}</span>
+            <button
+              onClick={() => setToastMessage(null)}
+              className="ml-2 text-slate-400 hover:text-white dark:hover:text-slate-900 p-0.5 rounded cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>,
         document.body

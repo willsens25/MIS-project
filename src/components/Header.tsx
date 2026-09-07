@@ -5,6 +5,7 @@ import { DivisionId } from '../types';
 import { NotificationBell } from './NotificationBell';
 import { EditProfileModal } from './profile/EditProfileModal';
 import { DivisionReportModal } from './modals/DivisionReportModal';
+import { AnnualReportModal } from './modals/AnnualReportModal';
 import {
   Building2,
   Wallet,
@@ -29,7 +30,8 @@ import {
   KeyRound,
   FileDown,
   Printer,
-  FileText
+  FileText,
+  Award
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -66,6 +68,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [showSwitchUserModal, setShowSwitchUserModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showAnnualReportModal, setShowAnnualReportModal] = useState(false);
 
   const pendingPengajuansCount = pengajuans.filter(p => p.status === 'pending').length;
 
@@ -384,6 +387,21 @@ export const Header: React.FC<HeaderProps> = ({
                       </button>
 
                       <button
+                        id="menu-annual-report"
+                        onClick={() => {
+                          setShowProfileMenu(false);
+                          setShowAnnualReportModal(true);
+                        }}
+                        className="w-full flex items-center px-4 py-2 text-xs text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/50 transition-colors font-medium"
+                      >
+                        <Award className="w-4 h-4 text-amber-600 dark:text-amber-400 mr-2.5" />
+                        <span>Laporan Tahunan Yayasan</span>
+                        <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/50">
+                          Annual
+                        </span>
+                      </button>
+
+                      <button
                         id="menu-audit-log"
                         onClick={() => {
                           setShowProfileMenu(false);
@@ -521,6 +539,12 @@ export const Header: React.FC<HeaderProps> = ({
         isOpen={showReportModal}
         onClose={() => setShowReportModal(false)}
         targetDivisionId={currentUser.divisi_id}
+      />
+
+      {/* Annual Executive Report Modal */}
+      <AnnualReportModal
+        isOpen={showAnnualReportModal}
+        onClose={() => setShowAnnualReportModal(false)}
       />
     </header>
   );

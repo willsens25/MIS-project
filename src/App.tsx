@@ -7,7 +7,6 @@ import { PenerbitanDashboard } from './components/penerbitan/PenerbitanDashboard
 import { MarketingDashboard } from './components/marketing/MarketingDashboard';
 import { ProduksiDashboard } from './components/produksi/ProduksiDashboard';
 import { LogistikDashboard } from './components/logistik/LogistikDashboard';
-import { RecentActivityWidget } from './components/RecentActivityWidget';
 import { AIAssistantModal } from './components/AIAssistantModal';
 import { AuthModal } from './components/auth/AuthModal';
 
@@ -17,9 +16,22 @@ const AppContent: React.FC = () => {
     isAuthenticated,
     isAuthModalOpen,
     setIsAuthModalOpen,
-    authModalMode
+    authModalMode,
+    switchDivision
   } = useApp();
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [financeSubTab, setFinanceSubTab] = useState<'grafik' | 'mutasi' | 'persetujuan' | 'penjualan' | 'akun'>('grafik');
+  const [direktoratSubTab, setDirektoratSubTab] = useState<'overview' | 'identitas' | 'users' | 'audit'>('overview');
+
+  const handleOpenPersetujuan = () => {
+    switchDivision(2);
+    setFinanceSubTab('persetujuan');
+  };
+
+  const handleOpenAuditLogs = () => {
+    switchDivision(1);
+    setDirektoratSubTab('audit');
+  };
 
   // If user is not logged in, display the full-screen authentication screen
   if (!isAuthenticated) {
@@ -40,25 +52,18 @@ const AppContent: React.FC = () => {
       {/* Top Header & Division Navigation */}
       <Header
         onOpenAI={() => setIsAiModalOpen(true)}
-        onOpenAuditLogs={() => {
-          // Can switch or view audit logs
-        }}
-        onOpenPersetujuan={() => {
-          // Handled via Finance division
-        }}
+        onOpenAuditLogs={handleOpenAuditLogs}
+        onOpenPersetujuan={handleOpenPersetujuan}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
-        {currentUser.divisi_id === 1 && <DirektoratDashboard />}
-        {currentUser.divisi_id === 2 && <FinanceDashboard />}
+        {currentUser.divisi_id === 1 && <DirektoratDashboard initialSubTab={direktoratSubTab} />}
+        {currentUser.divisi_id === 2 && <FinanceDashboard initialSubTab={financeSubTab} />}
         {currentUser.divisi_id === 3 && <PenerbitanDashboard />}
         {currentUser.divisi_id === 4 && <MarketingDashboard />}
         {currentUser.divisi_id === 5 && <ProduksiDashboard />}
         {currentUser.divisi_id === 6 && <LogistikDashboard />}
-
-        {/* Recent Activity Widget only for Direktorat (DIR) division */}
-        {currentUser.divisi_id === 1 && <RecentActivityWidget />}
       </main>
 
       {/* Footer */}
