@@ -84,7 +84,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
@@ -95,8 +95,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
 
     setLoading(true);
-    setTimeout(() => {
-      const res = login(loginEmail, loginPassword);
+    try {
+      const res = await login(loginEmail, loginPassword);
       setLoading(false);
       if (res.success) {
         setSuccessMsg(res.message);
@@ -106,10 +106,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       } else {
         setErrorMsg(res.message);
       }
-    }, 300);
+    } catch (err: any) {
+      setLoading(false);
+      setErrorMsg('Gagal memverifikasi password di server.');
+    }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
@@ -130,8 +133,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
 
     setLoading(true);
-    setTimeout(() => {
-      const res = register({
+    try {
+      const res = await register({
         name: regName,
         email: regEmail,
         password: regPassword,
@@ -149,7 +152,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       } else {
         setErrorMsg(res.message);
       }
-    }, 400);
+    } catch (err: any) {
+      setLoading(false);
+      setErrorMsg('Gagal memproses pendaftaran akun dengan server.');
+    }
   };
 
   const handleQuickLogin = (userId: number) => {
@@ -351,6 +357,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   </>
                 )}
               </button>
+
+              <div className="flex items-center justify-center space-x-1.5 py-1 text-[11px] text-emerald-400 font-medium">
+                <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                <span>Enkripsi Server-Side Bcrypt Terverifikasi (Cost: 10)</span>
+              </div>
 
               {/* QUICK 1-CLICK DEMO LOGIN ACCOUNTS */}
               <div className="pt-4 border-t border-slate-800 space-y-2.5">
@@ -557,6 +568,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   </>
                 )}
               </button>
+
+              <div className="flex items-center justify-center space-x-1.5 py-1 text-[11px] text-teal-400 font-medium">
+                <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                <span>Password akan dienkripsi server-side dengan Bcrypt (Salt Rounds 10)</span>
+              </div>
             </form>
           )}
         </div>

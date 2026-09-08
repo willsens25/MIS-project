@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
 import { DivisionId } from '../../types';
@@ -19,8 +19,18 @@ import {
   TrendingUp,
   Package,
   Layers,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Download,
+  FileText,
+  ChevronDown,
+  Loader2
 } from 'lucide-react';
+import {
+  printElement,
+  downloadDocumentAsPdf,
+  downloadDocumentAsHtml,
+  downloadDocumentAsWord
+} from '../../utils/documentExport';
 
 interface DivisionReportModalProps {
   isOpen: boolean;
@@ -53,6 +63,25 @@ export const DivisionReportModal: React.FC<DivisionReportModalProps> = ({
   const [selectedDivId, setSelectedDivId] = useState<DivisionId>(
     targetDivisionId || currentUser.divisi_id || 1
   );
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const downloadMenuRef = useRef<HTMLDivElement>(null);
+
+  const showFeedback = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (downloadMenuRef.current && !downloadMenuRef.current.contains(event.target as Node)) {
+        setShowDownloadMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   if (!isOpen) return null;
 
@@ -65,8 +94,39 @@ export const DivisionReportModal: React.FC<DivisionReportModalProps> = ({
   });
   const reportDocNumber = `REP-${currentDiv.kode}/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${String(new Date().getDate()).padStart(2, '0')}-01`;
 
+  const docTitle = `Laporan Resmi Divisi ${currentDiv.nama_divisi} - ${currentDiv.kode}`;
+  const filenameBase = `Laporan_Divisi_${currentDiv.kode}_${new Date().toISOString().substring(0, 10)}`;
+
+  const handleDownloadPdf = async () => {
+    setIsGeneratingPdf(true);
+    showFeedback('Sedang memproses dokumen PDF divisi...');
+    setShowDownloadMenu(false);
+    const ok = await downloadDocumentAsPdf('printable-area', filenameBase, (status) => {
+      showFeedback(status);
+    });
+    setIsGeneratingPdf(false);
+    if (ok) {
+      showFeedback(`File PDF Divisi ${currentDiv.nama_divisi} berhasil diunduh!`);
+    } else {
+      showFeedback('Gagal membuat PDF. Coba cetak langsung atau unduh HTML.');
+    }
+  };
+
   const handlePrint = () => {
-    window.print();
+    showFeedback('Membuka opsi cetak / simpan PDF...');
+    printElement('printable-area', docTitle, filenameBase);
+  };
+
+  const handleDownloadHtml = () => {
+    showFeedback('Mengunduh dokumen resmi (.html standalone)...');
+    downloadDocumentAsHtml('printable-area', filenameBase, docTitle);
+    setShowDownloadMenu(false);
+  };
+
+  const handleDownloadWord = () => {
+    showFeedback('Mengunduh dokumen Microsoft Word (.doc)...');
+    downloadDocumentAsWord('printable-area', filenameBase, docTitle);
+    setShowDownloadMenu(false);
   };
 
   // Helper calculation for Directorate
@@ -153,14 +213,92 @@ export const DivisionReportModal: React.FC<DivisionReportModalProps> = ({
                 </select>
               </div>
 
+              {/* Download Dokumen Dropdown */}
+              <div className="relative" ref={downloadMenuRef}>
+                <button
+                  id="btn-download-div-report"
+                  onClick={() => setShowDownloadMenu(!showDownloadMenu)}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 rounded-xl text-xs font-semibold transition-all cursor-pointer border border-slate-700"
+                  title="Pilihan Format Dokumen"
+                >
+                  <Download className="w-3.5 h-3.5 text-teal-400" />
+                  <span>Format Lain</span>
+                  <ChevronDown className="w-3 h-3 text-slate-400" />
+                </button>
+
+                {showDownloadMenu && (
+                  <div className="absolute right-0 mt-2 w-60 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1.5 z-50 text-left animate-in fade-in slide-in-from-top-1 duration-150">
+                    <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                      Format Unduhan Dokumen
+                    </div>
+
+                    <button
+                      id="btn-download-div-pdf-menu"
+                      onClick={handleDownloadPdf}
+                      disabled={isGeneratingPdf}
+                      className="w-full flex items-center px-3 py-2 text-xs text-teal-300 hover:bg-slate-800 transition-colors"
+                    >
+                      {isGeneratingPdf ? (
+                        <Loader2 className="w-3.5 h-3.5 text-teal-400 mr-2.5 animate-spin shrink-0" />
+                      ) : (
+                        <FileDown className="w-3.5 h-3.5 text-teal-400 mr-2.5 shrink-0" />
+                      )}
+                      <div className="text-left">
+                        <div className="font-bold">Dokumen PDF Resmi (.pdf)</div>
+                        <div className="text-[10px] text-slate-400">Unduh langsung ke perangkat</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={handleDownloadHtml}
+                      className="w-full flex items-center px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 hover:text-teal-300 transition-colors border-t border-slate-800/60"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-teal-400 mr-2.5 shrink-0" />
+                      <div className="text-left">
+                        <div className="font-semibold">Dokumen Web Standalone (.html)</div>
+                        <div className="text-[10px] text-slate-400">Siap Cetak / Simpan PDF Offline</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={handleDownloadWord}
+                      className="w-full flex items-center px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 hover:text-blue-300 transition-colors"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-blue-400 mr-2.5 shrink-0" />
+                      <div className="text-left">
+                        <div className="font-semibold">Microsoft Word (.doc)</div>
+                        <div className="text-[10px] text-slate-400">Buka di Word atau LibreOffice</div>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Direct PDF Download Button */}
+              <button
+                id="btn-trigger-pdf-report"
+                onClick={handleDownloadPdf}
+                disabled={isGeneratingPdf}
+                className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 active:scale-95 disabled:opacity-50 text-white font-bold rounded-xl text-xs shadow-md transition-all cursor-pointer"
+                title="Unduh langsung file PDF laporan divisi"
+              >
+                {isGeneratingPdf ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <FileDown className="w-3.5 h-3.5" />
+                )}
+                <span>{isGeneratingPdf ? 'Membuat PDF...' : 'Download PDF'}</span>
+              </button>
+
+              {/* Print Button */}
               <button
                 id="btn-trigger-print-report"
                 onClick={handlePrint}
-                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold rounded-xl text-xs shadow-md transition-all cursor-pointer"
-                title="Cetak atau Simpan sebagai PDF"
+                className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 rounded-xl text-xs font-semibold border border-slate-700 transition-all cursor-pointer"
+                title="Buka dialog cetak browser atau printer fisik"
               >
-                <Printer className="w-4 h-4" />
-                <span>Download / Cetak PDF</span>
+                <Printer className="w-3.5 h-3.5 text-slate-300" />
+                <span className="hidden sm:inline">Cetak</span>
               </button>
 
               <button

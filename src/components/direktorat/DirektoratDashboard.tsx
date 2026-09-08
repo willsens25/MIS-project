@@ -239,26 +239,26 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
     });
   };
 
-  const handleSaveUser = (e: React.FormEvent) => {
+  const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userForm.name || !userForm.email) return;
     if (editingUser) {
-      updateUser(
+      await updateUser(
         editingUser.id,
         userForm.name,
         userForm.email,
         userForm.divisi_id,
         userForm.role,
-        userForm.password || undefined,
+        userForm.password?.trim() ? userForm.password.trim() : undefined,
         userForm.phone || undefined
       );
     } else {
-      addUser(
+      await addUser(
         userForm.name,
         userForm.email,
         userForm.divisi_id,
         userForm.role || 'Staff',
-        userForm.password || 'password123',
+        userForm.password?.trim() || 'password123',
         userForm.phone
       );
     }
@@ -810,6 +810,12 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
                   </div>
                   <p className="text-xs text-slate-500">{usr.email}</p>
                   {usr.phone && <p className="text-[11px] text-slate-400">WA: {usr.phone}</p>}
+                  
+                  <div className="flex items-center space-x-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md w-fit font-medium">
+                    <ShieldCheck className="w-3 h-3" />
+                    <span>Password Bcrypt Hash</span>
+                  </div>
+
                   <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700 text-xs">
                     <span className="text-[11px] text-slate-400">
                       Role: {usr.role || 'Staff'} {isCurrent ? '(Anda)' : ''}
@@ -823,7 +829,7 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
                             email: usr.email,
                             divisi_id: usr.divisi_id,
                             role: usr.role || 'Staff',
-                            password: usr.password || '',
+                            password: '', // Blank so unchanged password is preserved
                             phone: usr.phone || ''
                           });
                           setUserModalOpen(true);
@@ -1060,6 +1066,12 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
                     ))}
                   </select>
                 </div>
+
+                <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 rounded-xl flex items-center space-x-2 text-xs text-emerald-700 dark:text-emerald-300">
+                  <ShieldCheck className="w-4 h-4 shrink-0" />
+                  <span>Password akan dienkripsi secara aman dengan algoritma Bcrypt (Salt factor 10) di server sebelum disimpan.</span>
+                </div>
+
                 <div className="flex justify-end space-x-2 pt-3">
                   <button
                     type="button"

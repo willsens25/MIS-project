@@ -25,13 +25,16 @@ export const INITIAL_DIVISI: Divisi[] = [
   { id: 6, nama_divisi: 'Logistik & Gudang', kode: 'LOG', deskripsi: 'Stok Riil, Antrean Packing & Surat Jalan' },
 ];
 
+// Pre-hashed with bcrypt (salt rounds 10) for 'password123'
+const DEFAULT_BCRYPT_PASSWORD_HASH = '$2b$10$S7ml9yWVoI1Kg0HGHponxOO053AboWyPCZCEINT6h9qA/Z9x2T0tm';
+
 export const INITIAL_USERS: User[] = [
-  { id: 1, name: 'Direktur Utama (Admin)', email: 'admin@lamrimnesia.org', password: 'password123', divisi_id: 1, role: 'Direktur', phone: '081234567890' },
-  { id: 2, name: 'Siti Rahmawati (Bendahara)', email: 'finance@lamrimnesia.org', password: 'password123', divisi_id: 2, role: 'Bendahara', phone: '081234567891' },
-  { id: 3, name: 'Budi Santoso (Penerbitan)', email: 'penerbitan@lamrimnesia.org', password: 'password123', divisi_id: 3, role: 'Editor Kepala', phone: '081234567892' },
-  { id: 4, name: 'Diana Wijaya (Marketing)', email: 'marketing@lamrimnesia.org', password: 'password123', divisi_id: 4, role: 'Marketing Officer', phone: '081234567893' },
-  { id: 5, name: 'Agus Priyono (Produksi)', email: 'produksi@lamrimnesia.org', password: 'password123', divisi_id: 5, role: 'Kepala Percetakan', phone: '081234567894' },
-  { id: 6, name: 'Hendra Gunawan (Logistik)', email: 'logistik@lamrimnesia.org', password: 'password123', divisi_id: 6, role: 'Staff Gudang', phone: '081234567895' },
+  { id: 1, name: 'Direktur Utama (Admin)', email: 'admin@lamrimnesia.org', password: DEFAULT_BCRYPT_PASSWORD_HASH, divisi_id: 1, role: 'Direktur', phone: '081234567890' },
+  { id: 2, name: 'Siti Rahmawati (Bendahara)', email: 'finance@lamrimnesia.org', password: DEFAULT_BCRYPT_PASSWORD_HASH, divisi_id: 2, role: 'Bendahara', phone: '081234567891' },
+  { id: 3, name: 'Budi Santoso (Penerbitan)', email: 'penerbitan@lamrimnesia.org', password: DEFAULT_BCRYPT_PASSWORD_HASH, divisi_id: 3, role: 'Editor Kepala', phone: '081234567892' },
+  { id: 4, name: 'Diana Wijaya (Marketing)', email: 'marketing@lamrimnesia.org', password: DEFAULT_BCRYPT_PASSWORD_HASH, divisi_id: 4, role: 'Marketing Officer', phone: '081234567893' },
+  { id: 5, name: 'Agus Priyono (Produksi)', email: 'produksi@lamrimnesia.org', password: DEFAULT_BCRYPT_PASSWORD_HASH, divisi_id: 5, role: 'Kepala Percetakan', phone: '081234567894' },
+  { id: 6, name: 'Hendra Gunawan (Logistik)', email: 'logistik@lamrimnesia.org', password: DEFAULT_BCRYPT_PASSWORD_HASH, divisi_id: 6, role: 'Staff Gudang', phone: '081234567895' },
 ];
 
 export const INITIAL_CATEGORIES: Category[] = [

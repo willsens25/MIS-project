@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import path from "path";
 import cors from "cors";
+import bcrypt from "bcryptjs";
 import { GoogleGenAI } from "@google/genai";
 
 const app = express();
@@ -12,6 +13,119 @@ app.use(express.json());
 // API Health Check
 app.get("/api/health", (_req: Request, res: Response) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// ============================================================================
+// Server-Side Authentication & Bcrypt Password Hashing Endpoints
+// ============================================================================
+
+/**
+ * Hash a plain-text password using server-side bcrypt with salt rounds
+ */
+app.post("/api/auth/hash", async (req: Request, res: Response) => {
+  try {
+    const { password, saltRounds = 10 } = req.body;
+    if (!password || typeof password !== "string") {
+      return res.status(400).json({ success: false, message: "Password string is required" });
+    }
+
+    const salt = await bcrypt.genSalt(Number(saltRounds) || 10);
+    const hash = await bcrypt.hash(password, salt);
+
+    return res.json({
+      success: true,
+      hash,
+      algorithm: "bcrypt",
+      saltRounds: Number(saltRounds) || 10
+    });
+  } catch (error: any) {
+    console.error("Error hashing password on server:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Gagal melakukan hashing password di server: " + (error?.message || String(error))
+    });
+  }
+});
+
+/**
+ * Verify a plain-text password against a stored hash using server-side bcrypt
+ * Supports automatic transparent upgrading of legacy plain-text passwords
+ */
+app.post("/api/auth/verify", async (req: Request, res: Response) => {
+  try {
+    const { password, hash } = req.body;
+    if (!password || !hash) {
+      return res.status(400).json({
+        success: false,
+        valid: false,
+        message: "Password dan hash wajib disediakan"
+      });
+    }
+
+    const isBcrypt = typeof hash === "string" && (hash.startsWith("$2a$") || hash.startsWith("$2b$") || hash.startsWith("$2y$"));
+
+    if (isBcrypt) {
+      const isValid = await bcrypt.compare(password, hash);
+      return res.json({
+        success: true,
+        valid: isValid,
+        algorithm: "bcrypt"
+      });
+    }
+
+    // Backward compatibility for legacy plain-text credentials:
+    const isLegacyMatch = password === hash;
+    let upgradedHash: string | undefined = undefined;
+
+    if (isLegacyMatch) {
+      // Automatically generate a new bcrypt hash so the client can upgrade the stored record
+      const salt = await bcrypt.genSalt(10);
+      upgradedHash = await bcrypt.hash(password, salt);
+    }
+
+    return res.json({
+      success: true,
+      valid: isLegacyMatch,
+      algorithm: "legacy_plain",
+      upgradedHash
+    });
+  } catch (error: any) {
+    console.error("Error verifying password on server:", error);
+    return res.status(500).json({
+      success: false,
+      valid: false,
+      message: "Gagal memverifikasi password di server: " + (error?.message || String(error))
+    });
+  }
+});
+
+/**
+ * Bulk hash endpoint to securely upgrade an array of users with plain text passwords to bcrypt
+ */
+app.post("/api/auth/bulk-hash", async (req: Request, res: Response) => {
+  try {
+    const { users } = req.body;
+    if (!Array.isArray(users)) {
+      return res.status(400).json({ success: false, message: "Expected users array" });
+    }
+
+    const results = await Promise.all(
+      users.map(async (u: { id: number; password?: string }) => {
+        if (!u.password) return { id: u.id, hash: undefined };
+        if (u.password.startsWith("$2a$") || u.password.startsWith("$2b$") || u.password.startsWith("$2y$")) {
+          return { id: u.id, hash: u.password };
+        }
+        const salt = await bcrypt.genSalt(10);
+        const hash = await bcrypt.hash(u.password, salt);
+        return { id: u.id, hash };
+      })
+    );
+
+    return res.json({ success: true, users: results });
+  } catch (error: any) {
+    console.error("Error in bulk hash:", error);
+    return res.status(500).json({ success: false, message: "Bulk hashing error" });
+  }
 });
 
 // Gemini AI Assistant Endpoint (Server-Side Proxy)

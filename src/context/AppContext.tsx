@@ -34,6 +34,12 @@ import {
   INITIAL_PRODUCTION_LOGS,
   INITIAL_ACTIVITY_LOGS
 } from '../lib/initialData';
+import {
+  hashPasswordServer,
+  verifyPasswordServer,
+  isBcryptHash,
+  bulkUpgradePasswordsServer
+} from '../services/authService';
 
 interface AppContextType {
   currentUser: User;
@@ -45,8 +51,8 @@ interface AppContextType {
   // Auth state & methods
   isAuthenticated: boolean;
   setIsAuthenticated: (val: boolean) => void;
-  login: (email: string, password?: string) => { success: boolean; message: string; user?: User };
-  register: (data: { name: string; email: string; password: string; divisi_id: DivisionId; role?: string; phone?: string; createIdentitas?: boolean }) => { success: boolean; message: string; user?: User };
+  login: (email: string, password?: string) => Promise<{ success: boolean; message: string; user?: User }>;
+  register: (data: { name: string; email: string; password: string; divisi_id: DivisionId; role?: string; phone?: string; createIdentitas?: boolean }) => Promise<{ success: boolean; message: string; user?: User }>;
   logout: () => void;
   quickLoginAs: (userId: number) => void;
   isAuthModalOpen: boolean;
@@ -122,8 +128,8 @@ interface AppContextType {
   bulkDeleteIdentitas: (ids: number[]) => void;
 
   // User management
-  addUser: (name: string, email: string, divisi_id: DivisionId, role?: string, password?: string, phone?: string) => void;
-  updateUser: (id: number, name: string, email: string, divisi_id: DivisionId, role?: string, password?: string, phone?: string) => void;
+  addUser: (name: string, email: string, divisi_id: DivisionId, role?: string, password?: string, phone?: string) => Promise<void> | void;
+  updateUser: (id: number, name: string, email: string, divisi_id: DivisionId, role?: string, password?: string, phone?: string) => Promise<void> | void;
   updateUserProfile: (data: { name: string; avatar?: string; phone?: string }) => void;
   deleteUser: (id: number) => void;
   bulkDeleteUsers: (ids: number[]) => void;
@@ -226,6 +232,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Sync to localStorage
   useEffect(() => { setStoredItem('mis_users', usersList); }, [usersList]);
   useEffect(() => { setStoredItem('mis_current_user', currentUser); }, [currentUser]);
+
+  // Transparently upgrade any legacy plain-text passwords to bcrypt hashes in background
+  useEffect(() => {
+    const autoUpgradeLegacyPasswords = async () => {
+      const hasUnhashed = usersList.some(u => u.password && !isBcryptHash(u.password));
+      if (!hasUnhashed) return;
+      try {
+        const upgraded = await bulkUpgradePasswordsServer(usersList);
+        if (upgraded && upgraded.length > 0) {
+          setUsersList(prev => prev.map(u => {
+            const match = upgraded.find(m => m.id === u.id);
+            return (match && match.hash) ? { ...u, password: match.hash } : u;
+          }));
+        }
+      } catch (err) {
+        console.warn('Auto upgrade passwords to bcrypt failed:', err);
+      }
+    };
+    autoUpgradeLegacyPasswords();
+  }, []);
   useEffect(() => { setStoredItem('mis_categories', categories); }, [categories]);
   useEffect(() => { setStoredItem('mis_accounts', accounts); }, [accounts]);
   useEffect(() => { setStoredItem('mis_books', books); }, [books]);
@@ -834,23 +860,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Authentication Handlers
-  const login = (email: string, password?: string): { success: boolean; message: string; user?: User } => {
+  const login = async (email: string, password?: string): Promise<{ success: boolean; message: string; user?: User }> => {
     const cleanEmail = email.trim().toLowerCase();
     const user = usersList.find(u => u.email.toLowerCase() === cleanEmail);
     if (!user) {
       return { success: false, message: 'Email tidak ditemukan dalam sistem. Pastikan email terdaftar.' };
     }
-    if (user.password && password && user.password !== password) {
-      return { success: false, message: 'Password salah. Silakan periksa kembali kata sandi Anda.' };
+
+    if (user.password && password) {
+      // Verify password via server-side bcrypt endpoint
+      const verification = await verifyPasswordServer(password, user.password);
+      if (!verification.valid) {
+        return { success: false, message: 'Password salah. Silakan periksa kembali kata sandi Anda.' };
+      }
+
+      // If user had a legacy unhashed password and server provided an upgraded bcrypt hash, persist it
+      if (verification.upgradedHash) {
+        setUsersList(prev => prev.map(u => u.id === user.id ? { ...u, password: verification.upgradedHash } : u));
+      }
     }
+
     setCurrentUser(user);
     setIsAuthenticated(true);
     localStorage.setItem('mis_is_auth', 'true');
-    recordActivity('Login User', 'Auth', `Pengguna "${user.name}" (${user.email}) berhasil masuk ke sistem SAPA-ALL.`);
+    recordActivity('Login User', 'Auth', `Pengguna "${user.name}" (${user.email}) berhasil terverifikasi dan masuk ke sistem SAPA-ALL.`);
     return { success: true, message: `Selamat datang kembali, ${user.name}!`, user };
   };
 
-  const register = (data: {
+  const register = async (data: {
     name: string;
     email: string;
     password: string;
@@ -858,11 +895,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     role?: string;
     phone?: string;
     createIdentitas?: boolean;
-  }): { success: boolean; message: string; user?: User } => {
+  }): Promise<{ success: boolean; message: string; user?: User }> => {
     const cleanEmail = data.email.trim().toLowerCase();
     if (usersList.some(u => u.email.toLowerCase() === cleanEmail)) {
       return { success: false, message: 'Email sudah terdaftar. Silakan login menggunakan akun tersebut.' };
     }
+
+    // Hash password securely via server-side bcrypt before storing
+    const hashedPassword = await hashPasswordServer(data.password);
 
     let linkedIdentitasId: number | undefined = undefined;
     if (data.createIdentitas) {
@@ -883,7 +923,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: Date.now(),
       name: data.name.trim(),
       email: cleanEmail,
-      password: data.password,
+      password: hashedPassword,
       divisi_id: data.divisi_id,
       role: data.role || divisiList.find(d => d.id === data.divisi_id)?.nama_divisi || 'Staff',
       phone: data.phone,
@@ -895,8 +935,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(newUser);
     setIsAuthenticated(true);
     localStorage.setItem('mis_is_auth', 'true');
-    recordActivity('Registrasi User', 'Auth', `Akun baru terdaftar: "${newUser.name}" (${newUser.email}) pada divisi ${divisiList.find(d => d.id === data.divisi_id)?.nama_divisi}`);
-    return { success: true, message: `Akun berhasil didaftarkan! Selamat bertugas, ${newUser.name}.`, user: newUser };
+    recordActivity('Registrasi User', 'Auth', `Akun baru terdaftar: "${newUser.name}" (${newUser.email}) pada divisi ${divisiList.find(d => d.id === data.divisi_id)?.nama_divisi} dengan enkripsi bcrypt.`);
+    return { success: true, message: `Akun berhasil didaftarkan dengan proteksi bcrypt! Selamat bertugas, ${newUser.name}.`, user: newUser };
   };
 
   const logout = () => {
@@ -916,22 +956,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Users
-  const addUser = (name: string, email: string, divisi_id: DivisionId, role?: string, password?: string, phone?: string) => {
+  const addUser = async (name: string, email: string, divisi_id: DivisionId, role?: string, password?: string, phone?: string): Promise<void> => {
+    const plainPass = password || 'password123';
+    const hashedPassword = await hashPasswordServer(plainPass);
+
     const newUser: User = {
       id: Date.now(),
       name,
       email,
       divisi_id,
-      password: password || 'password123',
+      password: hashedPassword,
       phone,
       role: role || divisiList.find(d => d.id === divisi_id)?.nama_divisi || 'Staff',
       created_at: new Date().toISOString()
     };
     setUsersList(prev => [...prev, newUser]);
-    recordActivity('Tambah User', 'User', `Menambahkan user baru: "${name}" (${email}) pada divisi ${divisiList.find(d => d.id === divisi_id)?.nama_divisi}`);
+    recordActivity('Tambah User', 'User', `Menambahkan user baru: "${name}" (${email}) pada divisi ${divisiList.find(d => d.id === divisi_id)?.nama_divisi} [Password Bcrypt Protected]`);
   };
 
-  const updateUser = (id: number, name: string, email: string, divisi_id: DivisionId, role?: string, password?: string, phone?: string) => {
+  const updateUser = async (id: number, name: string, email: string, divisi_id: DivisionId, role?: string, password?: string, phone?: string): Promise<void> => {
+    let hashedPassword: string | undefined = undefined;
+    if (password && password.trim()) {
+      hashedPassword = await hashPasswordServer(password.trim());
+    }
+
     setUsersList(prev => prev.map(u => {
       if (u.id === id) {
         return {
@@ -940,13 +988,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           email,
           divisi_id,
           role: role !== undefined ? role : u.role,
-          password: password !== undefined ? password : u.password,
+          password: hashedPassword !== undefined ? hashedPassword : u.password,
           phone: phone !== undefined ? phone : u.phone
         };
       }
       return u;
     }));
-    recordActivity('Update User', 'User', `Mengubah data user ID #${id}: "${name}" (${email})`);
+    recordActivity('Update User', 'User', `Mengubah data user ID #${id}: "${name}" (${email})${hashedPassword ? ' (Password diperbarui & di-hash bcrypt)' : ''}`);
   };
 
   const updateUserProfile = (data: { name: string; avatar?: string; phone?: string }) => {

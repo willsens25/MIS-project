@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Penyaluran, LogisticLog } from '../../types';
-import { Printer, X } from 'lucide-react';
+import { Printer, X, Download, FileDown, Loader2 } from 'lucide-react';
+import { printElement, downloadDocumentAsPdf, downloadDocumentAsHtml } from '../../utils/documentExport';
 
 interface SuratJalanPrintModalProps {
   noInvoice: string;
@@ -10,10 +11,24 @@ interface SuratJalanPrintModalProps {
 }
 
 export const SuratJalanPrintModal: React.FC<SuratJalanPrintModalProps> = ({ noInvoice, items, onClose }) => {
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   if (!items || items.length === 0) return null;
 
+  const docTitle = `Surat Jalan Pengiriman #${noInvoice} - Yayasan Dharma Patriot`;
+  const filenameBase = `Surat_Jalan_${noInvoice}`;
+
+  const handleDownloadPdf = async () => {
+    setIsGeneratingPdf(true);
+    await downloadDocumentAsPdf('printable-area', filenameBase);
+    setIsGeneratingPdf(false);
+  };
+
   const handlePrint = () => {
-    window.print();
+    printElement('printable-area', docTitle, filenameBase);
+  };
+
+  const handleDownloadHtml = () => {
+    downloadDocumentAsHtml('printable-area', filenameBase, docTitle);
   };
 
   const recipientName = items[0]?.nama_agen || 'Agen Dharma';
@@ -38,15 +53,39 @@ export const SuratJalanPrintModal: React.FC<SuratJalanPrintModalProps> = ({ noIn
             </div>
             <div className="flex items-center space-x-2">
               <button
-                onClick={handlePrint}
-                className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold cursor-pointer"
+                onClick={handleDownloadHtml}
+                className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 rounded-lg text-xs font-semibold cursor-pointer border border-slate-700 transition-all"
+                title="Unduh dokumen surat jalan (HTML)"
               >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Cetak Dokumen</span>
+                <Download className="w-3.5 h-3.5 text-emerald-400" />
+                <span>HTML</span>
+              </button>
+
+              <button
+                onClick={handleDownloadPdf}
+                disabled={isGeneratingPdf}
+                className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 disabled:opacity-50 text-white rounded-lg text-xs font-bold cursor-pointer transition-all shadow-md"
+                title="Unduh langsung file PDF surat jalan ke perangkat Anda"
+              >
+                {isGeneratingPdf ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <FileDown className="w-3.5 h-3.5" />
+                )}
+                <span>{isGeneratingPdf ? 'Membuat PDF...' : 'Download PDF'}</span>
+              </button>
+
+              <button
+                onClick={handlePrint}
+                className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 rounded-lg text-xs font-semibold cursor-pointer border border-slate-700 transition-all"
+                title="Buka dialog cetak browser atau printer"
+              >
+                <Printer className="w-3.5 h-3.5 text-slate-300" />
+                <span>Cetak</span>
               </button>
               <button
                 onClick={onClose}
-                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>

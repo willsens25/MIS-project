@@ -30,8 +30,16 @@
 
 @media print {
   @page {
-    margin: 12mm;
+    margin: 10mm;
     size: auto;
+  }
+  /* Remove dark backdrop of fixed modals in print */
+  .fixed.inset-0 {
+    position: static !important;
+    background: transparent !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
   body {
     background: white !important;

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
 import {
@@ -18,8 +18,20 @@ import {
   Calendar,
   Layers,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Download,
+  FileDown,
+  FileText,
+  ChevronDown,
+  Check,
+  Loader2
 } from 'lucide-react';
+import {
+  printElement,
+  downloadDocumentAsPdf,
+  downloadDocumentAsHtml,
+  downloadDocumentAsWord
+} from '../../utils/documentExport';
 
 interface AnnualReportModalProps {
   isOpen: boolean;
@@ -48,6 +60,26 @@ export const AnnualReportModal: React.FC<AnnualReportModalProps> = ({
   } = useApp();
 
   const [selectedYear, setSelectedYear] = useState<number>(defaultYear);
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const downloadMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close download menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (downloadMenuRef.current && !downloadMenuRef.current.contains(event.target as Node)) {
+        setShowDownloadMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const showFeedback = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
 
   // Available years from mutasi / order data
   const availableYears = useMemo(() => {
@@ -127,7 +159,6 @@ export const AnnualReportModal: React.FC<AnnualReportModalProps> = ({
         if (m.tipe === 'Masuk') q.masuk += m.nominal;
         else q.keluar += m.nominal;
       } else {
-        // distribute to Q3/Q4 if undetermined
         if (m.tipe === 'Masuk') quarters[2].masuk += m.nominal;
         else quarters[2].keluar += m.nominal;
       }
@@ -167,8 +198,39 @@ export const AnnualReportModal: React.FC<AnnualReportModalProps> = ({
   }, {});
   const topKota = Object.entries(kotaCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
+  const documentTitle = `Laporan Tahunan Yayasan Dharma Patriot - Tahun ${selectedYear}`;
+  const filenameBase = `Laporan_Tahunan_Dharma_Patriot_${selectedYear}`;
+
+  const handleDownloadPdf = async () => {
+    setIsGeneratingPdf(true);
+    showFeedback('Sedang memproses dokumen PDF resmi...');
+    setShowDownloadMenu(false);
+    const ok = await downloadDocumentAsPdf('printable-area', filenameBase, (status) => {
+      showFeedback(status);
+    });
+    setIsGeneratingPdf(false);
+    if (ok) {
+      showFeedback('File PDF Laporan Tahunan berhasil diunduh!');
+    } else {
+      showFeedback('Gagal membuat PDF. Gunakan opsi Cetak / HTML.');
+    }
+  };
+
   const handlePrint = () => {
-    window.print();
+    showFeedback('Membuka opsi cetak / simpan PDF...');
+    printElement('printable-area', documentTitle, filenameBase);
+  };
+
+  const handleDownloadHtml = () => {
+    showFeedback('Mengunduh dokumen resmi (.html standalone)...');
+    downloadDocumentAsHtml('printable-area', filenameBase, documentTitle);
+    setShowDownloadMenu(false);
+  };
+
+  const handleDownloadWord = () => {
+    showFeedback('Mengunduh dokumen Microsoft Word (.doc)...');
+    downloadDocumentAsWord('printable-area', filenameBase, documentTitle);
+    setShowDownloadMenu(false);
   };
 
   const handleExportCSV = () => {
@@ -201,11 +263,13 @@ export const AnnualReportModal: React.FC<AnnualReportModalProps> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `Laporan_Tahunan_Dharma_Patriot_${selectedYear}.csv`);
+    link.setAttribute('download', `${filenameBase}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    showFeedback('Data tabel spreadsheet (.csv) berhasil diunduh');
+    setShowDownloadMenu(false);
   };
 
   if (!isOpen) return null;
@@ -222,6 +286,14 @@ export const AnnualReportModal: React.FC<AnnualReportModalProps> = ({
           className="relative bg-white text-slate-900 rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden my-6 text-left animate-in zoom-in-95 duration-150"
           onClick={e => e.stopPropagation()}
         >
+          {/* Toast Notification Banner */}
+          {toastMessage && (
+            <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-amber-300 text-xs font-semibold px-4 py-2 rounded-xl shadow-xl flex items-center space-x-2 border border-amber-500/40 animate-in fade-in slide-in-from-top-2 duration-150">
+              <Check className="w-4 h-4 text-emerald-400" />
+              <span>{toastMessage}</span>
+            </div>
+          )}
+
           {/* Top Control Bar (Screen only, hidden on print) */}
           <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 bg-slate-900 text-white print:hidden border-b border-slate-800">
             <div className="flex items-center space-x-3">
@@ -259,23 +331,106 @@ export const AnnualReportModal: React.FC<AnnualReportModalProps> = ({
                 </select>
               </div>
 
-              {/* CSV Export Button */}
+              {/* Download Dokumen Dropdown Menu */}
+              <div className="relative" ref={downloadMenuRef}>
+                <button
+                  id="btn-download-annual-report-menu"
+                  onClick={() => setShowDownloadMenu(!showDownloadMenu)}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 rounded-xl text-xs font-semibold transition-all cursor-pointer border border-slate-700"
+                  title="Pilihan Format Dokumen"
+                >
+                  <Download className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Format Lain</span>
+                  <ChevronDown className="w-3 h-3 text-slate-400" />
+                </button>
+
+                {showDownloadMenu && (
+                  <div className="absolute right-0 mt-2 w-60 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1.5 z-50 text-left animate-in fade-in slide-in-from-top-1 duration-150">
+                    <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                      Format Unduhan Dokumen
+                    </div>
+
+                    <button
+                      id="btn-download-pdf-menu"
+                      onClick={handleDownloadPdf}
+                      disabled={isGeneratingPdf}
+                      className="w-full flex items-center px-3 py-2 text-xs text-amber-300 hover:bg-slate-800 transition-colors"
+                    >
+                      {isGeneratingPdf ? (
+                        <Loader2 className="w-3.5 h-3.5 text-amber-400 mr-2.5 animate-spin shrink-0" />
+                      ) : (
+                        <FileDown className="w-3.5 h-3.5 text-amber-400 mr-2.5 shrink-0" />
+                      )}
+                      <div className="text-left">
+                        <div className="font-bold">Dokumen PDF Resmi (.pdf)</div>
+                        <div className="text-[10px] text-slate-400">Unduh langsung tanpa dialog cetak</div>
+                      </div>
+                    </button>
+
+                    <button
+                      id="btn-download-html"
+                      onClick={handleDownloadHtml}
+                      className="w-full flex items-center px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 hover:text-amber-300 transition-colors border-t border-slate-800/60"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-teal-400 mr-2.5 shrink-0" />
+                      <div className="text-left">
+                        <div className="font-semibold">Dokumen Web Standalone (.html)</div>
+                        <div className="text-[10px] text-slate-400">Siap cetak & offline viewer</div>
+                      </div>
+                    </button>
+
+                    <button
+                      id="btn-download-word"
+                      onClick={handleDownloadWord}
+                      className="w-full flex items-center px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 hover:text-blue-300 transition-colors"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-blue-400 mr-2.5 shrink-0" />
+                      <div className="text-left">
+                        <div className="font-semibold">Microsoft Word (.doc)</div>
+                        <div className="text-[10px] text-slate-400">Buka di Word atau LibreOffice</div>
+                      </div>
+                    </button>
+
+                    <button
+                      id="btn-download-csv"
+                      onClick={handleExportCSV}
+                      className="w-full flex items-center px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 hover:text-emerald-300 transition-colors border-t border-slate-800/80"
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400 mr-2.5 shrink-0" />
+                      <div className="text-left">
+                        <div className="font-semibold">Tabel Data (.csv)</div>
+                        <div className="text-[10px] text-slate-400">Format Spreadsheet Excel</div>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Direct PDF Download Button */}
               <button
-                onClick={handleExportCSV}
-                className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer border border-slate-700"
-                title="Unduh Data CSV"
+                id="btn-download-pdf-annual-report"
+                onClick={handleDownloadPdf}
+                disabled={isGeneratingPdf}
+                className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 active:scale-95 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
+                title="Unduh langsung file PDF resmi ke komputer Anda"
               >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="hidden sm:inline">Ekspor CSV</span>
+                {isGeneratingPdf ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <FileDown className="w-3.5 h-3.5" />
+                )}
+                <span>{isGeneratingPdf ? 'Membuat PDF...' : 'Download PDF'}</span>
               </button>
 
               {/* Print / Save PDF Button */}
               <button
+                id="btn-print-annual-report"
                 onClick={handlePrint}
-                className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
+                className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 rounded-xl text-xs font-semibold border border-slate-700 transition-all cursor-pointer"
+                title="Buka dialog cetak browser atau cetak ke printer fisik"
               >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Cetak / PDF</span>
+                <Printer className="w-3.5 h-3.5 text-slate-300" />
+                <span className="hidden sm:inline">Cetak</span>
               </button>
 
               {/* Close Button */}

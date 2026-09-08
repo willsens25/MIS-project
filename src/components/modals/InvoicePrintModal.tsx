@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Order } from '../../types';
-import { Printer, X, Download } from 'lucide-react';
+import { Printer, X, Download, FileDown, Loader2 } from 'lucide-react';
+import { printElement, downloadDocumentAsPdf, downloadDocumentAsHtml, downloadDocumentAsWord } from '../../utils/documentExport';
 
 interface InvoicePrintModalProps {
   order: Order | null;
@@ -9,10 +10,24 @@ interface InvoicePrintModalProps {
 }
 
 export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({ order, onClose }) => {
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   if (!order) return null;
 
+  const docTitle = `Faktur Penjualan Resmi #${order.no_invoice} - Yayasan Dharma Patriot`;
+  const filenameBase = `Invoice_${order.no_invoice}`;
+
+  const handleDownloadPdf = async () => {
+    setIsGeneratingPdf(true);
+    await downloadDocumentAsPdf('printable-area', filenameBase);
+    setIsGeneratingPdf(false);
+  };
+
   const handlePrint = () => {
-    window.print();
+    printElement('printable-area', docTitle, filenameBase);
+  };
+
+  const handleDownloadHtml = () => {
+    downloadDocumentAsHtml('printable-area', filenameBase, docTitle);
   };
 
   const totalDiskon = order.items.reduce((sum, it) => sum + (it.potongan_diskon || 0), 0);
@@ -34,19 +49,43 @@ export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({ order, onC
           <div className="flex items-center justify-between px-6 py-3.5 bg-slate-900 text-white print:hidden">
             <div className="flex items-center space-x-2">
               <Printer className="w-4 h-4 text-cyan-400" />
-              <span className="font-semibold text-sm">Cetak Invoice Resmi #{order.no_invoice}</span>
+              <span className="font-semibold text-sm">Faktur Penjualan Resmi #{order.no_invoice}</span>
             </div>
             <div className="flex items-center space-x-2">
               <button
-                onClick={handlePrint}
-                className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold cursor-pointer"
+                onClick={handleDownloadHtml}
+                className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 rounded-lg text-xs font-semibold cursor-pointer border border-slate-700 transition-all"
+                title="Unduh file dokumen HTML (offline & siap cetak)"
               >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Cetak / Simpan PDF</span>
+                <Download className="w-3.5 h-3.5 text-cyan-400" />
+                <span>HTML</span>
+              </button>
+
+              <button
+                onClick={handleDownloadPdf}
+                disabled={isGeneratingPdf}
+                className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 active:scale-95 disabled:opacity-50 text-white rounded-lg text-xs font-bold cursor-pointer transition-all shadow-md"
+                title="Unduh langsung file PDF invoice ke perangkat Anda"
+              >
+                {isGeneratingPdf ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <FileDown className="w-3.5 h-3.5" />
+                )}
+                <span>{isGeneratingPdf ? 'Membuat PDF...' : 'Download PDF'}</span>
+              </button>
+
+              <button
+                onClick={handlePrint}
+                className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 rounded-lg text-xs font-semibold cursor-pointer border border-slate-700 transition-all"
+                title="Buka dialog cetak browser atau printer"
+              >
+                <Printer className="w-3.5 h-3.5 text-slate-300" />
+                <span>Cetak</span>
               </button>
               <button
                 onClick={onClose}
-                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
