@@ -52,6 +52,7 @@ interface AppContextType {
   currentSubTab: string;
   setCurrentSubTab: (subTab: string) => void;
   theme: 'light' | 'dark';
+  setTheme: (theme: 'light' | 'dark') => void;
   toggleTheme: () => void;
   
   // Auth state & methods
@@ -316,8 +317,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  const handleSetTheme = (newTheme: 'light' | 'dark') => {
+    try {
+      localStorage.setItem('mis_theme', newTheme);
+      const root = document.documentElement;
+      root.setAttribute('data-theme', newTheme);
+      root.style.colorScheme = newTheme;
+      if (newTheme === 'dark') {
+        root.classList.add('dark');
+        document.body.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+        document.body.classList.remove('dark');
+      }
+    } catch (e) {
+      console.warn('Error persisting theme:', e);
+    }
+    setTheme(newTheme);
+  };
+
   const toggleTheme = () => {
-    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+    setTheme(prev => {
+      const nextTheme = prev === 'dark' ? 'light' : 'dark';
+      try {
+        localStorage.setItem('mis_theme', nextTheme);
+        const root = document.documentElement;
+        root.setAttribute('data-theme', nextTheme);
+        root.style.colorScheme = nextTheme;
+        if (nextTheme === 'dark') {
+          root.classList.add('dark');
+          document.body.classList.add('dark');
+        } else {
+          root.classList.remove('dark');
+          document.body.classList.remove('dark');
+        }
+      } catch (e) {
+        console.warn('Error persisting theme toggle:', e);
+      }
+      return nextTheme;
+    });
   };
 
   const DEFAULT_SUBTABS: Record<number, string> = {
@@ -1202,6 +1240,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         currentSubTab,
         setCurrentSubTab,
         theme,
+        setTheme: handleSetTheme,
         toggleTheme,
         isAuthenticated,
         setIsAuthenticated,
