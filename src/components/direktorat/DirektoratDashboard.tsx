@@ -48,16 +48,19 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
     orders,
     books,
     pengajuans,
-    activityLogs
+    activityLogs,
+    currentSubTab,
+    setCurrentSubTab
   } = useApp();
 
-  const [activeSubTab, setActiveSubTab] = useState<'overview' | 'identitas' | 'users' | 'audit'>(
-    initialSubTab || 'overview'
-  );
+  const activeSubTab = (['overview', 'identitas', 'users', 'audit'].includes(currentSubTab)
+    ? currentSubTab
+    : 'overview') as 'overview' | 'identitas' | 'users' | 'audit';
+  const setActiveSubTab = (tab: 'overview' | 'identitas' | 'users' | 'audit') => setCurrentSubTab(tab);
 
   useEffect(() => {
     if (initialSubTab) {
-      setActiveSubTab(initialSubTab);
+      setCurrentSubTab(initialSubTab);
     }
   }, [initialSubTab]);
 

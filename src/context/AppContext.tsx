@@ -15,7 +15,9 @@ import {
   ProductionLog,
   ActivityLog,
   Order,
-  DivisionId
+  DivisionId,
+  SalesChannel,
+  Expedition
 } from '../types';
 import {
   INITIAL_DIVISI,
@@ -32,7 +34,9 @@ import {
   INITIAL_PENYALURAN,
   INITIAL_LOGISTIC_LOGS,
   INITIAL_PRODUCTION_LOGS,
-  INITIAL_ACTIVITY_LOGS
+  INITIAL_ACTIVITY_LOGS,
+  INITIAL_SALES_CHANNELS,
+  INITIAL_EXPEDITIONS
 } from '../lib/initialData';
 import {
   hashPasswordServer,
@@ -44,7 +48,9 @@ import {
 interface AppContextType {
   currentUser: User;
   setCurrentUser: (user: User) => void;
-  switchDivision: (divisiId: DivisionId) => void;
+  switchDivision: (divisiId: DivisionId, targetSubTab?: string) => void;
+  currentSubTab: string;
+  setCurrentSubTab: (subTab: string) => void;
   theme: 'light' | 'dark';
   toggleTheme: () => void;
   
@@ -69,6 +75,8 @@ interface AppContextType {
   accounts: Account[];
   books: Book[];
   promos: Promo[];
+  salesChannels: SalesChannel[];
+  expeditions: Expedition[];
   identitasList: Identitas[];
   orders: Order[];
   mutasis: Mutasi[];
@@ -94,10 +102,18 @@ interface AppContextType {
   tandaiLunasOrder: (orderId: number, targetAccountId?: number) => { success: boolean; message: string };
   cancelOrder: (orderId: number) => void;
   bulkDeleteOrders: (ids: number[]) => void;
-  checkPromoCode: (code: string, bookId?: number) => { valid: boolean; type?: 'percentage' | 'nominal'; value?: number; message?: string };
+  checkPromoCode: (code: string, bookId?: number, orderDate?: string, identitasId?: number, subtotal?: number) => { valid: boolean; type?: 'percentage' | 'nominal'; value?: number; message?: string; promo?: Promo };
+  lookupEligiblePromos: (params: { orderDate?: string; bookId?: number; identitasId?: number; subtotal?: number }) => Promo[];
   addPromo: (promo: Omit<Promo, 'id' | 'used_count' | 'created_at'>) => void;
+  updatePromo: (id: number, promo: Partial<Promo>) => void;
   deletePromo: (id: number) => void;
   bulkDeletePromos: (ids: number[]) => void;
+  addSalesChannel: (channel: Omit<SalesChannel, 'id'>) => { success: boolean; message: string; channel?: SalesChannel };
+  updateSalesChannel: (id: number, channel: Partial<SalesChannel>) => void;
+  deleteSalesChannel: (id: number) => void;
+  addExpedition: (expedition: Omit<Expedition, 'id'>) => { success: boolean; message: string; expedition?: Expedition };
+  updateExpedition: (id: number, expedition: Partial<Expedition>) => void;
+  deleteExpedition: (id: number) => void;
 
   // Finance actions
   addMutasi: (account_id: number, nama_kategori: string, tipe: 'Masuk' | 'Keluar', nominal: number, keterangan: string, tanggal?: string) => void;
@@ -202,6 +218,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [accounts, setAccounts] = useState<Account[]>(() => getStoredItem('mis_accounts', INITIAL_ACCOUNTS));
   const [books, setBooks] = useState<Book[]>(() => getStoredItem('mis_books', INITIAL_BOOKS));
   const [promos, setPromos] = useState<Promo[]>(() => getStoredItem('mis_promos', INITIAL_PROMOS));
+  const [salesChannels, setSalesChannels] = useState<SalesChannel[]>(() => getStoredItem('mis_sales_channels', INITIAL_SALES_CHANNELS));
+  const [expeditions, setExpeditions] = useState<Expedition[]>(() => getStoredItem('mis_expeditions', INITIAL_EXPEDITIONS));
   const [identitasList, setIdentitasList] = useState<Identitas[]>(() => getStoredItem('mis_identitas', INITIAL_IDENTITAS));
   const [orders, setOrders] = useState<Order[]>(() => getStoredItem('mis_orders', INITIAL_ORDERS));
   const [mutasis, setMutasis] = useState<Mutasi[]>(() => getStoredItem('mis_mutasis', INITIAL_MUTASI));
@@ -256,6 +274,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => { setStoredItem('mis_accounts', accounts); }, [accounts]);
   useEffect(() => { setStoredItem('mis_books', books); }, [books]);
   useEffect(() => { setStoredItem('mis_promos', promos); }, [promos]);
+  useEffect(() => { setStoredItem('mis_sales_channels', salesChannels); }, [salesChannels]);
+  useEffect(() => { setStoredItem('mis_expeditions', expeditions); }, [expeditions]);
   useEffect(() => { setStoredItem('mis_identitas', identitasList); }, [identitasList]);
   useEffect(() => { setStoredItem('mis_orders', orders); }, [orders]);
   useEffect(() => { setStoredItem('mis_mutasis', mutasis); }, [mutasis]);
@@ -300,7 +320,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
   };
 
-  const switchDivision = (divisiId: DivisionId) => {
+  const DEFAULT_SUBTABS: Record<number, string> = {
+    1: 'overview',
+    2: 'grafik',
+    3: 'katalog',
+    4: 'pos',
+    5: 'overview',
+    6: 'antrean'
+  };
+
+  const [divisionSubTabs, setDivisionSubTabs] = useState<Record<number, string>>(() => {
+    return getStoredItem<Record<number, string>>('mis_subtabs', DEFAULT_SUBTABS);
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('mis_subtabs', JSON.stringify(divisionSubTabs));
+    } catch (e) {
+      console.error('Failed to store subtabs', e);
+    }
+  }, [divisionSubTabs]);
+
+  const currentSubTab = divisionSubTabs[currentUser.divisi_id] || DEFAULT_SUBTABS[currentUser.divisi_id] || 'overview';
+
+  const setCurrentSubTab = (subTab: string) => {
+    setDivisionSubTabs(prev => ({
+      ...prev,
+      [currentUser.divisi_id]: subTab
+    }));
+  };
+
+  const switchDivision = (divisiId: DivisionId, targetSubTab?: string) => {
     const userForDivisi = usersList.find(u => u.divisi_id === divisiId) || {
       id: 99,
       name: `User ${divisiList.find(d => d.id === divisiId)?.nama_divisi || 'Divisi'}`,
@@ -309,6 +359,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       role: 'Staff'
     };
     setCurrentUser(userForDivisi);
+    if (targetSubTab) {
+      setDivisionSubTabs(prev => ({
+        ...prev,
+        [divisiId]: targetSubTab
+      }));
+    }
     recordActivity('Ganti Divisi', 'User', `Beralih ke divisi: ${divisiList.find(d => d.id === divisiId)?.nama_divisi}`);
   };
 
@@ -379,23 +435,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     recordActivity('Ajukan Cetak Buku', 'PengajuanCetak', `Mengajukan cetak ulang buku "${book?.judul}" sebanyak ${jumlah} Eks. Menunggu persetujuan Finance.`);
   };
 
-  // Promo Check
-  const checkPromoCode = (code: string, bookId?: number) => {
+  // Promo Check with date range, target book, buyer category & minimum order validation
+  const checkPromoCode = (
+    code: string,
+    bookId?: number,
+    orderDate?: string,
+    identitasId?: number,
+    subtotal?: number
+  ) => {
     const cleanCode = code.trim().toUpperCase();
     const promo = promos.find(p => p.code.toUpperCase() === cleanCode);
     if (!promo) {
       return { valid: false, message: 'Kode promo tidak ditemukan.' };
     }
-    if (promo.expiry_date && new Date(promo.expiry_date) < new Date()) {
-      return { valid: false, message: 'Kode promo telah kedaluwarsa.' };
+    const checkDate = orderDate ? new Date(orderDate) : new Date();
+    if (promo.start_date && new Date(promo.start_date) > checkDate) {
+      return { valid: false, message: `Promo belum aktif (Mulai berlaku: ${promo.start_date}).`, promo };
+    }
+    if (promo.expiry_date && new Date(promo.expiry_date) < checkDate) {
+      return { valid: false, message: `Kode promo telah kedaluwarsa (${promo.expiry_date}).`, promo };
     }
     if (promo.used_count >= promo.max_uses) {
-      return { valid: false, message: 'Kuota pemakaian kode promo telah habis.' };
+      return { valid: false, message: `Kuota pemakaian kode promo telah habis (${promo.max_uses}/${promo.max_uses}).`, promo };
     }
     if (promo.buku_id_khusus && bookId && promo.buku_id_khusus !== bookId) {
-      return { valid: false, message: 'Kode promo tidak berlaku untuk buku ini.' };
+      const b = books.find(item => item.id === promo.buku_id_khusus);
+      return { valid: false, message: `Kode promo hanya berlaku untuk buku "${b?.judul || promo.buku_id_khusus}".`, promo };
     }
-    return { valid: true, type: promo.type, value: promo.reward_value };
+    if (promo.khusus_identitas_id && identitasId && promo.khusus_identitas_id !== identitasId) {
+      return { valid: false, message: 'Promo khusus untuk pembeli / anggota tertentu.', promo };
+    }
+    if (promo.khusus_kategori_pembeli && promo.khusus_kategori_pembeli !== 'Semua') {
+      const buyer = identitasId ? identitasList.find(i => i.id === identitasId) : null;
+      if (!buyer || buyer.jenis_umat !== promo.khusus_kategori_pembeli) {
+        return { valid: false, message: `Promo khusus untuk kategori ${promo.khusus_kategori_pembeli}.`, promo };
+      }
+    }
+    if (promo.min_order && subtotal !== undefined && subtotal < promo.min_order) {
+      return { valid: false, message: `Minimal belanja Rp ${promo.min_order.toLocaleString('id-ID')} (Subtotal saat ini: Rp ${subtotal.toLocaleString('id-ID')}).`, promo };
+    }
+    return { valid: true, type: promo.type, value: promo.reward_value, promo };
+  };
+
+  const lookupEligiblePromos = (params: { orderDate?: string; bookId?: number; identitasId?: number; subtotal?: number }) => {
+    return promos.filter(p => {
+      const res = checkPromoCode(p.code, params.bookId, params.orderDate, params.identitasId, params.subtotal);
+      return res.valid;
+    });
   };
 
   const addPromo = (promoData: Omit<Promo, 'id' | 'used_count' | 'created_at'>) => {
@@ -410,6 +496,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     recordActivity('Tambah Promo', 'Promo', `Membuat kode promo baru: ${newPromo.code} (${newPromo.type === 'percentage' ? `${newPromo.reward_value}%` : `Rp ${newPromo.reward_value.toLocaleString('id-ID')}`})`);
   };
 
+  const updatePromo = (id: number, promoData: Partial<Promo>) => {
+    setPromos(prev => prev.map(p => p.id === id ? { ...p, ...promoData } : p));
+    recordActivity('Update Promo', 'Promo', `Memperbarui data kode promo ID #${id}`);
+  };
+
   const deletePromo = (id: number) => {
     const promo = promos.find(p => p.id === id);
     setPromos(prev => prev.filter(p => p.id !== id));
@@ -421,6 +512,60 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const codes = promos.filter(p => ids.includes(p.id)).map(p => p.code).join(', ');
     setPromos(prev => prev.filter(p => !ids.includes(p.id)));
     recordActivity('Hapus Massal Promo', 'Promo', `Menghapus ${ids.length} kode promo: [${codes}]`);
+  };
+
+  // Sales Channels Management
+  const addSalesChannel = (channelData: Omit<SalesChannel, 'id'>) => {
+    const exists = salesChannels.some(c => c.nama_channel.toLowerCase() === channelData.nama_channel.trim().toLowerCase());
+    if (exists) {
+      return { success: false, message: `Saluran "${channelData.nama_channel}" sudah ada di database.` };
+    }
+    const newChannel: SalesChannel = {
+      ...channelData,
+      id: Date.now(),
+      nama_channel: channelData.nama_channel.trim()
+    };
+    setSalesChannels(prev => [...prev, newChannel]);
+    recordActivity('Tambah Saluran Penjualan', 'SalesChannel', `Menambahkan saluran penjualan: ${newChannel.nama_channel} (${newChannel.kategori || 'Marketplace'})`);
+    return { success: true, message: `Saluran penjualan "${newChannel.nama_channel}" berhasil ditambahkan!`, channel: newChannel };
+  };
+
+  const updateSalesChannel = (id: number, channelData: Partial<SalesChannel>) => {
+    setSalesChannels(prev => prev.map(c => c.id === id ? { ...c, ...channelData } : c));
+    recordActivity('Update Saluran Penjualan', 'SalesChannel', `Memperbarui saluran penjualan ID #${id}`);
+  };
+
+  const deleteSalesChannel = (id: number) => {
+    const channel = salesChannels.find(c => c.id === id);
+    setSalesChannels(prev => prev.filter(c => c.id !== id));
+    recordActivity('Hapus Saluran Penjualan', 'SalesChannel', `Menghapus saluran penjualan: ${channel?.nama_channel}`);
+  };
+
+  // Expeditions Management
+  const addExpedition = (expData: Omit<Expedition, 'id'>) => {
+    const exists = expeditions.some(e => e.nama_ekspedisi.toLowerCase() === expData.nama_ekspedisi.trim().toLowerCase());
+    if (exists) {
+      return { success: false, message: `Jenis ekspedisi "${expData.nama_ekspedisi}" sudah ada di database.` };
+    }
+    const newExp: Expedition = {
+      ...expData,
+      id: Date.now(),
+      nama_ekspedisi: expData.nama_ekspedisi.trim()
+    };
+    setExpeditions(prev => [...prev, newExp]);
+    recordActivity('Tambah Ekspedisi', 'Expedition', `Menambahkan jenis ekspedisi: ${newExp.nama_ekspedisi} (${newExp.estimasi || '-'})`);
+    return { success: true, message: `Ekspedisi "${newExp.nama_ekspedisi}" berhasil ditambahkan!`, expedition: newExp };
+  };
+
+  const updateExpedition = (id: number, expData: Partial<Expedition>) => {
+    setExpeditions(prev => prev.map(e => e.id === id ? { ...e, ...expData } : e));
+    recordActivity('Update Ekspedisi', 'Expedition', `Memperbarui opsi ekspedisi ID #${id}`);
+  };
+
+  const deleteExpedition = (id: number) => {
+    const exp = expeditions.find(e => e.id === id);
+    setExpeditions(prev => prev.filter(e => e.id !== id));
+    recordActivity('Hapus Ekspedisi', 'Expedition', `Menghapus ekspedisi: ${exp?.nama_ekspedisi}`);
   };
 
   // Order & POS
@@ -504,7 +649,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       user_id: currentUser?.id || 1,
       tipe: 'Masuk',
       nominal: order.total_tagihan,
-      keterangan: `Otomatis: Pelunasan #${order.no_invoice} (${order.nama_pembeli})`,
+      keterangan: `Otomatis: Pelunasan #${order.no_invoice} (${order.nama_pembeli})${order.donasi ? ` [Termasuk Donasi Rp ${order.donasi.toLocaleString('id-ID')}${order.keterangan_donasi ? ` - ${order.keterangan_donasi}` : ''}]` : ''}`,
       tanggal: new Date().toISOString().substring(0, 10),
       jenis: 'INVOICE'
     };
@@ -1033,6 +1178,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAccounts(INITIAL_ACCOUNTS);
     setBooks(INITIAL_BOOKS);
     setPromos(INITIAL_PROMOS);
+    setSalesChannels(INITIAL_SALES_CHANNELS);
+    setExpeditions(INITIAL_EXPEDITIONS);
     setIdentitasList(INITIAL_IDENTITAS);
     setOrders(INITIAL_ORDERS);
     setMutasis(INITIAL_MUTASI);
@@ -1052,6 +1199,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         currentUser,
         setCurrentUser,
         switchDivision,
+        currentSubTab,
+        setCurrentSubTab,
         theme,
         toggleTheme,
         isAuthenticated,
@@ -1072,6 +1221,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         accounts,
         books,
         promos,
+        salesChannels,
+        expeditions,
         identitasList,
         orders,
         mutasis,
@@ -1092,9 +1243,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         cancelOrder,
         bulkDeleteOrders,
         checkPromoCode,
+        lookupEligiblePromos,
         addPromo,
+        updatePromo,
         deletePromo,
         bulkDeletePromos,
+        addSalesChannel,
+        updateSalesChannel,
+        deleteSalesChannel,
+        addExpedition,
+        updateExpedition,
+        deleteExpedition,
         addMutasi,
         updateMutasi,
         deleteMutasi,

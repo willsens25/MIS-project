@@ -131,15 +131,24 @@ export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({ order, onC
             {/* Info Customer & Pengiriman */}
             <div className="grid grid-cols-2 gap-6 my-6 text-xs">
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
-                <span className="font-bold text-slate-500 uppercase tracking-wider block text-[10px] mb-1">Tagihan Kepada:</span>
+                <span className="font-bold text-slate-500 uppercase tracking-wider block text-[10px] mb-1">Tagihan & Resi Dikirimkan Kepada:</span>
                 <p className="font-bold text-sm text-slate-900">{order.nama_pembeli}</p>
-                <p className="text-slate-600 mt-0.5">Via / Platform: <span className="font-semibold">{order.via}</span></p>
+                {order.kontak_pembeli && (
+                  <p className="text-slate-600 mt-0.5">WhatsApp / No. HP: <span className="font-semibold text-slate-800">{order.kontak_pembeli}</span></p>
+                )}
+                {order.email_pembeli && (
+                  <p className="text-slate-600 mt-0.5">Email: <span className="font-semibold text-slate-800">{order.email_pembeli}</span></p>
+                )}
+                <p className="text-slate-600 mt-0.5">Via / Saluran: <span className="font-semibold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200 text-[11px]">{order.via}</span></p>
               </div>
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
-                <span className="font-bold text-slate-500 uppercase tracking-wider block text-[10px] mb-1">Tujuan Pengiriman:</span>
-                <p className="font-semibold text-slate-900">{order.nama_penerima || order.nama_pembeli}</p>
+                <span className="font-bold text-slate-500 uppercase tracking-wider block text-[10px] mb-1">Tujuan Pengiriman Barang (Penerima):</span>
+                <p className="font-semibold text-sm text-slate-900">{order.nama_penerima || order.nama_pembeli}</p>
+                {order.kontak_penerima && (
+                  <p className="text-slate-600 mt-0.5">No. HP Penerima: <span className="font-semibold text-slate-800">{order.kontak_penerima}</span></p>
+                )}
                 <p className="text-slate-600 mt-0.5">{order.alamat_penerima}</p>
-                <p className="text-slate-600 mt-0.5">Ekspedisi: <span className="font-semibold">{order.ekspedisi}</span></p>
+                <p className="text-slate-600 mt-1">Ekspedisi: <span className="font-semibold text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-300">{order.ekspedisi}</span></p>
               </div>
             </div>
 
@@ -212,6 +221,17 @@ export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({ order, onC
                   <span>Ongkos Kirim ({order.ekspedisi}):</span>
                   <span>Rp {order.ongkir.toLocaleString('id-ID')}</span>
                 </div>
+                {(order.donasi && order.donasi > 0) ? (
+                  <div className="flex justify-between text-amber-700 font-semibold bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                    <div>
+                      <span>Donasi Sukarela</span>
+                      {order.keterangan_donasi && (
+                        <span className="block text-[10px] text-amber-600 font-normal">({order.keterangan_donasi})</span>
+                      )}
+                    </div>
+                    <span>Rp {order.donasi.toLocaleString('id-ID')}</span>
+                  </div>
+                ) : null}
                 <div className="flex justify-between border-t-2 border-slate-800 pt-2 text-sm font-extrabold text-slate-900">
                   <span>TOTAL TAGIHAN:</span>
                   <span className="text-indigo-700">Rp {order.total_tagihan.toLocaleString('id-ID')}</span>

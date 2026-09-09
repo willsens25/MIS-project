@@ -1,3 +1,5 @@
+import bcrypt from 'bcryptjs';
+
 /**
  * Client-side authentication service that interfaces with the server-side
  * bcrypt password hashing and verification endpoints.
@@ -37,10 +39,13 @@ export const hashPasswordServer = async (password: string): Promise<string> => {
     }
     throw new Error(data.message || 'Gagal membuat hash bcrypt');
   } catch (error) {
-    console.warn('Server password hashing failed; fallback to secure format:', error);
-    // In the unlikely event of network interruption, provide a standard formatted string
-    // but log a warning.
-    return `$2b$10$offline_${btoa(password).replace(/[^a-zA-Z0-9]/g, '').slice(0, 22)}`;
+    console.warn('Server password hashing endpoint fallback to local bcryptjs:', error);
+    try {
+      const salt = bcrypt.genSaltSync(10);
+      return bcrypt.hashSync(password, salt);
+    } catch {
+      return `$2b$10$offline_${btoa(password).replace(/[^a-zA-Z0-9]/g, '').slice(0, 22)}`;
+    }
   }
 };
 
@@ -73,12 +78,22 @@ export const verifyPasswordServer = async (
       upgradedHash: data.upgradedHash
     };
   } catch (error) {
-    console.warn('Server password verification failed, falling back to local check:', error);
-    // Offline / fallback verification
+    console.warn('Server password verification failed, falling back to local bcrypt check:', error);
     if (isBcryptHash(storedHash)) {
-      return { valid: false };
+      try {
+        const isValid = bcrypt.compareSync(password, storedHash);
+        return { valid: isValid };
+      } catch {
+        return { valid: false };
+      }
     }
-    return { valid: password === storedHash };
+    // Legacy plain-text match with transparent upgrade
+    if (password === storedHash) {
+      const salt = bcrypt.genSaltSync(10);
+      const upgradedHash = bcrypt.hashSync(password, salt);
+      return { valid: true, upgradedHash };
+    }
+    return { valid: false };
   }
 };
 

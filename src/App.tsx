@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/Header';
+import { BreadcrumbNav } from './components/navigation/BreadcrumbNav';
 import { DirektoratDashboard } from './components/direktorat/DirektoratDashboard';
 import { FinanceDashboard } from './components/finance/FinanceDashboard';
 import { PenerbitanDashboard } from './components/penerbitan/PenerbitanDashboard';
@@ -20,17 +21,13 @@ const AppContent: React.FC = () => {
     switchDivision
   } = useApp();
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-  const [financeSubTab, setFinanceSubTab] = useState<'grafik' | 'mutasi' | 'persetujuan' | 'penjualan' | 'akun'>('grafik');
-  const [direktoratSubTab, setDirektoratSubTab] = useState<'overview' | 'identitas' | 'users' | 'audit'>('overview');
 
   const handleOpenPersetujuan = () => {
-    switchDivision(2);
-    setFinanceSubTab('persetujuan');
+    switchDivision(2, 'persetujuan');
   };
 
   const handleOpenAuditLogs = () => {
-    switchDivision(1);
-    setDirektoratSubTab('audit');
+    switchDivision(1, 'audit');
   };
 
   // If user is not logged in, display the full-screen authentication screen
@@ -56,10 +53,13 @@ const AppContent: React.FC = () => {
         onOpenPersetujuan={handleOpenPersetujuan}
       />
 
+      {/* Breadcrumb Navigation Bar */}
+      <BreadcrumbNav />
+
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
-        {currentUser.divisi_id === 1 && <DirektoratDashboard initialSubTab={direktoratSubTab} />}
-        {currentUser.divisi_id === 2 && <FinanceDashboard initialSubTab={financeSubTab} />}
+        {currentUser.divisi_id === 1 && <DirektoratDashboard />}
+        {currentUser.divisi_id === 2 && <FinanceDashboard />}
         {currentUser.divisi_id === 3 && <PenerbitanDashboard />}
         {currentUser.divisi_id === 4 && <MarketingDashboard />}
         {currentUser.divisi_id === 5 && <ProduksiDashboard />}

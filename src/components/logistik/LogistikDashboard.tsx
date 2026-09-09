@@ -28,10 +28,15 @@ export const LogistikDashboard: React.FC = () => {
     books,
     dispatchShipment,
     addManualLogisticLog,
-    orders
+    orders,
+    currentSubTab,
+    setCurrentSubTab
   } = useApp();
 
-  const [activeSubTab, setActiveSubTab] = useState<'antrean' | 'manual' | 'logs'>('antrean');
+  const activeSubTab = (['antrean', 'manual', 'logs'].includes(currentSubTab)
+    ? currentSubTab
+    : 'antrean') as 'antrean' | 'manual' | 'logs';
+  const setActiveSubTab = (tab: 'antrean' | 'manual' | 'logs') => setCurrentSubTab(tab);
 
   // Bulk delete selection states
   const [selectedLogIds, setSelectedLogIds] = useState<number[]>([]);

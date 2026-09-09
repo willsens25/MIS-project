@@ -35,13 +35,39 @@ export interface Book {
 export interface Promo {
   id: number;
   code: string;
+  nama_promo?: string;
   type: 'percentage' | 'nominal';
   reward_value: number;
   max_uses: number;
   used_count: number;
+  start_date?: string;
   expiry_date?: string;
   buku_id_khusus?: number;
+  khusus_kategori_pembeli?: string;
+  khusus_identitas_id?: number;
+  min_order?: number;
+  deskripsi?: string;
   created_at?: string;
+}
+
+export interface SalesChannel {
+  id: number;
+  nama_channel: string;
+  kategori?: 'Marketplace' | 'Direct / WhatsApp' | 'Direct / Offline' | 'Social Media' | 'Website' | 'Offline / Event' | 'Call Center' | 'Event' | 'Lainnya';
+  deskripsi?: string;
+  aktif: boolean;
+  is_active?: boolean;
+}
+
+export interface Expedition {
+  id: number;
+  nama_ekspedisi: string;
+  kode?: string;
+  kategori?: 'Reguler' | 'Express / Kilat' | 'Cargo / Berat' | 'Kargo' | 'Instant / Sameday' | 'Same Day / Instant' | 'Internal / Ambil Sendiri' | 'Ambil Sendiri' | 'Lainnya';
+  estimasi?: string;
+  deskripsi?: string;
+  aktif: boolean;
+  is_active?: boolean;
 }
 
 export interface Identitas {
@@ -62,6 +88,7 @@ export interface Identitas {
   kode_pos?: string;
   agama?: string;
   status_keamanan: 'Normal' | 'VIP' | 'Pengawasan';
+  kategori_identitas?: string;
   jenis_umat?: 'Anggota' | 'Simpatisan' | 'Pengurus' | 'Sangha';
   bhante_lay?: 'Bhante' | 'Ayya' | 'Lay' | null;
   is_agen_purna?: boolean | number;
@@ -87,10 +114,16 @@ export interface Order {
   tanggal_pesan: string;
   via: string;
   nama_pembeli: string;
+  kontak_pembeli?: string;
+  email_pembeli?: string;
+  pembeli_identitas_id?: number;
   nama_penerima: string;
+  kontak_penerima?: string;
   alamat_penerima: string;
   ekspedisi: string;
   ongkir: number;
+  donasi?: number;
+  keterangan_donasi?: string;
   status: 'Pending' | 'Lunas' | 'Dikirim' | 'Cancelled';
   total_tagihan: number;
   user_id?: number;

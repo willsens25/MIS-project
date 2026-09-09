@@ -17,8 +17,15 @@ export const ProduksiDashboard: React.FC = () => {
     books,
     productionLogs,
     addProductionOutput,
-    bulkDeleteProductionLogs
+    bulkDeleteProductionLogs,
+    currentSubTab,
+    setCurrentSubTab
   } = useApp();
+
+  const activeSubTab = (['overview', 'input', 'logs'].includes(currentSubTab)
+    ? currentSubTab
+    : 'overview') as 'overview' | 'input' | 'logs';
+  const setActiveSubTab = (tab: 'overview' | 'input' | 'logs') => setCurrentSubTab(tab);
 
   const [selectedBookId, setSelectedBookId] = useState<number>(books[0]?.id || 1);
   const [qtyProduksi, setQtyProduksi] = useState<number>(100);
@@ -90,10 +97,50 @@ export const ProduksiDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Sub tabs selector */}
+      <div className="flex items-center space-x-1.5 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl w-fit">
+        <button
+          onClick={() => setActiveSubTab('overview')}
+          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            activeSubTab === 'overview'
+              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <Factory className="w-3.5 h-3.5" />
+          <span>Pusat Cetak & Log</span>
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('input')}
+          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            activeSubTab === 'input'
+              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>Catat Hasil Cetak</span>
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('logs')}
+          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            activeSubTab === 'logs'
+              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <History className="w-3.5 h-3.5" />
+          <span>Riwayat Log Produksi ({productionLogs.length})</span>
+        </button>
+      </div>
+
+      <div className={activeSubTab === 'overview' ? "grid grid-cols-1 lg:grid-cols-3 gap-6" : "space-y-6"}>
         
         {/* Form Input Hasil Produksi */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+        {(activeSubTab === 'overview' || activeSubTab === 'input') && (
+        <div className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4 ${activeSubTab === 'input' ? 'max-w-2xl mx-auto' : ''}`}>
           <div>
             <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
               <Factory className="w-4 h-4 text-indigo-600" />
@@ -136,16 +183,18 @@ export const ProduksiDashboard: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-sm flex items-center justify-center space-x-1.5"
+              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-sm flex items-center justify-center space-x-1.5 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Simpan & Tambah Stok Gudang</span>
             </button>
           </form>
         </div>
+        )}
 
         {/* Riwayat Log Produksi */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+        {(activeSubTab === 'overview' || activeSubTab === 'logs') && (
+        <div className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4 ${activeSubTab === 'overview' ? 'lg:col-span-2' : 'w-full'}`}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100 dark:border-slate-800">
             <div>
               <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
@@ -219,6 +268,7 @@ export const ProduksiDashboard: React.FC = () => {
             </table>
           </div>
         </div>
+        )}
 
       </div>
 

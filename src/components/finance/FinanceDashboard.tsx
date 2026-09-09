@@ -47,16 +47,19 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
     rejectPengajuanCetak,
     bulkDeletePengajuanCetak,
     penjualans,
-    books
+    books,
+    currentSubTab,
+    setCurrentSubTab
   } = useApp();
 
-  const [activeSubTab, setActiveSubTab] = useState<'grafik' | 'mutasi' | 'persetujuan' | 'penjualan' | 'akun'>(
-    initialSubTab || 'grafik'
-  );
+  const activeSubTab = (['grafik', 'mutasi', 'persetujuan', 'penjualan', 'akun'].includes(currentSubTab)
+    ? currentSubTab
+    : 'grafik') as 'grafik' | 'mutasi' | 'persetujuan' | 'penjualan' | 'akun';
+  const setActiveSubTab = (tab: 'grafik' | 'mutasi' | 'persetujuan' | 'penjualan' | 'akun') => setCurrentSubTab(tab);
 
   useEffect(() => {
     if (initialSubTab) {
-      setActiveSubTab(initialSubTab);
+      setCurrentSubTab(initialSubTab);
     }
   }, [initialSubTab]);
 

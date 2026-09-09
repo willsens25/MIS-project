@@ -13,7 +13,9 @@ import {
   LogisticLog,
   ProductionLog,
   ActivityLog,
-  Order
+  Order,
+  SalesChannel,
+  Expedition
 } from '../types';
 
 export const INITIAL_DIVISI: Divisi[] = [
@@ -68,11 +70,115 @@ export const INITIAL_BOOKS: Book[] = [
   { id: 10, judul: 'Jalan Cahaya Pencerahan Batin', penulis: 'Geshe Lhundub Sopa', harga_jual: 130000, stok_gudang: 27, isbn: '978-602-1234-10-3', kategori: 'Filosofi' },
 ];
 
+export const INITIAL_SALES_CHANNELS: SalesChannel[] = [
+  { id: 1, nama_channel: 'Tokopedia', kategori: 'Marketplace', deskripsi: 'Official Store Tokopedia Yayasan Lamrimnesia', aktif: true },
+  { id: 2, nama_channel: 'Shopee', kategori: 'Marketplace', deskripsi: 'Shopee Mall / Official Shop Lamrimnesia', aktif: true },
+  { id: 3, nama_channel: 'TikTok Shop', kategori: 'Marketplace', deskripsi: 'Live shopping & etalase TikTok', aktif: true },
+  { id: 4, nama_channel: 'WhatsApp Marketing', kategori: 'Direct / WhatsApp', deskripsi: 'Chat CS Hotline WhatsApp Yayasan', aktif: true },
+  { id: 5, nama_channel: 'Bazar / Event Vihara', kategori: 'Offline / Event', deskripsi: 'Stand bazar acara keagamaan & pameran buku', aktif: true },
+  { id: 6, nama_channel: 'Call Center / Hotline', kategori: 'Call Center', deskripsi: 'Pemesanan melalui telepon langsung', aktif: true },
+  { id: 7, nama_channel: 'Direct Order Offline', kategori: 'Offline / Event', deskripsi: 'Kunjungan walk-in ke sekretariat kantor pusat', aktif: true },
+  { id: 8, nama_channel: 'Website Lamrimnesia', kategori: 'Marketplace', deskripsi: 'Pemesanan otomatis portal web resmi', aktif: true },
+  { id: 9, nama_channel: 'Blibli', kategori: 'Marketplace', deskripsi: 'Official Merchant Blibli', aktif: true }
+];
+
+export const INITIAL_EXPEDITIONS: Expedition[] = [
+  { id: 1, nama_ekspedisi: 'JNE Reguler', kode: 'JNE-REG', kategori: 'Reguler', estimasi: '2-3 Hari', aktif: true },
+  { id: 2, nama_ekspedisi: 'JNE YES (Yakin Esok Sampai)', kode: 'JNE-YES', kategori: 'Express / Kilat', estimasi: '1 Hari', aktif: true },
+  { id: 3, nama_ekspedisi: 'JNE Trucking (JTR)', kode: 'JNE-JTR', kategori: 'Cargo / Berat', estimasi: '3-7 Hari', aktif: true },
+  { id: 4, nama_ekspedisi: 'J&T Express (EZ)', kode: 'J&T-EZ', kategori: 'Reguler', estimasi: '2-3 Hari', aktif: true },
+  { id: 5, nama_ekspedisi: 'SiCepat Reguler', kode: 'SICEPAT-REG', kategori: 'Reguler', estimasi: '1-2 Hari', aktif: true },
+  { id: 6, nama_ekspedisi: 'SiCepat Cargo / Gokil', kode: 'SICEPAT-GKL', kategori: 'Cargo / Berat', estimasi: '3-5 Hari', aktif: true },
+  { id: 7, nama_ekspedisi: 'Anteraja Reguler', kode: 'ANTERAJA', kategori: 'Reguler', estimasi: '2-3 Hari', aktif: true },
+  { id: 8, nama_ekspedisi: 'Pos Indonesia Kilat Khusus', kode: 'POS-KILAT', kategori: 'Reguler', estimasi: '2-4 Hari', aktif: true },
+  { id: 9, nama_ekspedisi: 'GoSend Instant', kode: 'GOSEND-INS', kategori: 'Instant / Sameday', estimasi: '1-3 Jam', aktif: true },
+  { id: 10, nama_ekspedisi: 'GrabExpress Instant', kode: 'GRAB-INS', kategori: 'Instant / Sameday', estimasi: '1-3 Jam', aktif: true },
+  { id: 11, nama_ekspedisi: 'Wahana Prestasi Logistik', kode: 'WAHANA', kategori: 'Reguler', estimasi: '3-5 Hari', aktif: true },
+  { id: 12, nama_ekspedisi: 'Lion Parcel REGPACK', kode: 'LION-REG', kategori: 'Reguler', estimasi: '2-3 Hari', aktif: true },
+  { id: 13, nama_ekspedisi: 'Indah Logistik Cargo', kode: 'INDAH-CRG', kategori: 'Cargo / Berat', estimasi: '4-7 Hari', aktif: true },
+  { id: 14, nama_ekspedisi: 'Ambil Sendiri di Gudang', kode: 'PICKUP-OFFLINE', kategori: 'Internal / Ambil Sendiri', estimasi: 'Hari H', aktif: true },
+  { id: 15, nama_ekspedisi: 'Kurir Internal Yayasan', kode: 'KURIR-INTERNAL', kategori: 'Internal / Ambil Sendiri', estimasi: '1-2 Hari', aktif: true }
+];
+
 export const INITIAL_PROMOS: Promo[] = [
-  { id: 1, code: 'DHARMA10', type: 'percentage', reward_value: 10, max_uses: 100, used_count: 24, expiry_date: '2027-12-31' },
-  { id: 2, code: 'WESAK25', type: 'percentage', reward_value: 25, max_uses: 50, used_count: 18, expiry_date: '2027-06-30' },
-  { id: 3, code: 'HEMAT20K', type: 'nominal', reward_value: 20000, max_uses: 200, used_count: 52, expiry_date: '2027-12-31' },
-  { id: 4, code: 'PATRIOT50', type: 'percentage', reward_value: 50, max_uses: 30, used_count: 8, expiry_date: '2027-12-31' },
+  {
+    id: 1,
+    code: 'DHARMA10',
+    nama_promo: 'Diskon Belajar Dharma 10%',
+    type: 'percentage',
+    reward_value: 10,
+    max_uses: 100,
+    used_count: 24,
+    start_date: '2026-01-01',
+    expiry_date: '2027-12-31',
+    min_order: 50000,
+    deskripsi: 'Potongan 10% untuk seluruh judul buku dharma nusantara'
+  },
+  {
+    id: 2,
+    code: 'WESAK25',
+    nama_promo: 'Berkah Waisak 25%',
+    type: 'percentage',
+    reward_value: 25,
+    max_uses: 50,
+    used_count: 18,
+    start_date: '2026-05-01',
+    expiry_date: '2027-06-30',
+    min_order: 100000,
+    deskripsi: 'Spesial perayaan Trisuci Waisak diskon 25% semua katalog'
+  },
+  {
+    id: 3,
+    code: 'HEMAT20K',
+    nama_promo: 'Voucher Potongan Rp 20.000',
+    type: 'nominal',
+    reward_value: 20000,
+    max_uses: 200,
+    used_count: 52,
+    start_date: '2026-01-01',
+    expiry_date: '2027-12-31',
+    min_order: 150000,
+    deskripsi: 'Potongan langsung Rp 20.000 dengan minimal belanja Rp 150.000'
+  },
+  {
+    id: 4,
+    code: 'PATRIOT50',
+    nama_promo: 'Apresiasi Dharma Patriot 50%',
+    type: 'percentage',
+    reward_value: 50,
+    max_uses: 30,
+    used_count: 8,
+    start_date: '2026-01-01',
+    expiry_date: '2027-12-31',
+    khusus_kategori_pembeli: 'Pengurus',
+    deskripsi: 'Diskon khusus 50% bagi Pengurus & Dharma Patriot aktif'
+  },
+  {
+    id: 5,
+    code: 'SANGHA100',
+    nama_promo: 'Dana Persembahan Sangha 100%',
+    type: 'percentage',
+    reward_value: 100,
+    max_uses: 50,
+    used_count: 5,
+    start_date: '2026-01-01',
+    expiry_date: '2027-12-31',
+    khusus_kategori_pembeli: 'Sangha',
+    deskripsi: 'Bebas biaya 100% persembahan dana buku untuk anggota Sangha (Bhante/Ayya)'
+  },
+  {
+    id: 6,
+    code: 'LAMRIM15',
+    nama_promo: 'Spesial Lamrim Chenmo 15%',
+    type: 'percentage',
+    reward_value: 15,
+    max_uses: 80,
+    used_count: 12,
+    start_date: '2026-01-01',
+    expiry_date: '2027-12-31',
+    buku_id_khusus: 1,
+    deskripsi: 'Diskon 15% khusus pembelian buku Masterpiece Pembebasan di Tangan Kita'
+  }
 ];
 
 export const INITIAL_IDENTITAS: Identitas[] = [
@@ -215,18 +321,24 @@ export const INITIAL_ORDERS: Order[] = [
     tanggal_pesan: '2026-08-30',
     via: 'WhatsApp Marketing',
     nama_pembeli: 'ANAND KRISHNA WIJAYA',
+    kontak_pembeli: '081288991122',
+    email_pembeli: 'anand.wijaya@gmail.com',
+    pembeli_identitas_id: 1,
     nama_penerima: 'Anand Krishna Wijaya',
-    alamat_penerima: 'Jl. Surya Kencana No. 45, Kebon Jeruk, Jakarta Barat',
-    ekspedisi: 'JNE YES',
+    kontak_penerima: '081288991122',
+    alamat_penerima: 'Jl. Surya Kencana No. 45, Kebon Jeruk, Jakarta Barat, 11530',
+    ekspedisi: 'JNE YES (Yakin Esok Sampai)',
     ongkir: 25000,
+    donasi: 50000,
+    keterangan_donasi: 'Donasi Cetak Kitab Suci Lamrim',
     status: 'Lunas',
-    total_tagihan: 395000,
+    total_tagihan: 445000,
     user_id: 4,
-    keterangan: 'Paket buku dharma untuk kegiatan retret',
+    keterangan: 'Paket buku dharma untuk kegiatan retret. Mohon sertakan kartu ucapan berkah.',
     tercatat_finance: 1,
     created_at: '2026-08-30 10:30:00',
     items: [
-      { buku_id: 1, jumlah: 2, harga_satuan: 145000, subtotal: 290000, kode_promo_terpakai: 'DHARMA10', potongan_diskon: 29000 },
+      { buku_id: 1, jumlah: 2, harga_satuan: 145000, subtotal: 261000, kode_promo_terpakai: 'DHARMA10', potongan_diskon: 29000 },
       { buku_id: 3, jumlah: 1, harga_satuan: 120000, subtotal: 109000, kode_promo_terpakai: 'DHARMA10', potongan_diskon: 11000 }
     ]
   },
@@ -236,19 +348,24 @@ export const INITIAL_ORDERS: Order[] = [
     tanggal_pesan: '2026-08-31',
     via: 'Tokopedia',
     nama_pembeli: 'MEILIANA SUSANTO',
-    nama_penerima: 'Toko Buku Dharma Surabaya',
-    alamat_penerima: 'Komp. Ruko Darmo Park II Blok 4 No. 12, Surabaya',
-    ekspedisi: 'SiCepat Cargo',
+    kontak_pembeli: '081399887766',
+    email_pembeli: 'meiliana.s@yahoo.com',
+    nama_penerima: 'Toko Buku Dharma Surabaya (u.p. Bpk Hendra)',
+    kontak_penerima: '081987654321',
+    alamat_penerima: 'Komp. Ruko Darmo Park II Blok 4 No. 12, Wonokromo, Kota Surabaya, Jawa Timur 60241',
+    ekspedisi: 'SiCepat Cargo / Gokil',
     ongkir: 45000,
+    donasi: 25000,
+    keterangan_donasi: 'Dana Operasional Yayasan',
     status: 'Pending',
-    total_tagihan: 725000,
+    total_tagihan: 750000,
     user_id: 4,
-    keterangan: 'Restock etalase toko buku vihara',
+    keterangan: 'Pesanan untuk kirim ke cabang toko buku vihara teman. Resi dan faktur tolong WA ke pembeli (Meiliana).',
     tercatat_finance: 0,
     created_at: '2026-08-31 09:15:00',
     items: [
       { buku_id: 2, jumlah: 5, harga_satuan: 95000, subtotal: 475000, kode_promo_terpakai: null, potongan_diskon: 0 },
-      { buku_id: 4, jumlah: 3, harga_satuan: 80000, subtotal: 240000, kode_promo_terpakai: 'HEMAT20K', potongan_diskon: 20000 }
+      { buku_id: 4, jumlah: 3, harga_satuan: 80000, subtotal: 220000, kode_promo_terpakai: 'HEMAT20K', potongan_diskon: 20000 }
     ]
   }
 ];

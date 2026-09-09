@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
-import { Order, OrderItem, Promo, Book, Identitas } from '../../types';
+import { Order, OrderItem, Promo, Book, Identitas, SalesChannel, Expedition } from '../../types';
 import {
   ShoppingBag,
   Plus,
@@ -20,11 +20,25 @@ import {
   Sparkles,
   TrendingUp,
   Check,
-  X
+  X,
+  Globe,
+  Calendar,
+  DollarSign,
+  HeartHandshake,
+  Gift,
+  FileText,
+  Phone,
+  Mail,
+  MapPin,
+  ExternalLink,
+  ChevronDown
 } from 'lucide-react';
 import { InvoicePrintModal } from '../modals/InvoicePrintModal';
 import { MarketingCharts } from '../charts/MarketingCharts';
 import { ConfirmModal } from '../modals/ConfirmModal';
+import { SalesChannelModal } from './SalesChannelModal';
+import { ExpeditionModal } from './ExpeditionModal';
+import { ChannelsAndExpeditionsTab } from './ChannelsAndExpeditionsTab';
 
 export const MarketingDashboard: React.FC = () => {
   const {
@@ -36,16 +50,32 @@ export const MarketingDashboard: React.FC = () => {
     books,
     promos,
     addPromo,
+    updatePromo,
     deletePromo,
     bulkDeletePromos,
     checkPromoCode,
+    lookupEligiblePromos,
+    salesChannels,
+    addSalesChannel,
+    updateSalesChannel,
+    deleteSalesChannel,
+    expeditions,
+    addExpedition,
+    updateExpedition,
+    deleteExpedition,
     identitasList,
-    accounts
+    accounts,
+    currentSubTab,
+    setCurrentSubTab
   } = useApp();
 
-  const [activeSubTab, setActiveSubTab] = useState<'pos' | 'grafik' | 'invoices' | 'promos' | 'agen'>('pos');
+  const activeSubTab = (['pos', 'grafik', 'invoices', 'promos', 'saluran', 'agen'].includes(currentSubTab)
+    ? currentSubTab
+    : 'pos') as 'pos' | 'grafik' | 'invoices' | 'promos' | 'saluran' | 'agen';
+  const setActiveSubTab = (tab: 'pos' | 'grafik' | 'invoices' | 'promos' | 'saluran' | 'agen') => setCurrentSubTab(tab);
   const [invoiceSearch, setInvoiceSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [channelFilter, setChannelFilter] = useState<string>('all');
 
   // Selection states for bulk delete & bulk lunas
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
@@ -76,17 +106,37 @@ export const MarketingDashboard: React.FC = () => {
   // Print Invoice Modal
   const [printingOrder, setPrintingOrder] = useState<Order | null>(null);
 
-  // POS Form State
+  // Quick modals for POS inline creation
+  const [isAddChannelQuickModalOpen, setIsAddChannelQuickModalOpen] = useState(false);
+  const [isAddExpeditionQuickModalOpen, setIsAddExpeditionQuickModalOpen] = useState(false);
+
+  // POS Form State (All 12 user requested fields)
+  // 1. Tanggal (Tanggal Pesen)
+  const [tanggalPesan, setTanggalPesan] = useState(new Date().toISOString().substring(0, 10));
+  // 2. Via (Marketplace / Saluran)
+  const [viaPlatform, setViaPlatform] = useState(salesChannels[0]?.nama_channel || 'Tokopedia');
+  // 3. Pembeli (Nama, WA/HP, Email)
   const [pembeliName, setPembeliName] = useState('');
+  const [kontakPembeli, setKontakPembeli] = useState('');
+  const [emailPembeli, setEmailPembeli] = useState('');
   const [selectedIdentitasId, setSelectedIdentitasId] = useState<number | ''>('');
-  const [viaPlatform, setViaPlatform] = useState('WhatsApp Marketing');
+  // 4. Penerima
   const [penerimaName, setPenerimaName] = useState('');
+  const [kontakPenerima, setKontakPenerima] = useState('');
+  // 5. Alamat Penerima
   const [alamatPenerima, setAlamatPenerima] = useState('');
-  const [ekspedisi, setEkspedisi] = useState('JNE Reguler');
+  // 6. Jenis Ekspedisi
+  const [ekspedisi, setEkspedisi] = useState(expeditions[0]?.nama_ekspedisi || 'JNE Reguler');
+  // 7. Ongkos Kirim
   const [ongkir, setOngkir] = useState<number>(0);
+  // 8. Donasi
+  const [donasi, setDonasi] = useState<number>(0);
+  // 9. Keterangan Donasi
+  const [keteranganDonasi, setKeteranganDonasi] = useState('');
+  // 10. Keterangan (Kartu ucapan, permintaan khusus, dll)
   const [keterangan, setKeterangan] = useState('');
 
-  // POS Items
+  // 11. Buku & Promo (Multi-row with VLOOKUP)
   const [orderItems, setOrderItems] = useState<Array<{
     buku_id: number;
     jumlah: number;
@@ -100,16 +150,27 @@ export const MarketingDashboard: React.FC = () => {
   const [modalPromoOpen, setModalPromoOpen] = useState(false);
   const [promoForm, setPromoForm] = useState<{
     code: string;
+    nama_promo?: string;
     type: 'percentage' | 'nominal';
     reward_value: number;
     max_uses: number;
+    start_date?: string;
     expiry_date: string;
+    min_order?: number;
+    khusus_kategori_pembeli?: string;
+    buku_id_khusus?: number;
+    deskripsi?: string;
   }>({
     code: '',
+    nama_promo: '',
     type: 'percentage',
     reward_value: 10,
     max_uses: 100,
-    expiry_date: '2027-12-31'
+    start_date: new Date().toISOString().substring(0, 10),
+    expiry_date: '2027-12-31',
+    min_order: 0,
+    khusus_kategori_pembeli: '',
+    deskripsi: ''
   });
 
   // Handle agent selection auto-fill
@@ -118,9 +179,27 @@ export const MarketingDashboard: React.FC = () => {
     if (identitas) {
       setSelectedIdentitasId(identitas.id);
       setPembeliName(identitas.nama_lengkap);
+      setKontakPembeli(identitas.nomor_hp_primary || '');
+      setEmailPembeli(identitas.email || '');
       setPenerimaName(identitas.panggilan || identitas.nama_lengkap);
+      setKontakPenerima(identitas.nomor_hp_primary || '');
       setAlamatPenerima(`${identitas.alamat || ''}, ${identitas.kota || ''}`.trim());
+      setToastMessage(`Data pembeli otomatis dimuat dari master identitas: ${identitas.nama_lengkap}`);
+      setTimeout(() => setToastMessage(null), 3000);
     }
+  };
+
+  // Copy buyer info to recipient
+  const handleCopyPembeliToPenerima = () => {
+    if (!pembeliName) {
+      setToastMessage('Harap isi Nama Pembeli terlebih dahulu.');
+      setTimeout(() => setToastMessage(null), 2500);
+      return;
+    }
+    setPenerimaName(pembeliName);
+    if (kontakPembeli) setKontakPenerima(kontakPembeli);
+    setToastMessage('Data penerima disamakan dengan data pembeli.');
+    setTimeout(() => setToastMessage(null), 2500);
   };
 
   // Add Item Row
@@ -141,7 +220,7 @@ export const MarketingDashboard: React.FC = () => {
     setOrderItems(updated);
   };
 
-  // Calculate POS totals
+  // Calculate POS totals with intelligent promo VLOOKUP
   const calculatedItems: OrderItem[] = orderItems.map(row => {
     const book = books.find(b => b.id === row.buku_id);
     const hargaSatuan = book?.harga_jual || 0;
@@ -151,7 +230,13 @@ export const MarketingDashboard: React.FC = () => {
     let validPromoCode: string | null = null;
 
     if (row.promo_code.trim()) {
-      const check = checkPromoCode(row.promo_code, row.buku_id);
+      const check = checkPromoCode(
+        row.promo_code,
+        row.buku_id,
+        tanggalPesan,
+        typeof selectedIdentitasId === 'number' ? selectedIdentitasId : undefined,
+        subtotalAwal
+      );
       if (check.valid) {
         validPromoCode = row.promo_code.trim().toUpperCase();
         if (check.type === 'percentage') {
@@ -176,14 +261,16 @@ export const MarketingDashboard: React.FC = () => {
   });
 
   const totalItemCount = calculatedItems.reduce((s, it) => s + it.jumlah, 0);
+  const totalSubtotalKotor = calculatedItems.reduce((s, it) => s + (it.harga_satuan * it.jumlah), 0);
+  const totalDiskonPromo = calculatedItems.reduce((s, it) => s + (it.potongan_diskon || 0), 0);
   const totalSubtotalItems = calculatedItems.reduce((s, it) => s + it.subtotal, 0);
-  const totalTagihanAkhir = totalSubtotalItems + (ongkir || 0);
+  const totalTagihanAkhir = totalSubtotalItems + (ongkir || 0) + (donasi || 0);
 
-  // Submit Order
+  // Submit Order with all 12 requested fields
   const handleCreateOrderSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!pembeliName.trim()) {
-      setToastMessage('Peringatan: Nama Pembeli / Agen wajib diisi!');
+      setToastMessage('Peringatan: Nama Pembeli wajib diisi!');
       setTimeout(() => setToastMessage(null), 3500);
       return;
     }
@@ -194,22 +281,28 @@ export const MarketingDashboard: React.FC = () => {
     }
 
     // Generate invoice no: INV-YYYYMMDD-XXXX
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const dateStr = (tanggalPesan || new Date().toISOString().substring(0, 10)).replace(/-/g, '');
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const invoiceNo = `INV-${dateStr}-${randomSuffix}`;
 
     const newOrderData: Omit<Order, 'id' | 'created_at'> = {
       no_invoice: invoiceNo,
-      tanggal_pesan: new Date().toISOString().substring(0, 10),
+      tanggal_pesan: tanggalPesan || new Date().toISOString().substring(0, 10),
       via: viaPlatform,
       nama_pembeli: pembeliName.trim().toUpperCase(),
-      nama_penerima: penerimaName.trim() || pembeliName.trim(),
+      kontak_pembeli: kontakPembeli.trim() || undefined,
+      email_pembeli: emailPembeli.trim() || undefined,
+      pembeli_identitas_id: typeof selectedIdentitasId === 'number' ? selectedIdentitasId : undefined,
+      nama_penerima: (penerimaName.trim() || pembeliName.trim()).toUpperCase(),
+      kontak_penerima: kontakPenerima.trim() || kontakPembeli.trim() || undefined,
       alamat_penerima: alamatPenerima.trim() || 'Alamat Toko / Pengambilan Kantor',
       ekspedisi,
       ongkir: ongkir || 0,
+      donasi: donasi || 0,
+      keterangan_donasi: keteranganDonasi.trim() || undefined,
+      keterangan: keterangan.trim() || undefined,
       status: 'Pending',
       total_tagihan: totalTagihanAkhir,
-      keterangan,
       items: calculatedItems,
       tercatat_finance: 0
     };
@@ -220,9 +313,15 @@ export const MarketingDashboard: React.FC = () => {
       setTimeout(() => setToastMessage(null), 4000);
       // Reset form
       setPembeliName('');
+      setKontakPembeli('');
+      setEmailPembeli('');
+      setSelectedIdentitasId('');
       setPenerimaName('');
+      setKontakPenerima('');
       setAlamatPenerima('');
       setOngkir(0);
+      setDonasi(0);
+      setKeteranganDonasi('');
       setKeterangan('');
       setOrderItems([{ buku_id: books[0]?.id || 1, jumlah: 1, promo_code: '' }]);
       setActiveSubTab('invoices');
@@ -235,23 +334,38 @@ export const MarketingDashboard: React.FC = () => {
   const handleSavePromo = (e: React.FormEvent) => {
     e.preventDefault();
     if (!promoForm.code.trim() || promoForm.reward_value <= 0) {
-      setToastMessage('Kode Promo dan Nilai Reward harus diisi dengan benar!');
+      setToastMessage('Kode Promo dan Nilai Diskon harus diisi dengan benar!');
       setTimeout(() => setToastMessage(null), 3500);
       return;
     }
     addPromo(promoForm);
     setModalPromoOpen(false);
-    setPromoForm({ code: '', type: 'percentage', reward_value: 10, max_uses: 100, expiry_date: '2027-12-31' });
-    setToastMessage(`Kode promo "${promoForm.code}" berhasil ditambahkan!`);
+    setPromoForm({
+      code: '',
+      nama_promo: '',
+      type: 'percentage',
+      reward_value: 10,
+      max_uses: 100,
+      start_date: new Date().toISOString().substring(0, 10),
+      expiry_date: '2027-12-31',
+      min_order: 0,
+      khusus_kategori_pembeli: '',
+      deskripsi: ''
+    });
+    setToastMessage(`Kode promo "${promoForm.code.toUpperCase()}" berhasil disimpan!`);
     setTimeout(() => setToastMessage(null), 3500);
   };
 
   const filteredOrders = orders.filter(o => {
     const matchSearch = o.no_invoice.toLowerCase().includes(invoiceSearch.toLowerCase()) ||
       o.nama_pembeli.toLowerCase().includes(invoiceSearch.toLowerCase()) ||
+      (o.nama_penerima && o.nama_penerima.toLowerCase().includes(invoiceSearch.toLowerCase())) ||
+      (o.kontak_pembeli && o.kontak_pembeli.includes(invoiceSearch)) ||
+      (o.kontak_penerima && o.kontak_penerima.includes(invoiceSearch)) ||
       o.via.toLowerCase().includes(invoiceSearch.toLowerCase());
     const matchStatus = statusFilter === 'all' || o.status === statusFilter;
-    return matchSearch && matchStatus;
+    const matchChannel = channelFilter === 'all' || o.via === channelFilter;
+    return matchSearch && matchStatus && matchChannel;
   });
 
   const pendingSelectedOrders = orders.filter(o => selectedOrderIds.includes(o.id) && o.status === 'Pending');
@@ -335,9 +449,9 @@ export const MarketingDashboard: React.FC = () => {
   };
 
   const handleExportOrdersCSV = () => {
-    const headers = ['No Invoice,Tanggal,Via,Pembeli,Ekspedisi,Ongkir,Status,Total Tagihan'];
+    const headers = ['No Invoice,Tanggal Pesan,Via Saluran,Nama Pembeli,Kontak Pembeli,Email Pembeli,Nama Penerima,Kontak Penerima,Alamat Penerima,Ekspedisi,Ongkir,Donasi,Keterangan Donasi,Catatan Tambahan,Status,Total Tagihan'];
     const rows = filteredOrders.map(o =>
-      `"${o.no_invoice}","${o.tanggal_pesan}","${o.via}","${o.nama_pembeli}","${o.ekspedisi}","${o.ongkir}","${o.status}","${o.total_tagihan}"`
+      `"${o.no_invoice}","${o.tanggal_pesan}","${o.via}","${o.nama_pembeli}","${o.kontak_pembeli || '-'}","${o.email_pembeli || '-'}","${o.nama_penerima || o.nama_pembeli}","${o.kontak_penerima || '-'}","${(o.alamat_penerima || '').replace(/"/g, '""')}","${o.ekspedisi}","${o.ongkir}","${o.donasi || 0}","${o.keterangan_donasi || '-'}","${(o.keterangan || '').replace(/"/g, '""')}","${o.status}","${o.total_tagihan}"`
     );
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers, ...rows].join('\n');
     const encodedUri = encodeURI(csvContent);
@@ -354,7 +468,7 @@ export const MarketingDashboard: React.FC = () => {
       
       {/* Sub tabs */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
-        <div className="flex items-center space-x-1.5 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl">
+        <div className="flex items-center space-x-1.5 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl flex-wrap">
           <button
             onClick={() => setActiveSubTab('grafik')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
@@ -404,6 +518,18 @@ export const MarketingDashboard: React.FC = () => {
           </button>
 
           <button
+            onClick={() => setActiveSubTab('saluran')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              activeSubTab === 'saluran'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5" />
+            <span>Saluran & Ekspedisi ({salesChannels.length}/{expeditions.length})</span>
+          </button>
+
+          <button
             onClick={() => setActiveSubTab('agen')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               activeSubTab === 'agen'
@@ -447,15 +573,118 @@ export const MarketingDashboard: React.FC = () => {
         <form onSubmit={handleCreateOrderSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           {/* Left 2 Cols: Form Fields & Multi Items */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-5">
             
-            {/* Customer & Platform */}
+            {/* 1. Tanggal Pesan & Saluran Penjualan (Via) */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
-              <h3 className="font-bold text-sm text-slate-900 dark:text-white">Informasi Pembeli & Saluran Penjualan</h3>
-              
+              <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                    <Calendar className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                      1. Tanggal Pesan & Saluran Penjualan (Via)
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Waktu order masuk dan kanal pemesanan (Tokopedia, Shopee, Event, dsb.)
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                 <div>
-                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">Pilih dari Master Agen / Anggota (Opsional)</label>
+                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">
+                    Tanggal Pesan (Tanggal Transaksi) *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      required
+                      value={tanggalPesan}
+                      onChange={e => setTanggalPesan(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
+                    />
+                  </div>
+                  <div className="flex space-x-2 mt-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setTanggalPesan(new Date().toISOString().substring(0, 10))}
+                      className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline font-semibold"
+                    >
+                      Hari Ini
+                    </button>
+                    <span className="text-[10px] text-slate-400">•</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const d = new Date();
+                        d.setDate(d.getDate() - 1);
+                        setTanggalPesan(d.toISOString().substring(0, 10));
+                      }}
+                      className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline font-semibold"
+                    >
+                      Kemarin
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-slate-600 dark:text-slate-400 font-semibold">
+                      Via Saluran / Marketplace *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddChannelQuickModalOpen(true)}
+                      className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold flex items-center space-x-0.5 hover:underline"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Tambah Saluran</span>
+                    </button>
+                  </div>
+                  <select
+                    value={viaPlatform}
+                    onChange={e => setViaPlatform(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
+                  >
+                    {salesChannels.filter(c => (c.is_active ?? c.aktif ?? true)).map(channel => (
+                      <option key={channel.id} value={channel.nama_channel}>
+                        {channel.nama_channel} ({channel.kategori})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Dapat ditambah sendiri kapan saja bila ada kanal atau event baru.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Informasi Pembeli (Pemesan) */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                      2. Data Pembeli (Penanggung Jawab Pesanan)
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Invoice dan resi akan dikirim ke pembeli (bisa berbeda dari penerima hadiah/paket)
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">
+                    Pilih dari Master Agen / Anggota Komunitas (Opsional)
+                  </label>
                   <select
                     value={selectedIdentitasId}
                     onChange={e => {
@@ -465,100 +694,230 @@ export const MarketingDashboard: React.FC = () => {
                     }}
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl"
                   >
-                    <option value="">-- Pilih Anggota / Agen Terdaftar --</option>
+                    <option value="">-- Pilih Anggota / Agen Terdaftar (Isi Cepat) --</option>
                     {identitasList.map(i => (
-                      <option key={i.id} value={i.id}>{i.nama_lengkap} ({i.kota || 'Indonesia'})</option>
+                      <option key={i.id} value={i.id}>
+                        {i.nama_lengkap} — {i.kategori_identitas || i.jenis_umat || 'Umat'} ({i.kota || 'Indonesia'})
+                      </option>
                     ))}
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">Nama Pembeli / Agen *</label>
-                  <input
-                    type="text"
-                    required
-                    value={pembeliName}
-                    onChange={e => setPembeliName(e.target.value)}
-                    placeholder="Nama Lengkap Pembeli / Toko"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold uppercase"
-                  />
-                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-1">
+                    <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">
+                      Nama Pembeli / Pemesan *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={pembeliName}
+                      onChange={e => setPembeliName(e.target.value)}
+                      placeholder="Contoh: Budi Santoso"
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold uppercase"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">Via Saluran / Marketplace *</label>
-                  <select
-                    value={viaPlatform}
-                    onChange={e => setViaPlatform(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl"
-                  >
-                    <option value="WhatsApp Marketing">WhatsApp Marketing</option>
-                    <option value="Tokopedia">Tokopedia</option>
-                    <option value="Shopee">Shopee</option>
-                    <option value="Bazar / Event Vihara">Bazar / Event Vihara</option>
-                    <option value="Direct Order Offline">Direct Order Offline</option>
-                    <option value="Website Lamrimnesia">Website Lamrimnesia</option>
-                  </select>
-                </div>
+                  <div className="sm:col-span-1">
+                    <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">
+                      No. WhatsApp / HP Pembeli
+                    </label>
+                    <div className="relative">
+                      <Phone className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                      <input
+                        type="text"
+                        value={kontakPembeli}
+                        onChange={e => setKontakPembeli(e.target.value)}
+                        placeholder="08123456789 (Kirim resi/invoice)"
+                        className="w-full pl-8 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+                      />
+                    </div>
+                  </div>
 
+                  <div className="sm:col-span-1">
+                    <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">
+                      Email Pembeli (Opsional)
+                    </label>
+                    <div className="relative">
+                      <Mail className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                      <input
+                        type="email"
+                        value={emailPembeli}
+                        onChange={e => setEmailPembeli(e.target.value)}
+                        placeholder="email@domain.com"
+                        className="w-full pl-8 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Informasi Penerima & Alamat Kirim */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                    <MapPin className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                      3. Data Penerima & Alamat Pengiriman
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Tujuan fisik pengiriman buku paket ekspedisi
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyPembeliToPenerima}
+                  className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg text-[11px] font-semibold transition-colors flex items-center space-x-1"
+                >
+                  <span>Sama dengan Pembeli</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                 <div>
-                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">Nama Penerima Paket</label>
+                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">
+                    Nama Penerima Paket
+                  </label>
                   <input
                     type="text"
                     value={penerimaName}
                     onChange={e => setPenerimaName(e.target.value)}
-                    placeholder="Sama dengan nama pembeli jika kosong"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+                    placeholder="Nama orang yang menerima paket"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl uppercase font-semibold"
                   />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Biarkan kosong jika sama dengan nama pembeli.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">
+                    No. Kontak WhatsApp / HP Penerima (Untuk Kurir)
+                  </label>
+                  <div className="relative">
+                    <Phone className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                    <input
+                      type="text"
+                      value={kontakPenerima}
+                      onChange={e => setKontakPenerima(e.target.value)}
+                      placeholder="081xxxxxxx (Nomor di label paket)"
+                      className="w-full pl-8 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+                    />
+                  </div>
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">Alamat Tujuan Pengiriman</label>
+                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">
+                    Alamat Lengkap Penerima *
+                  </label>
                   <textarea
                     rows={2}
                     value={alamatPenerima}
                     onChange={e => setAlamatPenerima(e.target.value)}
-                    placeholder="Jl. Nama Jalan No. XX, Kota, Kode Pos..."
+                    placeholder="Jl. Nama Jalan No. XX, RT/RW, Kelurahan, Kecamatan, Kota/Kabupaten, Kode Pos, Patokan..."
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">Pilihan Ekspedisi / Kurir</label>
-                  <select
-                    value={ekspedisi}
-                    onChange={e => setEkspedisi(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl"
-                  >
-                    <option value="JNE Reguler">JNE Reguler</option>
-                    <option value="JNE YES">JNE YES</option>
-                    <option value="SiCepat Reguler">SiCepat Reguler</option>
-                    <option value="SiCepat Cargo / Gokil">SiCepat Cargo / Gokil</option>
-                    <option value="J&T Express">J&T Express</option>
-                    <option value="GrabExpress / GoSend">GrabExpress / GoSend</option>
-                    <option value="Ambil Sendiri di Gudang">Ambil Sendiri di Gudang</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">Ongkos Kirim (Rupiah)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={ongkir || ''}
-                    onChange={e => setOngkir(parseInt(e.target.value) || 0)}
-                    placeholder="0"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Dynamic Items Selection */}
+            {/* 4. Ekspedisi & Ongkir */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-950/80 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+                    <Truck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                      4. Jenis Ekspedisi & Ongkos Kirim
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Pilihan kurir pengiriman (bisa di-lookup & ditambah fleksibel)
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAddExpeditionQuickModalOpen(true)}
+                  className="text-[10px] text-teal-600 dark:text-teal-400 font-bold flex items-center space-x-0.5 hover:underline"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Tambah Ekspedisi</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                 <div>
-                  <h3 className="font-bold text-sm text-slate-900 dark:text-white">Pilihan Buku & Kode Promo Per Baris</h3>
-                  <p className="text-xs text-slate-500">Stok divalidasi langsung dari database gudang.</p>
+                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">
+                    Pilihan Jenis Ekspedisi / Kurir
+                  </label>
+                  <select
+                    value={ekspedisi}
+                    onChange={e => setEkspedisi(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
+                  >
+                    {expeditions.filter(e => (e.is_active ?? e.aktif ?? true)).map(exp => (
+                      <option key={exp.id} value={exp.nama_ekspedisi}>
+                        {exp.nama_ekspedisi} [{exp.kategori}] {exp.estimasi ? `(${exp.estimasi})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">
+                    Ongkos Kirim (Rupiah)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={ongkir || ''}
+                    onChange={e => setOngkir(parseInt(e.target.value) || 0)}
+                    placeholder="0 (Gratis Ongkir)"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white"
+                  />
+                  <div className="flex items-center space-x-1.5 mt-1.5 flex-wrap gap-y-1">
+                    <span className="text-[10px] text-slate-400 font-medium">Preset:</span>
+                    {[0, 10000, 15000, 25000, 50000].map(val => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setOngkir(val)}
+                        className={`text-[10px] px-2 py-0.5 rounded-md border ${
+                          ongkir === val
+                            ? 'bg-teal-50 dark:bg-teal-950/60 border-teal-400 text-teal-700 dark:text-teal-300 font-bold'
+                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100'
+                        }`}
+                      >
+                        {val === 0 ? 'Gratis' : `Rp ${(val / 1000)}rb`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 5. Pilihan Buku & Promo (VLOOKUP) */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                    <Package className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                      5. Buku yang Dipesan & Kode Promo (VLOOKUP)
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Daftar buku, kuantitas, dan promo yang berlaku untuk tanggal & pembeli ini
+                    </p>
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -570,22 +929,36 @@ export const MarketingDashboard: React.FC = () => {
                 </button>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-3.5">
                 {orderItems.map((item, idx) => {
                   const currentBook = books.find(b => b.id === item.buku_id);
                   const isLowStock = currentBook && currentBook.stok_gudang < item.jumlah;
+                  const calculated = calculatedItems[idx];
+                  
+                  // Lookup eligible promos for this specific row
+                  const eligiblePromos = lookupEligiblePromos({
+                    orderDate: tanggalPesan,
+                    bookId: item.buku_id,
+                    identitasId: typeof selectedIdentitasId === 'number' ? selectedIdentitasId : undefined,
+                    subtotal: (currentBook?.harga_jual || 0) * item.jumlah
+                  });
 
                   return (
-                    <div key={idx} className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-2">
+                    <div
+                      key={idx}
+                      className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-2.5"
+                    >
                       <div className="flex flex-col sm:flex-row items-center gap-2 text-xs">
                         
                         {/* Book Select */}
                         <div className="flex-1 w-full">
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-0.5">Judul Buku</label>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-0.5">
+                            Buku & Harga Jual Satuan
+                          </label>
                           <select
                             value={item.buku_id}
                             onChange={e => handleUpdateItem(idx, 'buku_id', parseInt(e.target.value))}
-                            className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs"
+                            className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-medium"
                           >
                             {books.map(b => (
                               <option key={b.id} value={b.id}>
@@ -597,7 +970,9 @@ export const MarketingDashboard: React.FC = () => {
 
                         {/* Qty */}
                         <div className="w-24">
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-0.5">QTY</label>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-0.5">
+                            Berapa Banyak (QTY)
+                          </label>
                           <input
                             type="number"
                             min="1"
@@ -607,16 +982,55 @@ export const MarketingDashboard: React.FC = () => {
                           />
                         </div>
 
-                        {/* Promo Code */}
-                        <div className="w-36">
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-0.5">Kode Promo</label>
-                          <input
-                            type="text"
-                            value={item.promo_code}
-                            onChange={e => handleUpdateItem(idx, 'promo_code', e.target.value.toUpperCase())}
-                            placeholder="DHARMA10"
-                            className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg uppercase text-xs"
-                          />
+                        {/* Promo Code with VLOOKUP Suggestions */}
+                        <div className="w-48">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase">
+                              Promo (VLOOKUP)
+                            </label>
+                            {eligiblePromos.length > 0 && (
+                              <span className="text-[10px] text-indigo-600 font-bold">
+                                {eligiblePromos.length} Berlaku
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="space-y-1">
+                            {eligiblePromos.length > 0 ? (
+                              <select
+                                value={item.promo_code}
+                                onChange={e => handleUpdateItem(idx, 'promo_code', e.target.value)}
+                                className="w-full px-2 py-1.5 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-800 rounded-lg text-xs font-semibold text-indigo-700 dark:text-indigo-300"
+                              >
+                                <option value="">-- Pilih Promo Berlaku --</option>
+                                {eligiblePromos.map(p => (
+                                  <option key={p.id} value={p.code}>
+                                    {p.code} ({p.nama_promo || (p.type === 'percentage' ? `Diskon ${p.reward_value}%` : `Diskon Rp ${p.reward_value.toLocaleString('id-ID')}`)})
+                                  </option>
+                                ))}
+                                <option value="CUSTOM">-- Ketik Kode Lain Manual --</option>
+                              </select>
+                            ) : (
+                              <input
+                                type="text"
+                                value={item.promo_code}
+                                onChange={e => handleUpdateItem(idx, 'promo_code', e.target.value.toUpperCase())}
+                                placeholder="Ketik Kode Promo..."
+                                className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg uppercase text-xs"
+                              />
+                            )}
+
+                            {item.promo_code === 'CUSTOM' && (
+                              <input
+                                type="text"
+                                autoFocus
+                                value=""
+                                onChange={e => handleUpdateItem(idx, 'promo_code', e.target.value.toUpperCase())}
+                                placeholder="Ketik Kode Promo..."
+                                className="w-full px-2 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg uppercase text-xs"
+                              />
+                            )}
+                          </div>
                         </div>
 
                         {/* Remove */}
@@ -626,22 +1040,138 @@ export const MarketingDashboard: React.FC = () => {
                             onClick={() => handleRemoveItemRow(idx)}
                             disabled={orderItems.length === 1}
                             className="p-1.5 text-slate-400 hover:text-rose-600 disabled:opacity-30 rounded"
+                            title="Hapus Baris Buku"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
 
-                      {/* Stock Warning */}
-                      {isLowStock && (
-                        <div className="flex items-center space-x-1.5 text-rose-600 dark:text-rose-400 text-[11px] font-semibold">
-                          <AlertTriangle className="w-3.5 h-3.5" />
-                          <span>Stok tidak mencukupi! Hanya tersedia {currentBook?.stok_gudang} pcs di gudang.</span>
+                      {/* Row calculation info & warnings */}
+                      <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-200/60 dark:border-slate-700/40">
+                        <div className="flex items-center space-x-2">
+                          {isLowStock ? (
+                            <span className="flex items-center space-x-1 text-rose-600 dark:text-rose-400 font-semibold">
+                              <AlertTriangle className="w-3.5 h-3.5" />
+                              <span>Stok hanya {currentBook?.stok_gudang} pcs di gudang.</span>
+                            </span>
+                          ) : (
+                            <span className="text-slate-500">
+                              Subtotal Kotor: Rp {((currentBook?.harga_jual || 0) * item.jumlah).toLocaleString('id-ID')}
+                            </span>
+                          )}
+
+                          {calculated && calculated.potongan_diskon && calculated.potongan_diskon > 0 ? (
+                            <span className="inline-flex items-center space-x-1 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded font-bold">
+                              <Sparkles className="w-3 h-3" />
+                              <span>Hemat: -Rp {calculated.potongan_diskon.toLocaleString('id-ID')} ({calculated.kode_promo_terpakai})</span>
+                            </span>
+                          ) : null}
                         </div>
-                      )}
+
+                        <div className="font-extrabold text-slate-900 dark:text-white">
+                          Subtotal Bersih: Rp {(calculated?.subtotal || 0).toLocaleString('id-ID')}
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
+              </div>
+            </div>
+
+            {/* 6. Donasi, Keterangan Donasi & Keterangan Khusus */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                    <HeartHandshake className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                      6. Donasi & Catatan Khusus Pelanggan
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Donasi sukarela pembeli serta permintaan khusus (kartu ucapan, hadiah, dll.)
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+                {/* Donasi Nominal */}
+                <div>
+                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">
+                    Nominal Donasi Tambahan (Rupiah)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={donasi || ''}
+                    onChange={e => setDonasi(parseInt(e.target.value) || 0)}
+                    placeholder="0 (Tidak ada donasi)"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold"
+                  />
+                  <div className="flex items-center space-x-1.5 mt-1.5 flex-wrap gap-y-1">
+                    <span className="text-[10px] text-slate-400 font-medium">Preset:</span>
+                    {[0, 10000, 25000, 50000, 100000].map(val => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setDonasi(val)}
+                        className={`text-[10px] px-2 py-0.5 rounded-md border ${
+                          donasi === val
+                            ? 'bg-amber-50 dark:bg-amber-950/60 border-amber-400 text-amber-700 dark:text-amber-300 font-bold'
+                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100'
+                        }`}
+                      >
+                        {val === 0 ? 'Tanpa Donasi' : `Rp ${(val / 1000)}rb`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Keterangan Donasi */}
+                <div>
+                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">
+                    Keterangan Donasi (Alokasi Dana)
+                  </label>
+                  <input
+                    type="text"
+                    value={keteranganDonasi}
+                    onChange={e => setKeteranganDonasi(e.target.value)}
+                    placeholder="Contoh: Donasi Dana Dharma, Donasi Cetak Buku Gratis"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+                  />
+                  <div className="flex items-center space-x-1 mt-1.5 flex-wrap gap-y-1">
+                    {['Dana Dharma', 'Cetak Buku Gratis', 'Operasional Yayasan'].map(tag => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => setKeteranganDonasi(`Donasi ${tag}`)}
+                        className="text-[10px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded hover:bg-amber-100"
+                      >
+                        +{tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Keterangan / Permintaan Khusus */}
+                <div className="sm:col-span-2">
+                  <div className="flex items-center space-x-1.5 mb-1">
+                    <Gift className="w-3.5 h-3.5 text-slate-400" />
+                    <label className="block text-slate-600 dark:text-slate-400 font-semibold">
+                      Keterangan & Permintaan Khusus Pelanggan (Kartu Ucapan / Packing)
+                    </label>
+                  </div>
+                  <textarea
+                    rows={2}
+                    value={keterangan}
+                    onChange={e => setKeterangan(e.target.value)}
+                    placeholder="Contoh: Titip kartu ucapan 'Selamat Ulang Tahun untuk Ani', Jangan tempel harga, Bungkus bubble tebal..."
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+                  />
+                </div>
               </div>
             </div>
 
@@ -650,9 +1180,14 @@ export const MarketingDashboard: React.FC = () => {
           {/* Right Col: Order Summary & Checkout Card */}
           <div className="space-y-6">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4 sticky top-20">
-              <h3 className="font-bold text-sm text-slate-900 dark:text-white pb-3 border-b border-slate-200 dark:border-slate-800">
-                Ringkasan Tagihan POS
-              </h3>
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+                <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                  Ringkasan Tagihan POS
+                </h3>
+                <span className="text-[10px] px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 rounded-full font-bold">
+                  {viaPlatform}
+                </span>
+              </div>
 
               <div className="space-y-2.5 text-xs text-slate-600 dark:text-slate-300">
                 <div className="flex justify-between">
@@ -661,7 +1196,19 @@ export const MarketingDashboard: React.FC = () => {
                 </div>
 
                 <div className="flex justify-between">
-                  <span>Subtotal Buku:</span>
+                  <span>Subtotal Kotor Buku:</span>
+                  <span>Rp {totalSubtotalKotor.toLocaleString('id-ID')}</span>
+                </div>
+
+                {totalDiskonPromo > 0 && (
+                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
+                    <span>Diskon Promo:</span>
+                    <span>-Rp {totalDiskonPromo.toLocaleString('id-ID')}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-between">
+                  <span>Subtotal Buku Bersih:</span>
                   <span className="font-bold">Rp {totalSubtotalItems.toLocaleString('id-ID')}</span>
                 </div>
 
@@ -670,23 +1217,25 @@ export const MarketingDashboard: React.FC = () => {
                   <span className="font-bold">Rp {(ongkir || 0).toLocaleString('id-ID')}</span>
                 </div>
 
+                {donasi > 0 && (
+                  <div className="flex justify-between text-amber-600 dark:text-amber-400 font-bold">
+                    <span>Donasi ({keteranganDonasi || 'Sukarela'}):</span>
+                    <span>+Rp {donasi.toLocaleString('id-ID')}</span>
+                  </div>
+                )}
+
                 <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center text-sm font-extrabold text-slate-900 dark:text-white">
                   <span>TOTAL TAGIHAN:</span>
-                  <span className="text-lg text-indigo-600 dark:text-indigo-400">
+                  <span className="text-xl text-indigo-600 dark:text-indigo-400 font-black">
                     Rp {totalTagihanAkhir.toLocaleString('id-ID')}
                   </span>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-slate-600 dark:text-slate-400 text-xs font-semibold mb-1">Catatan Tambahan</label>
-                <textarea
-                  rows={2}
-                  value={keterangan}
-                  onChange={e => setKeterangan(e.target.value)}
-                  placeholder="Catatan packing atau instruksi khusus..."
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs"
-                />
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/70 rounded-xl text-[11px] text-slate-500 space-y-1">
+                <p><strong>Pembeli:</strong> {pembeliName || '—'}</p>
+                <p><strong>Penerima:</strong> {penerimaName || pembeliName || '—'}</p>
+                <p><strong>Kurir:</strong> {ekspedisi}</p>
               </div>
 
               <button
@@ -752,6 +1301,19 @@ export const MarketingDashboard: React.FC = () => {
                   <option value="Dikirim">Dikirim (Logistik)</option>
                   <option value="Cancelled">Cancelled (Dibatalkan)</option>
                 </select>
+
+                <select
+                  value={channelFilter}
+                  onChange={e => setChannelFilter(e.target.value)}
+                  className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium"
+                >
+                  <option value="all">Semua Saluran (Via)</option>
+                  {salesChannels.map(c => (
+                    <option key={c.id} value={c.nama_channel}>
+                      {c.nama_channel}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>
@@ -772,8 +1334,8 @@ export const MarketingDashboard: React.FC = () => {
                       />
                     </th>
                     <th className="p-3.5">Invoice & Tanggal</th>
-                    <th className="p-3.5">Pembeli & Saluran</th>
-                    <th className="p-3.5">Ekspedisi / Tujuan</th>
+                    <th className="p-3.5">Pembeli & Kontak</th>
+                    <th className="p-3.5">Penerima & Ekspedisi</th>
                     <th className="p-3.5 text-right">Total Tagihan</th>
                     <th className="p-3.5">Status</th>
                     <th className="p-3.5 text-right">Aksi</th>
@@ -800,17 +1362,38 @@ export const MarketingDashboard: React.FC = () => {
                         <div className="text-[11px] text-slate-500">{order.tanggal_pesan}</div>
                       </td>
                       <td className="p-3.5">
-                        <div className="font-bold text-slate-900 dark:text-white">{order.nama_pembeli}</div>
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                          {order.via}
-                        </span>
+                        <div className="font-bold text-slate-900 dark:text-white flex items-center space-x-1">
+                          <span>{order.nama_pembeli}</span>
+                        </div>
+                        <div className="flex items-center space-x-1.5 mt-0.5">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-medium">
+                            {order.via}
+                          </span>
+                          {order.kontak_pembeli && (
+                            <span className="text-[10px] text-slate-500">
+                              📞 {order.kontak_pembeli}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-3.5">
-                        <div className="text-slate-800 dark:text-slate-200 font-semibold">{order.ekspedisi}</div>
-                        <div className="text-[11px] text-slate-500 truncate max-w-xs">{order.alamat_penerima}</div>
+                        <div className="text-slate-800 dark:text-slate-200 font-semibold flex items-center space-x-1.5">
+                          <span>{order.ekspedisi}</span>
+                          {order.nama_penerima && order.nama_penerima !== order.nama_pembeli && (
+                            <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-600 dark:text-slate-300">
+                              Penerima: {order.nama_penerima}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-slate-500 truncate max-w-xs">{order.alamat_penerima || 'Ambil langsung / Tanpa alamat'}</div>
                       </td>
                       <td className="p-3.5 text-right font-extrabold text-slate-900 dark:text-white">
-                        Rp {order.total_tagihan.toLocaleString('id-ID')}
+                        <div>Rp {order.total_tagihan.toLocaleString('id-ID')}</div>
+                        {order.donasi && order.donasi > 0 ? (
+                          <div className="text-[10px] font-normal text-amber-600 dark:text-amber-400">
+                            +Donasi: Rp {order.donasi.toLocaleString('id-ID')}
+                          </div>
+                        ) : null}
                       </td>
                       <td className="p-3.5">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
@@ -1008,6 +1591,35 @@ export const MarketingDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* SALURAN & EKSPEDISI SUB TAB */}
+      {activeSubTab === 'saluran' && (
+        <ChannelsAndExpeditionsTab />
+      )}
+
+      {/* Quick Add Channel Modal for POS */}
+      <SalesChannelModal
+        isOpen={isAddChannelQuickModalOpen}
+        onClose={() => setIsAddChannelQuickModalOpen(false)}
+        onSave={(newChannel) => {
+          addSalesChannel(newChannel);
+          setViaPlatform(newChannel.nama_channel);
+          setToastMessage(`Saluran "${newChannel.nama_channel}" berhasil ditambahkan dan dipilih!`);
+          setTimeout(() => setToastMessage(null), 3000);
+        }}
+      />
+
+      {/* Quick Add Expedition Modal for POS */}
+      <ExpeditionModal
+        isOpen={isAddExpeditionQuickModalOpen}
+        onClose={() => setIsAddExpeditionQuickModalOpen(false)}
+        onSave={(newExp) => {
+          addExpedition(newExp);
+          setEkspedisi(newExp.nama_ekspedisi);
+          setToastMessage(`Ekspedisi "${newExp.nama_ekspedisi}" berhasil ditambahkan dan dipilih!`);
+          setTimeout(() => setToastMessage(null), 3000);
+        }}
+      />
 
       {/* Invoice Print Modal */}
       <InvoicePrintModal

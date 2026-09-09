@@ -34,11 +34,16 @@ export const PenerbitanDashboard: React.FC = () => {
     bulkDeletePengajuanCetak,
     approvePengajuanCetak,
     accounts,
-    switchDivision
+    switchDivision,
+    currentSubTab,
+    setCurrentSubTab
   } = useApp();
 
   const [searchBook, setSearchBook] = useState('');
-  const [activeSubTab, setActiveSubTab] = useState<'katalog' | 'grafik' | 'pengajuan'>('katalog');
+  const activeSubTab = (['katalog', 'grafik', 'pengajuan'].includes(currentSubTab)
+    ? currentSubTab
+    : 'katalog') as 'katalog' | 'grafik' | 'pengajuan';
+  const setActiveSubTab = (tab: 'katalog' | 'grafik' | 'pengajuan') => setCurrentSubTab(tab);
   const [selectedBookIds, setSelectedBookIds] = useState<number[]>([]);
   const [selectedPengajuanIds, setSelectedPengajuanIds] = useState<number[]>([]);
   
