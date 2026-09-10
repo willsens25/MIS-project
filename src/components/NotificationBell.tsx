@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
 import {
   Bell,
@@ -477,14 +478,16 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
   return (
     <div className="relative" ref={dropdownRef}>
       {/* Bell Trigger Button */}
-      <button
+      <motion.button
         id="btn-notification-bell"
         type="button"
+        whileHover={{ scale: 1.08 }}
+        whileTap={{ scale: 0.92 }}
         onClick={() => setIsOpen(!isOpen)}
         aria-label={`Notifikasi Divisi ${currentDivisi?.nama_divisi || ''}`}
         aria-expanded={isOpen}
         title={`Alert & Notifikasi Divisi ${currentDivisi?.nama_divisi || ''} (${unreadAlerts.length} belum dibaca)`}
-        className={`relative p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-100 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/80 hover:border-slate-400 dark:hover:border-slate-600 transition-all cursor-pointer group shadow-sm ${
+        className={`relative p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-100 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/80 hover:border-slate-400 dark:hover:border-slate-600 transition-colors cursor-pointer group shadow-sm ${
           isOpen ? 'ring-2 ring-indigo-500/50 text-indigo-600 dark:text-indigo-400' : ''
         }`}
       >
@@ -507,178 +510,191 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
           </span>
         )}
-      </button>
+      </motion.button>
 
       {/* Dropdown Popover */}
-      {isOpen && (
-        <div
-          id="notification-popover"
-          className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
-        >
-          {/* Header */}
-          <div className="p-3.5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="p-1.5 bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-300 rounded-lg">
-                <Bell className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="flex items-center space-x-1.5">
-                  <h3 className="text-xs font-bold text-slate-900 dark:text-white">Alert & Notifikasi</h3>
-                  <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-indigo-100 dark:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 font-mono">
-                    {currentDivisi?.kode}
-                  </span>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            id="notification-popover"
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            transition={{ duration: 0.16 }}
+            className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden"
+          >
+            {/* Header */}
+            <div className="p-3.5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="p-1.5 bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-300 rounded-lg">
+                  <Bell className="w-4 h-4" />
                 </div>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[200px]">
-                  Divisi {currentDivisi?.nama_divisi}
-                </p>
+                <div>
+                  <div className="flex items-center space-x-1.5">
+                    <h3 className="text-xs font-bold text-slate-900 dark:text-white">Alert & Notifikasi</h3>
+                    <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-indigo-100 dark:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 font-mono">
+                      {currentDivisi?.kode}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[200px]">
+                    Divisi {currentDivisi?.nama_divisi}
+                  </p>
+                </div>
               </div>
+
+              {/* Mark all as read button */}
+              {unreadAlerts.length > 0 && (
+                <button
+                  type="button"
+                  onClick={markAllAsRead}
+                  className="flex items-center space-x-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline px-2 py-1 rounded transition-colors"
+                  title="Tandai semua alert telah dibaca"
+                >
+                  <Check className="w-3 h-3" />
+                  <span>Baca Semua</span>
+                </button>
+              )}
             </div>
 
-            {/* Mark all as read button */}
-            {unreadAlerts.length > 0 && (
-              <button
+            {/* Filter Tabs */}
+            <div className="flex items-center border-b border-slate-100 dark:border-slate-800 px-3 py-1.5 bg-white dark:bg-slate-900 gap-1.5 text-xs">
+              <motion.button
                 type="button"
-                onClick={markAllAsRead}
-                className="flex items-center space-x-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline px-2 py-1 rounded transition-colors"
-                title="Tandai semua alert telah dibaca"
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setFilter('all')}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                  filter === 'all'
+                    ? 'bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-300 font-semibold'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
               >
-                <Check className="w-3 h-3" />
-                <span>Baca Semua</span>
-              </button>
-            )}
-          </div>
+                Semua ({divisionAlerts.length})
+              </motion.button>
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setFilter('urgent')}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                  filter === 'urgent'
+                    ? 'bg-rose-50 dark:bg-rose-950/80 text-rose-600 dark:text-rose-300 font-semibold'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                Mendesak ({divisionAlerts.filter(a => a.type === 'urgent' || a.type === 'warning').length})
+              </motion.button>
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setFilter('info')}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                  filter === 'info'
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                Info ({divisionAlerts.filter(a => a.type === 'info' || a.type === 'success').length})
+              </motion.button>
+            </div>
 
-          {/* Filter Tabs */}
-          <div className="flex items-center border-b border-slate-100 dark:border-slate-800 px-3 py-1.5 bg-white dark:bg-slate-900 gap-1.5 text-xs">
-            <button
-              type="button"
-              onClick={() => setFilter('all')}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
-                filter === 'all'
-                  ? 'bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-300 font-semibold'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              Semua ({divisionAlerts.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilter('urgent')}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
-                filter === 'urgent'
-                  ? 'bg-rose-50 dark:bg-rose-950/80 text-rose-600 dark:text-rose-300 font-semibold'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              Mendesak ({divisionAlerts.filter(a => a.type === 'urgent' || a.type === 'warning').length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilter('info')}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
-                filter === 'info'
-                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-              }`}
-            >
-              Info ({divisionAlerts.filter(a => a.type === 'info' || a.type === 'success').length})
-            </button>
-          </div>
-
-          {/* Alert List */}
-          <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/80">
-            {filteredAlerts.length === 0 ? (
-              <div className="p-8 text-center">
-                <div className="w-10 h-10 mx-auto rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 mb-2">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+            {/* Alert List */}
+            <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/80">
+              {filteredAlerts.length === 0 ? (
+                <div className="p-8 text-center">
+                  <div className="w-10 h-10 mx-auto rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 mb-2">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">Tidak ada alert baru</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Seluruh operasi divisi {currentDivisi?.nama_divisi} berjalan normal.
+                  </p>
                 </div>
-                <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">Tidak ada alert baru</p>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  Seluruh operasi divisi {currentDivisi?.nama_divisi} berjalan normal.
-                </p>
-              </div>
-            ) : (
-              filteredAlerts.map(alert => (
-                <div
-                  key={alert.id}
-                  onClick={() => markSingleAsRead(alert.id)}
-                  className={`p-3.5 transition-colors text-left flex items-start space-x-3 cursor-pointer group ${
-                    alert.isRead
-                      ? 'bg-white dark:bg-slate-900/60 opacity-80 hover:opacity-100'
-                      : 'bg-indigo-50/40 dark:bg-indigo-950/20 hover:bg-indigo-50/70 dark:hover:bg-indigo-950/40'
-                  }`}
-                >
-                  {/* Icon */}
-                  <div className="mt-0.5">{getAlertIcon(alert.type)}</div>
+              ) : (
+                filteredAlerts.map(alert => (
+                  <motion.div
+                    key={alert.id}
+                    whileHover={{ x: 3 }}
+                    transition={{ duration: 0.15 }}
+                    onClick={() => markSingleAsRead(alert.id)}
+                    className={`p-3.5 transition-colors text-left flex items-start space-x-3 cursor-pointer group ${
+                      alert.isRead
+                        ? 'bg-white dark:bg-slate-900/60 opacity-80 hover:opacity-100'
+                        : 'bg-indigo-50/40 dark:bg-indigo-950/20 hover:bg-indigo-50/70 dark:hover:bg-indigo-950/40'
+                    }`}
+                  >
+                    {/* Icon */}
+                    <div className="mt-0.5">{getAlertIcon(alert.type)}</div>
 
-                  {/* Body */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-1 mb-0.5">
-                      <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                        {alert.title}
-                      </span>
-                      <span
-                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${getAlertBadgeClass(
-                          alert.type
-                        )}`}
-                      >
-                        {alert.category}
-                      </span>
-                    </div>
-
-                    <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed mb-2 line-clamp-2">
-                      {alert.description}
-                    </p>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-1 text-[10px] text-slate-400 dark:text-slate-500">
-                        <Clock className="w-3 h-3" />
-                        <span>{alert.time}</span>
-                        {!alert.isRead && (
-                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-indigo-500 ml-1"></span>
-                        )}
+                    {/* Body */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1 mb-0.5">
+                        <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                          {alert.title}
+                        </span>
+                        <span
+                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${getAlertBadgeClass(
+                            alert.type
+                          )}`}
+                        >
+                          {alert.category}
+                        </span>
                       </div>
 
-                      {/* Quick Action Button */}
-                      {alert.onAction && alert.actionLabel && (
-                        <button
-                          type="button"
-                          onClick={e => {
-                            e.stopPropagation();
-                            markSingleAsRead(alert.id);
-                            alert.onAction?.();
-                          }}
-                          className="flex items-center space-x-1 text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white transition-colors shadow-xs"
-                        >
-                          <span>{alert.actionLabel}</span>
-                          <ChevronRight className="w-3 h-3" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed mb-2 line-clamp-2">
+                        {alert.description}
+                      </p>
 
-          {/* Footer */}
-          <div className="p-2.5 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-            <span className="text-[10px]">
-              {unreadAlerts.length} alert aktif untuk {currentDivisi?.kode}
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                markAllAsRead();
-                setIsOpen(false);
-              }}
-              className="text-[10px] text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium"
-            >
-              Tutup Panel
-            </button>
-          </div>
-        </div>
-      )}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-1 text-[10px] text-slate-400 dark:text-slate-500">
+                          <Clock className="w-3 h-3" />
+                          <span>{alert.time}</span>
+                          {!alert.isRead && (
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-indigo-500 ml-1"></span>
+                          )}
+                        </div>
+
+                        {/* Quick Action Button */}
+                        {alert.onAction && alert.actionLabel && (
+                          <motion.button
+                            type="button"
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.94 }}
+                            onClick={e => {
+                              e.stopPropagation();
+                              markSingleAsRead(alert.id);
+                              alert.onAction?.();
+                            }}
+                            className="flex items-center space-x-1 text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white transition-colors shadow-xs"
+                          >
+                            <span>{alert.actionLabel}</span>
+                            <ChevronRight className="w-3 h-3" />
+                          </motion.button>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-2.5 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+              <span className="text-[10px]">
+                {unreadAlerts.length} alert aktif untuk {currentDivisi?.kode}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  markAllAsRead();
+                  setIsOpen(false);
+                }}
+                className="text-[10px] text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium cursor-pointer"
+              >
+                Tutup Panel
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

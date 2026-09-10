@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
 import { DivisionId } from '../types';
 import { NotificationBell } from './NotificationBell';
+import { MascotAvatar } from './MascotAvatar';
 import { EditProfileModal } from './profile/EditProfileModal';
 import { DivisionReportModal } from './modals/DivisionReportModal';
 import { AnnualReportModal } from './modals/AnnualReportModal';
@@ -99,28 +101,37 @@ export const Header: React.FC<HeaderProps> = ({
               />
             </div>
 
-            {/* Division Switcher Bar */}
-            <div className="hidden lg:flex items-center space-x-1 bg-slate-100 dark:bg-slate-900/90 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
+            {/* Division Switcher Bar with Animated Sliding Pill */}
+            <div className="hidden lg:flex items-center space-x-1 bg-slate-100 dark:bg-slate-900/90 p-1 rounded-xl border border-slate-200 dark:border-slate-800 relative">
               {divisiList.map((div) => {
                 const isActive = currentUser.divisi_id === div.id;
                 return (
-                  <button
+                  <motion.button
                     key={div.id}
                     id={`btn-divisi-${div.kode.toLowerCase()}`}
                     onClick={() => switchDivision(div.id)}
-                    className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.96 }}
+                    className={`relative flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors z-10 cursor-pointer ${
                       isActive
-                        ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-800/60'
+                        ? 'text-white font-semibold'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                     title={div.deskripsi}
                   >
+                    {isActive && (
+                      <motion.div
+                        layoutId="active-division-pill"
+                        className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-lg shadow-sm -z-10"
+                        transition={{ type: 'spring', stiffness: 450, damping: 30 }}
+                      />
+                    )}
                     {getDivisionIcon(div.id)}
                     <span>{div.kode}</span>
                     {div.id === 2 && pendingPengajuansCount > 0 && (
                       <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
                     )}
-                  </button>
+                  </motion.button>
                 );
               })}
             </div>
@@ -130,66 +141,82 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center space-x-2.5">
             {/* Mobile Division Selector Dropdown */}
             <div className="relative lg:hidden">
-              <button
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.96 }}
                 onClick={() => setShowDivisiMenu(!showDivisiMenu)}
                 className="flex items-center space-x-1 px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-medium border border-slate-300 dark:border-slate-700"
               >
                 {getDivisionIcon(currentUser.divisi_id)}
                 <span>{divisiList.find(d => d.id === currentUser.divisi_id)?.kode}</span>
                 <ChevronDown className="w-3.5 h-3.5" />
-              </button>
+              </motion.button>
 
-              {showDivisiMenu && (
-                <div className="absolute left-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl py-1 z-50">
-                  <div className="px-3 py-1.5 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800">
-                    Pilih Divisi MIS
-                  </div>
-                  {divisiList.map(div => (
-                    <button
-                      key={div.id}
-                      onClick={() => {
-                        switchDivision(div.id);
-                        setShowDivisiMenu(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-3 py-2 text-xs text-left ${
-                        currentUser.divisi_id === div.id
-                          ? 'bg-indigo-50 dark:bg-indigo-600/30 text-indigo-600 dark:text-indigo-300 font-semibold'
-                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-2">
-                        {getDivisionIcon(div.id)}
-                        <span>{div.nama_divisi}</span>
-                      </div>
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">{div.kode}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
+              <AnimatePresence>
+                {showDivisiMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute left-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl py-1 z-50 overflow-hidden"
+                  >
+                    <div className="px-3 py-1.5 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800">
+                      Pilih Divisi MIS
+                    </div>
+                    {divisiList.map(div => (
+                      <motion.button
+                        key={div.id}
+                        whileHover={{ x: 2, backgroundColor: 'rgba(99, 102, 241, 0.08)' }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => {
+                          switchDivision(div.id);
+                          setShowDivisiMenu(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 text-xs text-left ${
+                          currentUser.divisi_id === div.id
+                            ? 'bg-indigo-50 dark:bg-indigo-600/30 text-indigo-600 dark:text-indigo-300 font-semibold'
+                            : 'text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2">
+                          {getDivisionIcon(div.id)}
+                          <span>{div.nama_divisi}</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">{div.kode}</span>
+                      </motion.button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Download PDF Report Button */}
-            <button
+            <motion.button
               id="btn-download-pdf-report"
               onClick={() => setShowReportModal(true)}
-              className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-600/25 hover:bg-indigo-100 dark:hover:bg-indigo-600/40 text-indigo-700 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-500/40 rounded-lg text-xs font-semibold shadow-xs transition-all cursor-pointer"
+              whileHover={{ scale: 1.05, y: -1 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-600/25 hover:bg-indigo-100 dark:hover:bg-indigo-600/40 text-indigo-700 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-500/40 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
               title="Download PDF Report — Cetak Ringkasan Laporan Divisi"
             >
               <FileDown className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
               <span className="hidden sm:inline">Laporan PDF</span>
               <span className="sm:hidden inline">PDF</span>
-            </button>
+            </motion.button>
 
-            {/* AI Assistant Button */}
-            <button
+            {/* AI Assistant Button with Mascot Logo */}
+            <motion.button
               id="btn-gemini-assistant"
               onClick={onOpenAI}
-              className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-600/30 hover:bg-emerald-100 dark:hover:bg-emerald-600/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 rounded-lg text-xs font-semibold shadow-sm transition-all cursor-pointer"
-              title="Tanya Asisten AI Gemini MIS"
+              whileHover={{ scale: 1.06, y: -1 }}
+              whileTap={{ scale: 0.94 }}
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 bg-teal-50 dark:bg-teal-950/50 hover:bg-teal-100 dark:hover:bg-teal-900/60 text-teal-800 dark:text-teal-200 border border-teal-300 dark:border-teal-700/70 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer group"
+              title="Tanya Asisten AI MIS Lamrimnesia"
             >
-              <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 animate-pulse" />
-              <span className="hidden sm:inline">AI MIS</span>
-            </button>
+              <MascotAvatar size="xs" variant="badge" interactive={false} className="w-5 h-5 group-hover:scale-110 transition-transform shadow-xs" />
+              <span className="hidden sm:inline font-bold">AI MIS</span>
+            </motion.button>
 
             {/* Division-Specific Notification Bell */}
             <NotificationBell
@@ -198,15 +225,17 @@ export const Header: React.FC<HeaderProps> = ({
             />
 
             {/* Persistent UI Theme Toggle Switch Button */}
-            <button
+            <motion.button
               id="btn-theme-toggle"
               type="button"
               role="switch"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.92 }}
               aria-checked={theme === 'dark'}
               onClick={toggleTheme}
               aria-label={theme === 'dark' ? 'Mode Gelap Aktif — Klik untuk beralih ke Mode Terang' : 'Mode Terang Aktif — Klik untuk beralih ke Mode Gelap'}
               title={theme === 'dark' ? 'Mode Gelap Aktif — Klik untuk beralih ke Mode Terang (Light Mode)' : 'Mode Terang Aktif — Klik untuk beralih ke Mode Gelap (Dark Mode)'}
-              className={`relative inline-flex items-center h-8 rounded-full p-1 transition-all duration-300 cursor-pointer select-none border shadow-xs focus:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-500 group ${
+              className={`relative inline-flex items-center h-8 rounded-full p-1 transition-colors cursor-pointer select-none border shadow-xs focus:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-500 group ${
                 theme === 'dark'
                   ? 'bg-slate-800/95 border-slate-700 hover:border-slate-600 text-slate-200'
                   : 'bg-slate-200/90 border-slate-300 hover:border-slate-400 text-slate-700'
@@ -220,8 +249,10 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
 
               {/* Sliding thumb */}
-              <span
-                className={`absolute top-1 left-1 w-6 h-6 rounded-full bg-white dark:bg-slate-900 shadow-sm transform transition-transform duration-300 ease-out flex items-center justify-center border border-slate-200/90 dark:border-slate-700 pointer-events-none ${
+              <motion.span
+                layout
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                className={`absolute top-1 left-1 w-6 h-6 rounded-full bg-white dark:bg-slate-900 shadow-sm flex items-center justify-center border border-slate-200/90 dark:border-slate-700 pointer-events-none ${
                   theme === 'dark' ? 'translate-x-7' : 'translate-x-0'
                 }`}
               >
@@ -230,8 +261,8 @@ export const Header: React.FC<HeaderProps> = ({
                 ) : (
                   <Sun className="w-3.5 h-3.5 text-amber-500 group-hover:rotate-45 transition-transform duration-200" />
                 )}
-              </span>
-            </button>
+              </motion.span>
+            </motion.button>
 
             {/* If Not Authenticated: Show Login / Register Buttons */}
             {!isAuthenticated ? (
@@ -256,8 +287,10 @@ export const Header: React.FC<HeaderProps> = ({
             ) : (
               /* Authenticated User Profile & Actions Dropdown */
               <div className="relative">
-                <button
+                <motion.button
                   id="btn-user-profile"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.96 }}
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
                   className="flex items-center space-x-2 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/80 px-2.5 py-1.5 rounded-lg text-xs text-slate-700 dark:text-slate-200 transition-all cursor-pointer shadow-xs"
                 >
@@ -278,10 +311,17 @@ export const Header: React.FC<HeaderProps> = ({
                     <div className="text-[10px] text-slate-500 dark:text-slate-400 leading-none">{divisiList.find(d => d.id === currentUser.divisi_id)?.nama_divisi}</div>
                   </div>
                   <ChevronDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-                </button>
+                </motion.button>
 
-                {showProfileMenu && (
-                  <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <AnimatePresence>
+                  {showProfileMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                      transition={{ duration: 0.16 }}
+                      className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl py-2 z-50 overflow-hidden"
+                    >
                     {/* User Card Header with Quick Edit Trigger */}
                     <div
                       onClick={() => {
@@ -473,9 +513,10 @@ export const Header: React.FC<HeaderProps> = ({
                         <span>Reset Data Default</span>
                       </button>
                     </div>
-                  </div>
+                  </motion.div>
                 )}
-              </div>
+              </AnimatePresence>
+            </div>
             )}
 
           </div>
