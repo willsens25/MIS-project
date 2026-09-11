@@ -30,7 +30,7 @@ export const MascotAvatar: React.FC<MascotAvatarProps> = ({
 
   const motionProps = interactive
     ? {
-        whileHover: { scale: 1.08, rotate: [0, -3, 3, 0] },
+        whileHover: { scale: 1.08, rotate: 3 },
         whileTap: { scale: 0.95 },
         transition: { type: 'spring' as const, stiffness: 400, damping: 17 }
       }

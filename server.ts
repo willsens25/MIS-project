@@ -149,47 +149,183 @@ function getAIClient() {
   return aiClient;
 }
 
-// Helper function for calling Gemini with model fallback and retries
-async function generateWithFallback(ai: GoogleGenAI, fullPrompt: string) {
-  const models = ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.5-pro"];
+// Priority list of fast, modern Gemini models (stable lite model first to prevent 503 capacity spikes)
+const FAST_GEMINI_MODELS = [
+  "gemini-3.1-flash-lite",
+  "gemini-flash-latest",
+  "gemini-3.8-flash"
+];
+
+// System instruction for genuinely helpful, flexible, and context-aware responses
+const GEMINI_SYSTEM_INSTRUCTION = `Anda adalah Asisten AI Cerdas MIS SAPA-ALL Lamrimnesia (Sistem Administrasi & Pengelolaan Terpadu).
+Karakter Anda adalah asisten yang cerdas, luwes, komunikatif, solutif, dan profesional.
+
+PANDUAN SAPAAN & PENYESUAIAN DIVISI (SANGAT PENTING):
+1. Periksa dengan teliti bagian [DIVISI & PENGGUNA AKTIF SAAT INI] pada konteks data.
+2. DILARANG KERAS memanggil atau menyapa "Halo Direktur", "Bapak/Ibu Direktur", atau semacamnya jika pengguna sedang berada di divisi lain (seperti Finance/Bendahara, Penerbitan, Marketing, Produksi, atau Logistik)!
+3. Sapalah pengguna menyesuaikan divisi yang sedang aktif/dipilih:
+   - Divisi Bendahara / Finance: Sapa sebagai rekan Finance/Bendahara (contoh: "Halo rekan Finance / Bendahara", "Halo Kak Siti", atau "Halo tim Keuangan"). Fokuskan sudut pandang pada arus kas, jurnal mutasi, dan verifikasi invoice.
+   - Divisi Penerbitan: Sapa sebagai rekan Penerbitan / Editorial (contoh: "Halo rekan Penerbitan", "Halo Kak Budi"). Fokuskan pada naskah, ISBN, HPP, dan pengajuan cetak.
+   - Divisi Marketing & Distribution: Sapa sebagai rekan Marketing & Distribusi (contoh: "Halo rekan Marketing", "Halo Kak Diana"). Fokuskan pada penjualan, promosi, pelanggan, bundling, dan pesanan.
+   - Divisi Produksi: Sapa sebagai rekan Produksi (contoh: "Halo rekan Produksi", "Halo Kak Agus"). Fokuskan pada cetak fisik, log pabrikasi, dan antrean cetak.
+   - Divisi Logistik & Gudang: Sapa sebagai rekan Logistik & Gudang (contoh: "Halo rekan Logistik", "Halo Kak Hendra"). Fokuskan pada stok gudang, packing, ekspedisi, dan surat jalan.
+   - HANYA sapa "Halo Bapak/Ibu Direktur" atau "Halo rekan Manajemen/Direktorat" jika pengguna memang sedang aktif di Divisi Direktorat & HRD (Divisi 1).
+4. Jika menyapa nama, gunakan nama pengguna yang tertera pada konteks divisi aktif tersebut.
+
+PANDUAN FORMAT & PENULISAN (SANGAT KETAT):
+1. DILARANG KERAS menggunakan tanda pagar (#, ##, ###, ####) untuk judul atau subjudul!
+   Pengguna meminta secara khusus agar TIDAK ADA simbol '###' atau semacamnya.
+   Sebagai gantinya, gunakan huruf tebal biasa (contoh: **Judul Bagian:** atau **Opsi 1:**) atau penomoran.
+2. DILARANG menggunakan garis pembatas seperti '---' atau '***'. Cukup gunakan jeda baris/paragraf baru yang rapi.
+3. Untuk daftar/list, gunakan tanda strip (-) atau bullet (•) atau angka (1., 2.).
+4. Buat format obrolan yang bersih, rapi, dan mudah dibaca selayaknya pesan chat modern.
+
+PANDUAN UTAMA MENJAWAB:
+1. PENUHI PERMINTAAN PENGGUNA SECARA TOTAL:
+   - Jawablah secara spesifik, kreatif, dan tepat sasaran sesuai instruksi pengguna.
+   - HINDARI jawaban template atau respon hafalan yang kaku/generik.
+   - Jika pengguna meminta membuat draf (seperti email penagihan, surat resmi, pesan WhatsApp, pengumuman, SOP, atau konten promosi), tuliskan draf yang lengkap, rapi, dan siap digunakan.
+   - Jika pengguna meminta analisis, perbandingan, ide, atau perhitungan, berikan penjelasan mendalam beserta rekomendasi praktis.
+   - Jika pengguna berdiskusi, bertanya hal umum, atau menyapa, balas dengan ramah, natural, dan interaktif seperti asisten sungguhan.
+
+2. INTEGRASI DATA MIS:
+   - Jika pertanyaan atau instruksi berkaitan dengan operasional Lamrimnesia (buku, harga, stok, keuangan kas, pesanan/invoice, penerbitan, atau anggota), gunakan data aktual MIS yang dilampirkan sebagai rujukan akurat.
+   - Anda bebas mengekstrak, menghitung, memfilter, atau mengelompokkan data yang tersedia untuk menjawab pertanyaan pengguna.`;
+
+// Helper function for calling Gemini with fast model fallback
+async function generateWithFallback(ai: GoogleGenAI, contents: any) {
   let lastError: any = null;
 
-  for (const model of models) {
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      try {
-        const response = await ai.models.generateContent({
-          model,
-          contents: fullPrompt,
-        });
-        if (response.text) {
-          return { text: response.text, modelUsed: model };
+  for (const model of FAST_GEMINI_MODELS) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents,
+        config: {
+          systemInstruction: GEMINI_SYSTEM_INSTRUCTION,
+          temperature: 0.75,
         }
-      } catch (err: any) {
-        lastError = err;
-        const errMsg = err?.message || String(err);
-        const isTransient = errMsg.includes("503") || errMsg.includes("UNAVAILABLE") || errMsg.includes("high demand") || errMsg.includes("429");
-        
-        // If 404 (model deprecated for account), break to next model immediately
-        if (errMsg.includes("404") || errMsg.includes("NOT_FOUND") || errMsg.includes("no longer available")) {
-          break;
-        }
-
-        if (isTransient && attempt === 1) {
-          // brief pause before retry
-          await new Promise((resolve) => setTimeout(resolve, 800));
-          continue;
-        }
-        break; // try next model
+      });
+      if (response.text) {
+        return { text: response.text, modelUsed: model };
       }
+    } catch (err: any) {
+      lastError = err;
+      // Immediately try next model on error without delay
     }
   }
 
   throw lastError;
 }
 
+// Build formatted contents supporting multi-turn conversation and grounded data
+function buildConversationContents(prompt: string, systemContext?: string, history?: Array<{ role: 'user' | 'assistant'; content: string }>) {
+  if (Array.isArray(history) && history.length > 0) {
+    const turns: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
+
+    // Include last few turns of conversation for memory
+    for (const msg of history.slice(-6)) {
+      if (!msg.content || !msg.content.trim()) continue;
+      turns.push({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
+      });
+    }
+
+    // Current user message enriched with grounded context
+    const currentTurnText = `${systemContext ? `[Konteks & Database Terkini MIS Lamrimnesia]:\n${systemContext}\n\n` : ''}Permintaan/Instruksi Pengguna:\n${prompt}`;
+    turns.push({
+      role: 'user',
+      parts: [{ text: currentTurnText }]
+    });
+
+    return turns;
+  }
+
+  // Single turn format
+  return `${systemContext ? `[Konteks & Database Terkini MIS Lamrimnesia]:\n${systemContext}\n\n` : ''}Permintaan/Instruksi Pengguna:\n${prompt}`;
+}
+
+// Real-time streaming endpoint (Server-Sent Events) for immediate response
+app.post("/api/gemini/stream", async (req: Request, res: Response) => {
+  try {
+    const { prompt, systemContext, history } = req.body;
+    if (!prompt) {
+      return res.status(400).json({ success: false, message: "Prompt is required" });
+    }
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders?.();
+
+    const ai = getAIClient();
+    if (!ai) {
+      const fallbackMsg = `[Mode Standar / Tanpa API Key]
+Saya mencatat pertanyaan Anda: "${prompt}".
+Untuk mengaktifkan kecerdasan penuh Gemini AI agar dapat menganalisis data dan menjawab secara bebas, silakan hubungkan GEMINI_API_KEY di pengaturan.`;
+      res.write(`data: ${JSON.stringify({ chunk: fallbackMsg })}\n\n`);
+      res.write("data: [DONE]\n\n");
+      return res.end();
+    }
+
+    const contents = buildConversationContents(prompt, systemContext, history);
+    let streamStarted = false;
+
+    for (const model of FAST_GEMINI_MODELS) {
+      try {
+        const stream = await ai.models.generateContentStream({
+          model,
+          contents,
+          config: {
+            systemInstruction: GEMINI_SYSTEM_INSTRUCTION,
+            temperature: 0.75,
+          }
+        });
+
+        for await (const chunk of stream) {
+          if (chunk.text) {
+            streamStarted = true;
+            res.write(`data: ${JSON.stringify({ chunk: chunk.text })}\n\n`);
+          }
+        }
+
+        res.write("data: [DONE]\n\n");
+        return res.end();
+      } catch (err: any) {
+        const errStr = String(err?.message || err);
+        const is503 = errStr.includes("503") || errStr.includes("UNAVAILABLE") || errStr.includes("high demand");
+        console.warn(`[AI Stream] Model ${model} ${is503 ? 'temporarily at capacity (503)' : 'encountered error'}, proceeding to fallback model...`);
+        if (streamStarted) {
+          res.write("data: [DONE]\n\n");
+          return res.end();
+        }
+        // Try next fast model immediately
+      }
+    }
+
+    // If all models failed to start, send helpful fallback based on prompt
+    const fallbackSummary = `Maaf, server AI saat ini sedang mengalami lonjakan trafik tinggi. 
+Namun data operasional MIS Anda tetap aman dan dapat diakses langsung melalui modul yang tersedia pada sistem dashboard SAPA-ALL. Silakan ajukan kembali pertanyaan Anda beberapa saat lagi.`;
+
+    res.write(`data: ${JSON.stringify({ chunk: fallbackSummary })}\n\n`);
+    res.write("data: [DONE]\n\n");
+    return res.end();
+  } catch (error: any) {
+    console.error("Stream route fatal error:", error);
+    try {
+      res.write(`data: ${JSON.stringify({ error: error?.message || "Internal Server Error" })}\n\n`);
+      res.write("data: [DONE]\n\n");
+      res.end();
+    } catch {
+      // Ignored
+    }
+  }
+});
+
 app.post("/api/gemini", async (req: Request, res: Response) => {
   try {
-    const { prompt, systemContext } = req.body;
+    const { prompt, systemContext, history } = req.body;
     if (!prompt) {
       return res.status(400).json({ success: false, message: "Prompt is required" });
     }
@@ -198,18 +334,14 @@ app.post("/api/gemini", async (req: Request, res: Response) => {
     if (!ai) {
       return res.json({
         success: true,
-        output: `[Mode Standar / Tanpa API Key]
-Ringkasan Data MIS SAPA-ALL:
-- Sistem mengelola 6 divisi: Direktorat, Bendahara/Finance, Penerbitan, Marketing, Produksi, dan Logistik.
-- Pertanyaan Anda: "${prompt}".
-- Untuk mengaktifkan Gemini AI cerdas sepenuhnya, tambahkan GEMINI_API_KEY di Settings/Environment.`
+        output: `[Mode Standar / Tanpa API Key]\nPertanyaan Anda: "${prompt}". Hubungkan GEMINI_API_KEY untuk respon AI cerdas.`
       });
     }
 
-    const fullPrompt = `${systemContext ? `Konteks Sistem MIS SAPA-ALL:\n${systemContext}\n\n` : ''}Pertanyaan/Perintah User:\n${prompt}\n\nBerikan jawaban yang jelas, profesional, dan berbasis data MIS dalam Bahasa Indonesia.`;
+    const contents = buildConversationContents(prompt, systemContext, history);
 
     try {
-      const result = await generateWithFallback(ai, fullPrompt);
+      const result = await generateWithFallback(ai, contents);
       return res.json({
         success: true,
         output: result.text,
@@ -217,23 +349,10 @@ Ringkasan Data MIS SAPA-ALL:
     } catch (apiError: any) {
       console.warn("Semua model Gemini sedang sibuk atau error:", apiError?.message);
 
-      // Graceful fallback response using local context summary when 503 / high demand occurs
-      const isCapacityIssue =
-        apiError?.message?.includes("503") ||
-        apiError?.message?.includes("UNAVAILABLE") ||
-        apiError?.message?.includes("high demand") ||
-        apiError?.message?.includes("429");
-
-      if (isCapacityIssue) {
-        return res.json({
-          success: true,
-          output: `⚠️ *Layanan Gemini Cloud sedang mengalami lonjakan trafik (503 High Demand). Berikut analisis instan dari ringkasan data lokal MIS:*
-
-${systemContext ? `📌 **Ringkasan Operasional Terkini:**\n${systemContext.split('\n').slice(0, 10).join('\n')}\n\n` : ''}💡 *Terkait pertanyaan Anda ("${prompt}"): Anda dapat mengecek detail langsung melalui modul divisi terkait pada dashboard SAPA-ALL, atau silakan coba ulangi pertanyaan Anda beberapa saat lagi.*`
-        });
-      }
-
-      throw apiError;
+      return res.json({
+        success: true,
+        output: `Maaf, server AI sedang mengalami lonjakan trafik saat ini. Silakan coba kembali sesaat lagi.`
+      });
     }
   } catch (error: any) {
     console.error("Gemini API Error:", error);
