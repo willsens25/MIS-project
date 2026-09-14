@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
 import { MascotAvatar } from './MascotAvatar';
-import { Send, X, Loader2, Lightbulb, Sparkles } from 'lucide-react';
+import { Send, X, Loader2, Lightbulb, Sparkles, Mic, MicOff, Volume2, VolumeX, Radio } from 'lucide-react';
+import { useWebSpeech } from '../hooks/useWebSpeech';
 
 interface AIAssistantModalProps {
   isOpen: boolean;
@@ -137,6 +138,37 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({ isOpen, onCl
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const [autoSendVoice, setAutoSendVoice] = useState(true);
+
+  // Reference to handleSend so speech callback can invoke the latest version
+  const handleSendRef = useRef<((customPrompt?: string) => Promise<void>) | undefined>(undefined);
+
+  const {
+    isRecognitionSupported,
+    isTtsSupported,
+    isListening,
+    interimTranscript,
+    speechError,
+    setSpeechError,
+    selectedLang,
+    setSelectedLang,
+    startListening,
+    stopListening,
+    toggleListening,
+    isSpeaking,
+    speakingIndex,
+    speak,
+    stopSpeaking
+  } = useWebSpeech({
+    defaultLang: 'id-ID',
+    onFinalResult: (transcript) => {
+      if (!transcript || !transcript.trim()) return;
+      setPrompt(transcript);
+      if (autoSendVoice) {
+        handleSendRef.current?.(transcript);
+      }
+    }
+  });
 
   // Automatically adapt welcome greeting whenever the active division changes
   useEffect(() => {
@@ -148,6 +180,14 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({ isOpen, onCl
     ]);
   }, [currentUser.divisi_id, currentUser.name, currentUser.role, currentDivisiName]);
 
+  // Stop listening and voice playback if modal is closed
+  useEffect(() => {
+    if (!isOpen) {
+      stopListening();
+      stopSpeaking();
+    }
+  }, [isOpen, stopListening, stopSpeaking]);
+
   useEffect(() => {
     if (isOpen) {
       chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -157,6 +197,11 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({ isOpen, onCl
   const quickPrompts = getDivisionQuickPrompts(currentUser.divisi_id);
 
   const handleSend = async (customPrompt?: string) => {
+    // If currently speaking, stop synthesis on new send
+    stopSpeaking();
+    // If currently listening, stop recognition
+    if (isListening) stopListening();
+
     const textToSend = customPrompt || prompt;
     if (!textToSend.trim() || isLoading) return;
 
@@ -338,6 +383,8 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
     }
   };
 
+  handleSendRef.current = handleSend;
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -355,7 +402,7 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
             transition={{ type: 'spring', damping: 25, stiffness: 350 }}
             className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl h-[600px] shadow-2xl flex flex-col overflow-hidden"
           >
-            {/* Header with Official Mascot Badge */}
+            {/* Header with Official Mascot Badge & Voice Indicators */}
             <div className="flex items-center justify-between px-5 py-3.5 bg-gradient-to-r from-slate-900 via-slate-850 to-teal-950 text-white border-b border-slate-800">
               <div className="flex items-center space-x-3">
                 {/* Mascot Logo from Image 2: Green Ring & Pink Background */}
@@ -364,7 +411,7 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
                   <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 border-2 border-slate-900 rounded-full" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                     <h3 className="font-bold text-sm text-slate-100">
                       AI MIS Lamrimnesia
                     </h3>
@@ -376,8 +423,25 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                       {currentDivisiName}
                     </span>
+                    {isRecognitionSupported && (
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-300 border border-teal-500/30 hidden sm:inline-flex items-center gap-1">
+                        <Mic className="w-2.5 h-2.5 text-teal-400" />
+                        Voice Ready
+                      </span>
+                    )}
+                    {isSpeaking && (
+                      <button
+                        type="button"
+                        onClick={stopSpeaking}
+                        className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 animate-pulse cursor-pointer hover:bg-amber-500/30"
+                        title="Klik untuk hentikan pembacaan suara"
+                      >
+                        <Volume2 className="w-2.5 h-2.5" />
+                        <span>Membacakan...</span>
+                      </button>
+                    )}
                   </div>
-                  <p className="text-[11px] text-slate-400">Asisten Cerdas Analitik & Operasional MIS</p>
+                  <p className="text-[11px] text-slate-400">Asisten Cerdas Analitik & Perintah Suara MIS</p>
                 </div>
               </div>
               <motion.button
@@ -435,6 +499,35 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
                           {renderCleanAiContent(msg.content)}
                           {isLoading && idx === messages.length - 1 && (
                             <span className="inline-block w-1.5 h-3.5 ml-1 bg-teal-200 animate-pulse align-middle" />
+                          )}
+
+                          {/* Action Footer for Web Speech TTS */}
+                          {msg.content && !(isLoading && idx === messages.length - 1) && isTtsSupported && (
+                            <div className="mt-2.5 pt-1.5 border-t border-teal-600/50 flex items-center justify-between text-[11px] text-teal-100/90">
+                              <span className="text-[10px] text-teal-200/70">MIS AI</span>
+                              <button
+                                type="button"
+                                onClick={() => isSpeaking && speakingIndex === idx ? stopSpeaking() : speak(msg.content, idx)}
+                                className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md transition-colors cursor-pointer text-xs font-medium ${
+                                  isSpeaking && speakingIndex === idx
+                                    ? 'bg-amber-400 text-slate-900 font-semibold shadow-xs'
+                                    : 'hover:bg-teal-700/70 text-teal-100 hover:text-white'
+                                }`}
+                                title={isSpeaking && speakingIndex === idx ? 'Hentikan pembacaan suara' : 'Bacakan jawaban ini dengan Web Speech API'}
+                              >
+                                {isSpeaking && speakingIndex === idx ? (
+                                  <>
+                                    <VolumeX className="w-3.5 h-3.5" />
+                                    <span>Hentikan Suara</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Volume2 className="w-3.5 h-3.5" />
+                                    <span>Bacakan</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -502,6 +595,82 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
               ))}
             </div>
 
+            {/* Live Voice Recognition Active Banner */}
+            <AnimatePresence>
+              {isListening && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="px-4 py-2.5 bg-gradient-to-r from-teal-950 via-slate-900 to-emerald-950 text-white border-t border-teal-600/40 flex items-center justify-between gap-3 overflow-hidden text-xs shadow-inner"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <span className="relative flex h-3 w-3 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 font-semibold text-teal-300 text-[11px]">
+                        <Radio className="w-3 h-3 text-red-400 animate-pulse" />
+                        <span>Mendengarkan Perintah Suara...</span>
+                      </div>
+                      <p className="italic text-slate-200 text-xs truncate">
+                        "{interimTranscript || 'Bicaralah sekarang (misal: "Berapa stok buku menipis?")...'}"
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedLang(selectedLang === 'id-ID' ? 'en-US' : 'id-ID')}
+                      className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium border border-slate-700 transition-colors cursor-pointer"
+                      title="Ganti bahasa pengenalan suara"
+                    >
+                      {selectedLang === 'id-ID' ? '🇮🇩 ID' : '🇺🇸 EN'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAutoSendVoice(!autoSendVoice)}
+                      className={`px-2 py-1 rounded-lg text-[11px] font-medium border transition-colors cursor-pointer ${
+                        autoSendVoice
+                          ? 'bg-teal-500/20 text-teal-300 border-teal-500/40'
+                          : 'bg-slate-800 text-slate-400 border-slate-700'
+                      }`}
+                      title={autoSendVoice ? 'Otomatis kirim saat selesai bicara' : 'Kirim manual'}
+                    >
+                      {autoSendVoice ? 'Auto-Kirim: On' : 'Auto-Kirim: Off'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={stopListening}
+                      className="px-2.5 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg text-[11px] font-semibold transition-colors cursor-pointer shadow-xs"
+                    >
+                      Selesai
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Speech Error Banner */}
+            {speechError && (
+              <div className="px-4 py-2 bg-amber-500/10 border-t border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <span className="text-amber-500 font-bold">⚠️</span>
+                  {speechError}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSpeechError(null)}
+                  className="p-1 hover:bg-amber-500/20 rounded text-amber-700 dark:text-amber-300 transition-colors cursor-pointer"
+                  aria-label="Tutup pesan error suara"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
             {/* Input Bar */}
             <div className="p-3 sm:p-3.5 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center space-x-2">
               <input
@@ -509,9 +678,38 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Tanyakan analisis buku, kas, invoice, atau data anggota MIS..."
+                placeholder={isListening ? 'Mendengarkan suara Anda...' : 'Tanyakan analisis buku, kas, invoice, atau bicara perintah suara...'}
                 className="flex-1 px-4 py-2.5 text-xs sm:text-sm bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0a9396]"
               />
+
+              {/* Web Speech API Microphone Button */}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.94 }}
+                type="button"
+                onClick={toggleListening}
+                disabled={isLoading}
+                className={`p-2.5 rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center transition-all cursor-pointer shadow-sm ${
+                  isListening
+                    ? 'bg-red-500 text-white ring-4 ring-red-400/40 animate-pulse'
+                    : 'bg-slate-100 hover:bg-teal-50 dark:bg-slate-800 dark:hover:bg-teal-950/40 text-slate-700 dark:text-slate-200 hover:text-[#0a9396] dark:hover:text-teal-300 border border-slate-300 dark:border-slate-700'
+                }`}
+                title={
+                  !isRecognitionSupported
+                    ? 'Web Speech API belum didukung pada browser ini'
+                    : isListening
+                    ? 'Sedang mendengarkan suara... Klik untuk berhenti'
+                    : 'Bicara perintah suara (Web Speech API)'
+                }
+                aria-label={isListening ? 'Berhenti mendengarkan suara' : 'Mulai perintah suara'}
+              >
+                {isListening ? (
+                  <MicOff className="w-4 h-4 text-white" />
+                ) : (
+                  <Mic className="w-4 h-4" />
+                )}
+              </motion.button>
+
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.94 }}

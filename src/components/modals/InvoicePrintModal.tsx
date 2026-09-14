@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Order } from '../../types';
-import { Printer, X, Download, FileDown, Loader2 } from 'lucide-react';
+import { Printer, X, Download, FileDown, Loader2, MessageSquare } from 'lucide-react';
 import { printElement, downloadDocumentAsPdf, downloadDocumentAsHtml, downloadDocumentAsWord } from '../../utils/documentExport';
+import { WhatsAppModal } from '../marketing/WhatsAppModal';
 
 interface InvoicePrintModalProps {
   order: Order | null;
@@ -11,6 +12,7 @@ interface InvoicePrintModalProps {
 
 export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({ order, onClose }) => {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
   if (!order) return null;
 
   const docTitle = `Faktur Penjualan Resmi #${order.no_invoice} - Yayasan Dharma Patriot`;
@@ -73,6 +75,15 @@ export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({ order, onC
                   <FileDown className="w-3.5 h-3.5" />
                 )}
                 <span>{isGeneratingPdf ? 'Membuat PDF...' : 'Download PDF'}</span>
+              </button>
+
+              <button
+                onClick={() => setIsWhatsAppOpen(true)}
+                className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 active:scale-95 text-white rounded-lg text-xs font-semibold cursor-pointer border border-emerald-600 transition-all shadow-xs"
+                title="Kirim detail faktur & instruksi transfer ke WhatsApp pemesan"
+              >
+                <MessageSquare className="w-3.5 h-3.5 text-emerald-300" />
+                <span>WhatsApp</span>
               </button>
 
               <button
@@ -257,6 +268,12 @@ export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({ order, onC
 
         </div>
       </div>
+
+      <WhatsAppModal
+        isOpen={isWhatsAppOpen}
+        onClose={() => setIsWhatsAppOpen(false)}
+        order={order}
+      />
     </div>,
     document.body
   );
