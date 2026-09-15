@@ -48,10 +48,12 @@
   body * {
     visibility: hidden !important;
   }
-  #printable-area, #printable-area * {
+  #printable-area, #printable-area *,
+  .printable-dashboard, .printable-dashboard * {
     visibility: visible !important;
   }
-  #printable-area {
+  #printable-area,
+  .printable-dashboard {
     position: absolute;
     left: 0;
     top: 0;
@@ -66,7 +68,32 @@
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  .print\:hidden {
+  .print\:hidden,
+  .print-hidden,
+  .printable-dashboard button:not(.print-include),
+  #printable-area button:not(.print-include) {
     display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Table formatting for clean reports */
+  .printable-dashboard table,
+  #printable-area table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+  .printable-dashboard th,
+  .printable-dashboard td,
+  #printable-area th,
+  #printable-area td {
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+  }
+
+  /* Avoid awkward page breaks inside cards */
+  .printable-dashboard .break-inside-avoid,
+  #printable-area .break-inside-avoid {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 }

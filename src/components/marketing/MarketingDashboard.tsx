@@ -42,6 +42,8 @@ import { ExpeditionModal } from './ExpeditionModal';
 import { ChannelsAndExpeditionsTab } from './ChannelsAndExpeditionsTab';
 import { WhatsAppModal } from './WhatsAppModal';
 import { WhatsAppAutomationTab } from './WhatsAppAutomationTab';
+import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
+import { PrintReportHeader } from '../common/PrintReportHeader';
 
 export const MarketingDashboard: React.FC = () => {
   const {
@@ -480,8 +482,29 @@ export const MarketingDashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       
+      {/* Official Print Header */}
+      <PrintReportHeader
+        divisionName="Marketing & Penjualan"
+        divisionCode="MKT"
+        subTabTitle={
+          activeSubTab === 'grafik'
+            ? 'Grafik & Analisis Penjualan'
+            : activeSubTab === 'pos'
+            ? 'Point of Sale (POS) & Buat Pesanan'
+            : activeSubTab === 'invoices'
+            ? 'Daftar Invoice & Riwayat Pesanan'
+            : activeSubTab === 'promos'
+            ? 'Manajemen Kode Promo & Diskon'
+            : activeSubTab === 'saluran'
+            ? 'Saluran Penjualan & Ekspedisi Pengiriman'
+            : activeSubTab === 'agen'
+            ? 'Direktori Agen & Mitra Pembeli'
+            : 'Integrasi & Notifikasi WhatsApp'
+        }
+      />
+
       {/* Sub tabs */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+      <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
         <div className="flex items-center space-x-1.5 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl flex-wrap">
           <button
             onClick={() => setActiveSubTab('grafik')}
@@ -577,25 +600,30 @@ export const MarketingDashboard: React.FC = () => {
           </button>
         </div>
 
-        {activeSubTab === 'invoices' && (
-          <button
-            onClick={handleExportOrdersCSV}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5" />
-            <span>Ekspor Rekap Excel / CSV</span>
-          </button>
-        )}
+        <div className="flex items-center space-x-2">
+          {/* Print Current View Action Button */}
+          <PrintCurrentViewButton id="btn-print-marketing" />
 
-        {activeSubTab === 'promos' && (
-          <button
-            onClick={() => setModalPromoOpen(true)}
-            className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Tambah Kode Promo</span>
-          </button>
-        )}
+          {activeSubTab === 'invoices' && (
+            <button
+              onClick={handleExportOrdersCSV}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>Ekspor Rekap Excel / CSV</span>
+            </button>
+          )}
+
+          {activeSubTab === 'promos' && (
+            <button
+              onClick={() => setModalPromoOpen(true)}
+              className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Tambah Kode Promo</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* GRAFIK & ANALISIS SUB TAB */}

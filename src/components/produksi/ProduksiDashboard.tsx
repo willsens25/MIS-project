@@ -11,6 +11,8 @@ import {
   AlertCircle,
   Trash2
 } from 'lucide-react';
+import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
+import { PrintReportHeader } from '../common/PrintReportHeader';
 
 export const ProduksiDashboard: React.FC = () => {
   const {
@@ -30,6 +32,12 @@ export const ProduksiDashboard: React.FC = () => {
   const [selectedBookId, setSelectedBookId] = useState<number>(books[0]?.id || 1);
   const [qtyProduksi, setQtyProduksi] = useState<number>(100);
   const [selectedLogIds, setSelectedLogIds] = useState<number[]>([]);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
 
   const totalProduksiUnit = productionLogs.reduce((sum, p) => sum + p.qty_produksi, 0);
 
@@ -47,29 +55,39 @@ export const ProduksiDashboard: React.FC = () => {
 
   const handleBulkDeleteLogs = () => {
     if (selectedLogIds.length === 0) return;
-    if (confirm(`Yakin ingin menghapus ${selectedLogIds.length} catatan log produksi terpilih?`)) {
-      bulkDeleteProductionLogs(selectedLogIds);
-      setSelectedLogIds([]);
-    }
+    bulkDeleteProductionLogs(selectedLogIds);
+    showToast(`✅ Berhasil menghapus ${selectedLogIds.length} catatan log produksi terpilih.`);
+    setSelectedLogIds([]);
   };
 
   const handleProduksiSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedBookId || qtyProduksi <= 0) {
-      alert('Pilih buku dan masukkan jumlah produksi yang valid!');
+      showToast('⚠️ Pilih buku dan masukkan jumlah produksi yang valid!');
       return;
     }
     const book = books.find(b => b.id === selectedBookId);
-    if (confirm(`Catat selesai cetak ${qtyProduksi} eks untuk buku "${book?.judul}"? Stok gudang akan langsung bertambah.`)) {
-      addProductionOutput(selectedBookId, qtyProduksi);
-      setQtyProduksi(100);
-      alert('Hasil produksi berhasil ditambahkan ke stok gudang!');
-    }
+    addProductionOutput(selectedBookId, qtyProduksi);
+    setQtyProduksi(100);
+    showToast(`🎉 Selesai cetak ${qtyProduksi} eks "${book?.judul || 'Buku'}". Stok gudang bertambah.`);
   };
 
   return (
     <div className="space-y-6">
       
+      {/* Official Print Header */}
+      <PrintReportHeader
+        divisionName="Produksi & Percetakan"
+        divisionCode="PRD"
+        subTabTitle={
+          activeSubTab === 'overview'
+            ? 'Pusat Cetak & Ringkasan Produksi'
+            : activeSubTab === 'input'
+            ? 'Pencatatan Hasil Cetak Eksemplar'
+            : 'Riwayat Batch Log Produksi Percetakan'
+        }
+      />
+
       {/* Top Banner & Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
@@ -97,43 +115,50 @@ export const ProduksiDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Sub tabs selector */}
-      <div className="flex items-center space-x-1.5 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl w-fit">
-        <button
-          onClick={() => setActiveSubTab('overview')}
-          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-            activeSubTab === 'overview'
-              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <Factory className="w-3.5 h-3.5" />
-          <span>Pusat Cetak & Log</span>
-        </button>
+      {/* Sub tabs selector & Print action */}
+      <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div className="flex items-center space-x-1.5 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl w-fit">
+          <button
+            onClick={() => setActiveSubTab('overview')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeSubTab === 'overview'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Factory className="w-3.5 h-3.5" />
+            <span>Pusat Cetak & Log</span>
+          </button>
 
-        <button
-          onClick={() => setActiveSubTab('input')}
-          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-            activeSubTab === 'input'
-              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Catat Hasil Cetak</span>
-        </button>
+          <button
+            onClick={() => setActiveSubTab('input')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeSubTab === 'input'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Catat Hasil Cetak</span>
+          </button>
 
-        <button
-          onClick={() => setActiveSubTab('logs')}
-          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-            activeSubTab === 'logs'
-              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <History className="w-3.5 h-3.5" />
-          <span>Riwayat Log Produksi ({productionLogs.length})</span>
-        </button>
+          <button
+            onClick={() => setActiveSubTab('logs')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeSubTab === 'logs'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <History className="w-3.5 h-3.5" />
+            <span>Riwayat Log Produksi ({productionLogs.length})</span>
+          </button>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          {/* Print Current View Action Button */}
+          <PrintCurrentViewButton id="btn-print-produksi" />
+        </div>
       </div>
 
       <div className={activeSubTab === 'overview' ? "grid grid-cols-1 lg:grid-cols-3 gap-6" : "space-y-6"}>
@@ -271,6 +296,12 @@ export const ProduksiDashboard: React.FC = () => {
         )}
 
       </div>
+
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 px-4 py-2.5 bg-slate-900 text-white dark:bg-slate-800 text-xs font-semibold rounded-xl shadow-2xl border border-teal-500/40 animate-fade-in flex items-center space-x-2 pointer-events-auto">
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
     </div>
   );

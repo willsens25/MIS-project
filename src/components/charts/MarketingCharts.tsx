@@ -50,13 +50,7 @@ export const MarketingCharts: React.FC<MarketingChartsProps> = ({
     .filter(([_, value]) => value > 0)
     .map(([name, value]) => ({ name, value }));
 
-  // Fallback if empty
-  const statusPieData = orderStatusData.length > 0 ? orderStatusData : [
-    { name: 'Lunas', value: 24 },
-    { name: 'Dikirim', value: 12 },
-    { name: 'Pending', value: 6 },
-    { name: 'Cancelled', value: 2 }
-  ];
+  const statusPieData = orderStatusData;
 
   // 2. Sales by Channel / Platform
   const channelMap: Record<string, number> = {};
@@ -70,23 +64,13 @@ export const MarketingCharts: React.FC<MarketingChartsProps> = ({
     omset: value
   }));
 
-  const salesChannelData = channelData.length > 0 ? channelData : [
-    { name: 'Tokopedia', omset: 18400000 },
-    { name: 'Shopee', omset: 14200000 },
-    { name: 'Kasir Kantor', omset: 6800000 },
-    { name: 'Bazar / Event', omset: 9500000 },
-    { name: 'WhatsApp', omset: 5200000 }
-  ];
+  const salesChannelData = channelData;
 
   // 3. Monthly Revenue Trend
   const totalOmsetReal = orders.reduce((sum, o) => sum + o.total_tagihan, 0);
-  const monthlyRevenueData = [
-    { month: 'Mei', omset: 8200000, pesanan: 14 },
-    { month: 'Jun', omset: 11400000, pesanan: 19 },
-    { month: 'Jul', omset: 16800000, pesanan: 28 },
-    { month: 'Agt', omset: 22500000, pesanan: 36 },
-    { month: 'Sep (Aktif)', omset: totalOmsetReal || 27800000, pesanan: orders.length || 42 }
-  ];
+  const monthlyRevenueData = orders.length > 0 ? [
+    { month: 'Bulan Berjalan', omset: totalOmsetReal, pesanan: orders.length }
+  ] : [];
 
   // 4. Best Seller Books from order items
   const bookSalesCount: Record<string, number> = {};
@@ -104,13 +88,7 @@ export const MarketingCharts: React.FC<MarketingChartsProps> = ({
     .sort((a, b) => b.terjual - a.terjual)
     .slice(0, 5);
 
-  const bestSellerDisplay = topSellingData.length > 0 ? topSellingData : [
-    { judul: 'Pembebasan di Tangan Kita', terjual: 65 },
-    { judul: 'Permata Hati Orang Bijak', terjual: 48 },
-    { judul: 'Langkah Awal Menuju Pencerahan', terjual: 39 },
-    { judul: 'Pelita Hati Lamrim', terjual: 28 },
-    { judul: 'Mahakarya Je Tsongkhapa', terjual: 22 }
-  ];
+  const bestSellerDisplay = topSellingData;
 
   return (
     <div className="space-y-6">
@@ -130,27 +108,34 @@ export const MarketingCharts: React.FC<MarketingChartsProps> = ({
             </span>
           </div>
           <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyRevenueData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorOmset" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#888' }} />
-                <YAxis
-                  tick={{ fontSize: 10, fill: '#888' }}
-                  tickFormatter={val => `Rp ${(val / 1000000).toFixed(0)}jt`}
-                />
-                <Tooltip
-                  formatter={(value: any) => [`Rp ${Number(value).toLocaleString('id-ID')}`, 'Total Omset']}
-                  contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '10px', color: '#fff', fontSize: '11px' }}
-                />
-                <Area type="monotone" dataKey="omset" name="Omset Penjualan" stroke="#3b82f6" strokeWidth={2.5} fillOpacity={1} fill="url(#colorOmset)" />
-              </AreaChart>
-            </ResponsiveContainer>
+            {monthlyRevenueData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={monthlyRevenueData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorOmset" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#888' }} />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: '#888' }}
+                    tickFormatter={val => `Rp ${(val / 1000000).toFixed(0)}jt`}
+                  />
+                  <Tooltip
+                    formatter={(value: any) => [`Rp ${Number(value).toLocaleString('id-ID')}`, 'Total Omset']}
+                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '10px', color: '#fff', fontSize: '11px' }}
+                  />
+                  <Area type="monotone" dataKey="omset" name="Omset Penjualan" stroke="#3b82f6" strokeWidth={2.5} fillOpacity={1} fill="url(#colorOmset)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
+                <p className="text-xs font-medium">Belum ada data transaksi penjualan.</p>
+                <span className="text-[11px] text-slate-400 mt-1">Grafik omset akan terisi saat ada pesanan masuk.</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -166,27 +151,34 @@ export const MarketingCharts: React.FC<MarketingChartsProps> = ({
               <p className="text-[11px] text-slate-500 mb-2">Rasio pelunasan tagihan</p>
             </div>
             <div className="h-40 w-full flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={statusPieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={30}
-                    outerRadius={55}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {statusPieData.map((entry) => (
-                      <Cell key={`cell-${entry.name}`} fill={STATUS_COLORS[entry.name] || '#6366f1'} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: any) => [`${value} Transaksi`, 'Jumlah']}
-                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '10px', color: '#fff', fontSize: '11px' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              {statusPieData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={statusPieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={30}
+                      outerRadius={55}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {statusPieData.map((entry) => (
+                        <Cell key={`cell-${entry.name}`} fill={STATUS_COLORS[entry.name] || '#6366f1'} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value: any) => [`${value} Transaksi`, 'Jumlah']}
+                      contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '10px', color: '#fff', fontSize: '11px' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex flex-col items-center justify-center text-slate-400 text-center">
+                  <p className="text-xs font-medium">Belum ada pesanan</p>
+                  <span className="text-[10px] mt-0.5">Semua status nihil</span>
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-slate-200 dark:border-slate-800 text-[10px]">
               {statusPieData.map((item) => (
@@ -207,24 +199,30 @@ export const MarketingCharts: React.FC<MarketingChartsProps> = ({
               <p className="text-[11px] text-slate-500 mb-2">Pangsa omset per channel</p>
             </div>
             <div className="space-y-2.5 my-auto">
-              {salesChannelData.map((ch, idx) => {
-                const total = salesChannelData.reduce((s, c) => s + c.omset, 0) || 1;
-                const pct = Math.round((ch.omset / total) * 100);
-                return (
-                  <div key={ch.name} className="text-[11px]">
-                    <div className="flex justify-between items-center mb-0.5">
-                      <span className="text-slate-700 dark:text-slate-300 font-medium">{ch.name}</span>
-                      <span className="font-bold text-slate-900 dark:text-white">{pct}%</span>
+              {salesChannelData.length > 0 ? (
+                salesChannelData.map((ch, idx) => {
+                  const total = salesChannelData.reduce((s, c) => s + c.omset, 0) || 1;
+                  const pct = Math.round((ch.omset / total) * 100);
+                  return (
+                    <div key={ch.name} className="text-[11px]">
+                      <div className="flex justify-between items-center mb-0.5">
+                        <span className="text-slate-700 dark:text-slate-300 font-medium">{ch.name}</span>
+                        <span className="font-bold text-slate-900 dark:text-white">{pct}%</span>
+                      </div>
+                      <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${pct}%`, backgroundColor: CHANNEL_COLORS[idx % CHANNEL_COLORS.length] }}
+                        />
+                      </div>
                     </div>
-                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full"
-                        style={{ width: `${pct}%`, backgroundColor: CHANNEL_COLORS[idx % CHANNEL_COLORS.length] }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              ) : (
+                <div className="py-6 text-center text-slate-400 text-xs">
+                  Belum ada transaksi di platform manapun
+                </div>
+              )}
             </div>
             <div className="text-[10px] text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-800">
               Integrasi sinkronisasi pesanan multi-kanal aktif.
@@ -249,22 +247,29 @@ export const MarketingCharts: React.FC<MarketingChartsProps> = ({
           </span>
         </div>
         <div className="h-52 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={bestSellerDisplay} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} opacity={0.15} />
-              <XAxis type="number" tick={{ fontSize: 10, fill: '#888' }} />
-              <YAxis dataKey="judul" type="category" width={180} tick={{ fontSize: 11, fill: '#888' }} />
-              <Tooltip
-                formatter={(value: any) => [`${value} Eksemplar Terjual`, 'Total Sales']}
-                contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '10px', color: '#fff', fontSize: '11px' }}
-              />
-              <Bar dataKey="terjual" name="Unit Terjual" fill="#10b981" radius={[0, 6, 6, 0]}>
-                {bestSellerDisplay.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={CHANNEL_COLORS[index % CHANNEL_COLORS.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          {bestSellerDisplay.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={bestSellerDisplay} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} opacity={0.15} />
+                <XAxis type="number" tick={{ fontSize: 10, fill: '#888' }} />
+                <YAxis dataKey="judul" type="category" width={180} tick={{ fontSize: 11, fill: '#888' }} />
+                <Tooltip
+                  formatter={(value: any) => [`${value} Eksemplar Terjual`, 'Total Sales']}
+                  contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '10px', color: '#fff', fontSize: '11px' }}
+                />
+                <Bar dataKey="terjual" name="Unit Terjual" fill="#10b981" radius={[0, 6, 6, 0]}>
+                  {bestSellerDisplay.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={CHANNEL_COLORS[index % CHANNEL_COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
+              <p className="text-xs font-medium">Belum ada buku yang terjual.</p>
+              <span className="text-[11px] text-slate-400 mt-1">Peringkat buku terlaris akan otomatis terbentuk saat ada pesanan lunas.</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

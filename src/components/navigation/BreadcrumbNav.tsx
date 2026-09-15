@@ -369,7 +369,7 @@ export const BreadcrumbNav: React.FC = () => {
     <nav
       aria-label="Breadcrumb Navigation"
       id="breadcrumb-navigation-bar"
-      className="sticky top-16 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors shadow-2xs"
+      className="print:hidden sticky top-16 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors shadow-2xs"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between gap-3 text-xs">
         

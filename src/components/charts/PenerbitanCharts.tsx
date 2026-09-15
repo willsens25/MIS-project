@@ -46,9 +46,9 @@ export const PenerbitanCharts: React.FC<PenerbitanChartsProps> = ({
   };
 
   const statusPieData = [
-    { name: 'Disetujui', value: statusCounts.approved || 1, key: 'approved' },
-    { name: 'Menunggu', value: statusCounts.pending || 0, key: 'pending' },
-    { name: 'Ditolak', value: statusCounts.rejected || 0, key: 'rejected' }
+    { name: 'Disetujui', value: statusCounts.approved, key: 'approved' },
+    { name: 'Menunggu', value: statusCounts.pending, key: 'pending' },
+    { name: 'Ditolak', value: statusCounts.rejected, key: 'rejected' }
   ].filter(d => d.value > 0);
 
   // 3. Price vs Margin Insight
@@ -73,26 +73,33 @@ export const PenerbitanCharts: React.FC<PenerbitanChartsProps> = ({
             </span>
           </div>
           <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stockByBookData} margin={{ top: 10, right: 15, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                <XAxis dataKey="judul" tick={{ fontSize: 10, fill: '#888' }} />
-                <YAxis tick={{ fontSize: 10, fill: '#888' }} />
-                <Tooltip
-                  formatter={(value: any, name: any) => [
-                    name === 'Stok (Eks)' ? `${value} Eksemplar` : `Rp ${Number(value).toLocaleString('id-ID')}`,
-                    name
-                  ]}
-                  labelFormatter={(label, payload) => {
-                    const item = payload?.[0]?.payload;
-                    return item?.fullJudul || label;
-                  }}
-                  contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '10px', color: '#fff', fontSize: '11px' }}
-                />
-                <Legend iconSize={10} wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                <Bar dataKey="stok" name="Stok (Eks)" fill="#6366f1" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {stockByBookData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stockByBookData} margin={{ top: 10, right: 15, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+                  <XAxis dataKey="judul" tick={{ fontSize: 10, fill: '#888' }} />
+                  <YAxis tick={{ fontSize: 10, fill: '#888' }} />
+                  <Tooltip
+                    formatter={(value: any, name: any) => [
+                      name === 'Stok (Eks)' ? `${value} Eksemplar` : `Rp ${Number(value).toLocaleString('id-ID')}`,
+                      name
+                    ]}
+                    labelFormatter={(label, payload) => {
+                      const item = payload?.[0]?.payload;
+                      return item?.fullJudul || label;
+                    }}
+                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '10px', color: '#fff', fontSize: '11px' }}
+                  />
+                  <Legend iconSize={10} wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                  <Bar dataKey="stok" name="Stok (Eks)" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
+                <p className="text-xs font-medium">Belum ada data buku di katalog.</p>
+                <span className="text-[11px] text-slate-400 mt-1">Grafik stok akan muncul setelah judul buku didaftarkan.</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -110,29 +117,36 @@ export const PenerbitanCharts: React.FC<PenerbitanChartsProps> = ({
             </span>
           </div>
           <div className="h-44 w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={statusPieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={35}
-                  outerRadius={65}
-                  paddingAngle={4}
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} (${((percent || 0) * 100).toFixed(0)}%)`}
-                  labelLine={false}
-                >
-                  {statusPieData.map((entry) => (
-                    <Cell key={`cell-${entry.key}`} fill={STATUS_COLORS[entry.key] || '#6366f1'} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value: any) => [`${value} Judul`, 'Jumlah']}
-                  contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '10px', color: '#fff', fontSize: '11px' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            {statusPieData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={statusPieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={35}
+                    outerRadius={65}
+                    paddingAngle={4}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} (${((percent || 0) * 100).toFixed(0)}%)`}
+                    labelLine={false}
+                  >
+                    {statusPieData.map((entry) => (
+                      <Cell key={`cell-${entry.key}`} fill={STATUS_COLORS[entry.key] || '#6366f1'} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: any) => [`${value} Judul`, 'Jumlah']}
+                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '10px', color: '#fff', fontSize: '11px' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex flex-col items-center justify-center text-slate-400 text-center p-4">
+                <p className="text-xs font-medium">Belum ada pengajuan cetak</p>
+                <span className="text-[10px] mt-0.5">Semua SPK nihil</span>
+              </div>
+            )}
           </div>
 
           <div className="pt-3 border-t border-slate-200 dark:border-slate-800 text-[11px] space-y-1 text-slate-600 dark:text-slate-400">

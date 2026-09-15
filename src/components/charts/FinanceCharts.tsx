@@ -45,28 +45,21 @@ export const FinanceCharts: React.FC<FinanceChartsProps> = ({
     value
   }));
 
-  // Fallback data if empty
-  const pieData = spendingByCategoryData.length > 0 ? spendingByCategoryData : [
-    { name: 'Produksi & Cetak Buku', value: 24500000 },
-    { name: 'Gaji & Honorarium Staf', value: 15000000 },
-    { name: 'Operasional Kantor & Listrik', value: 4200000 },
-    { name: 'Logistik & Packing Pengiriman', value: 3800000 },
-    { name: 'Kegiatan Puja & Dharma Event', value: 6500000 }
-  ];
+  const pieData = spendingByCategoryData;
 
-  // 2. Monthly Spending vs Income
-  const monthlyFlowData = [
-    { month: 'Mei', pemasukan: 12500000, pengeluaran: 8200000, net: 4300000 },
-    { month: 'Jun', pemasukan: 15800000, pengeluaran: 9400000, net: 6400000 },
-    { month: 'Jul', pemasukan: 21000000, pengeluaran: 14200000, net: 6800000 },
-    { month: 'Agt', pemasukan: 28500000, pengeluaran: 18600000, net: 9900000 },
+  // 2. Monthly Spending vs Income from real mutasis
+  const totalMasukReal = mutasis.filter(m => m.tipe === 'Masuk').reduce((s, m) => s + m.nominal, 0);
+  const totalKeluarReal = mutasis.filter(m => m.tipe === 'Keluar').reduce((s, m) => s + m.nominal, 0);
+  const netReal = totalMasukReal - totalKeluarReal;
+
+  const monthlyFlowData = mutasis.length > 0 ? [
     {
-      month: 'Sep (Aktif)',
-      pemasukan: mutasis.filter(m => m.tipe === 'Masuk').reduce((s, m) => s + m.nominal, 0) || 32000000,
-      pengeluaran: mutasis.filter(m => m.tipe === 'Keluar').reduce((s, m) => s + m.nominal, 0) || 16400000,
-      net: (mutasis.filter(m => m.tipe === 'Masuk').reduce((s, m) => s + m.nominal, 0) - mutasis.filter(m => m.tipe === 'Keluar').reduce((s, m) => s + m.nominal, 0)) || 15600000
+      month: 'Bulan Berjalan',
+      pemasukan: totalMasukReal,
+      pengeluaran: totalKeluarReal,
+      net: netReal
     }
-  ];
+  ] : [];
 
   // 3. Saldo per Rekening Bank & Kas
   const accountBalancesData = accounts.map(a => {
@@ -104,24 +97,31 @@ export const FinanceCharts: React.FC<FinanceChartsProps> = ({
             </span>
           </div>
           <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={monthlyFlowData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#888' }} />
-                <YAxis
-                  tick={{ fontSize: 10, fill: '#888' }}
-                  tickFormatter={val => `${(val / 1000000).toFixed(0)}jt`}
-                />
-                <Tooltip
-                  formatter={(value: any) => [`Rp ${Number(value).toLocaleString('id-ID')}`, '']}
-                  contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '10px', color: '#fff', fontSize: '11px' }}
-                />
-                <Legend iconSize={10} wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                <Bar dataKey="pemasukan" name="Pemasukan" fill="#10b981" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="pengeluaran" name="Pengeluaran (Spending)" fill="#f43f5e" radius={[4, 4, 0, 0]} />
-                <Line type="monotone" dataKey="net" name="Surplus / Arus Bersih" stroke="#6366f1" strokeWidth={3} dot={{ r: 4 }} />
-              </ComposedChart>
-            </ResponsiveContainer>
+            {monthlyFlowData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={monthlyFlowData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#888' }} />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: '#888' }}
+                    tickFormatter={val => `${(val / 1000000).toFixed(0)}jt`}
+                  />
+                  <Tooltip
+                    formatter={(value: any) => [`Rp ${Number(value).toLocaleString('id-ID')}`, '']}
+                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '10px', color: '#fff', fontSize: '11px' }}
+                  />
+                  <Legend iconSize={10} wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                  <Bar dataKey="pemasukan" name="Pemasukan" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="pengeluaran" name="Pengeluaran (Spending)" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                  <Line type="monotone" dataKey="net" name="Surplus / Arus Bersih" stroke="#6366f1" strokeWidth={3} dot={{ r: 4 }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
+                <p className="text-xs font-medium">Belum ada riwayat mutasi kas.</p>
+                <span className="text-[11px] text-slate-400 mt-1">Grafik arus kas otomatis terbentuk setelah ada transaksi.</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -139,29 +139,36 @@ export const FinanceCharts: React.FC<FinanceChartsProps> = ({
             </span>
           </div>
           <div className="h-64 w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={80}
-                  paddingAngle={3}
-                  dataKey="value"
-                  label={({ name, percent }) => `${(name || '').substring(0, 12)} (${((percent || 0) * 100).toFixed(0)}%)`}
-                  labelLine={false}
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value: any) => [`Rp ${Number(value).toLocaleString('id-ID')}`, 'Nominal']}
-                  contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '10px', color: '#fff', fontSize: '11px' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            {pieData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={3}
+                    dataKey="value"
+                    label={({ name, percent }) => `${(name || '').substring(0, 12)} (${((percent || 0) * 100).toFixed(0)}%)`}
+                    labelLine={false}
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: any) => [`Rp ${Number(value).toLocaleString('id-ID')}`, 'Nominal']}
+                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '10px', color: '#fff', fontSize: '11px' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
+                <p className="text-xs font-medium">Belum ada pengeluaran kas.</p>
+                <span className="text-[11px] text-slate-400 mt-1">Grafik kategori biaya akan tampil setelah pencatatan pengeluaran.</span>
+              </div>
+            )}
           </div>
         </div>
 

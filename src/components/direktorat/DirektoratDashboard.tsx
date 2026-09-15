@@ -27,6 +27,8 @@ import { IdentitasModal } from '../modals/IdentitasModal';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { DirektoratCharts } from '../charts/DirektoratCharts';
 import { AnnualReportModal } from '../modals/AnnualReportModal';
+import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
+import { PrintReportHeader } from '../common/PrintReportHeader';
 
 interface DirektoratDashboardProps {
   initialSubTab?: 'overview' | 'identitas' | 'users' | 'audit';
@@ -271,8 +273,23 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
   return (
     <div className="space-y-6">
       
+      {/* Official Print Header */}
+      <PrintReportHeader
+        divisionName="Direktorat & Sekretariat"
+        divisionCode="DIR"
+        subTabTitle={
+          activeSubTab === 'overview'
+            ? 'Executive Summary & Analisis'
+            : activeSubTab === 'identitas'
+            ? 'Database Master Anggota & Identitas'
+            : activeSubTab === 'users'
+            ? 'Daftar Pengguna & Tim Operasional'
+            : 'Audit Trail & Log Aktivitas Sistem'
+        }
+      />
+
       {/* Sub navigation tabs */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+      <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
         <div className="flex items-center space-x-1.5 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl">
           <button
             onClick={() => setActiveSubTab('overview')}
@@ -323,50 +340,55 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
           </button>
         </div>
 
-        {activeSubTab === 'overview' && (
-          <button
-            onClick={() => setAnnualReportOpen(true)}
-            className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
-          >
-            <Award className="w-4 h-4" />
-            <span>Laporan Tahunan (Annual Report)</span>
-          </button>
-        )}
+        <div className="flex items-center space-x-2">
+          {/* Print Current View Action Button */}
+          <PrintCurrentViewButton id="btn-print-direktorat" />
 
-        {activeSubTab === 'identitas' && (
-          <button
-            onClick={() => {
-              setEditingIdentitas(null);
-              setViewOnlyIdentitas(false);
-              setModalIdentitasOpen(true);
-            }}
-            className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Tambah Anggota Baru</span>
-          </button>
-        )}
+          {activeSubTab === 'overview' && (
+            <button
+              onClick={() => setAnnualReportOpen(true)}
+              className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
+            >
+              <Award className="w-4 h-4" />
+              <span>Laporan Tahunan (Annual Report)</span>
+            </button>
+          )}
 
-        {activeSubTab === 'users' && (
-          <button
-            onClick={() => {
-              setEditingUser(null);
-              setUserForm({
-                name: '',
-                email: '',
-                divisi_id: 1,
-                role: 'Staff',
-                password: 'password123',
-                phone: ''
-              });
-              setUserModalOpen(true);
-            }}
-            className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all cursor-pointer"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>Tambah User Sistem</span>
-          </button>
-        )}
+          {activeSubTab === 'identitas' && (
+            <button
+              onClick={() => {
+                setEditingIdentitas(null);
+                setViewOnlyIdentitas(false);
+                setModalIdentitasOpen(true);
+              }}
+              className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Tambah Anggota Baru</span>
+            </button>
+          )}
+
+          {activeSubTab === 'users' && (
+            <button
+              onClick={() => {
+                setEditingUser(null);
+                setUserForm({
+                  name: '',
+                  email: '',
+                  divisi_id: 1,
+                  role: 'Staff',
+                  password: 'password123',
+                  phone: ''
+                });
+                setUserModalOpen(true);
+              }}
+              className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all cursor-pointer"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>Tambah User Sistem</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* OVERVIEW SUB TAB */}

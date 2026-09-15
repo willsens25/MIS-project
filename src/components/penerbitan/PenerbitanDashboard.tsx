@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import { PenerbitanCharts } from '../charts/PenerbitanCharts';
 import { ConfirmModal } from '../modals/ConfirmModal';
+import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
+import { PrintReportHeader } from '../common/PrintReportHeader';
 
 export const PenerbitanDashboard: React.FC = () => {
   const {
@@ -167,8 +169,21 @@ export const PenerbitanDashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       
+      {/* Official Print Header */}
+      <PrintReportHeader
+        divisionName="Penerbitan"
+        divisionCode="PEN"
+        subTabTitle={
+          activeSubTab === 'katalog'
+            ? 'Katalog Judul Buku & Valuasi'
+            : activeSubTab === 'grafik'
+            ? 'Grafik Stok & Analisis Valuasi'
+            : 'Riwayat Pengajuan Anggaran Cetak'
+        }
+      />
+
       {/* Header Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+      <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
         <div>
           <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
@@ -178,13 +193,8 @@ export const PenerbitanDashboard: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-2">
-          <button
-            onClick={() => window.print()}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-semibold"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Cetak / Simpan PDF</span>
-          </button>
+          {/* Print Current View Action Button */}
+          <PrintCurrentViewButton id="btn-print-penerbitan" />
 
           <button
             onClick={() => {
@@ -201,7 +211,7 @@ export const PenerbitanDashboard: React.FC = () => {
       </div>
 
       {/* Sub Tabs */}
-      <div className="flex items-center space-x-1.5 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl w-fit">
+      <div className="print:hidden flex items-center space-x-1.5 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl w-fit">
         <button
           onClick={() => setActiveSubTab('katalog')}
           className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${

@@ -36,7 +36,20 @@ import {
   INITIAL_PRODUCTION_LOGS,
   INITIAL_ACTIVITY_LOGS,
   INITIAL_SALES_CHANNELS,
-  INITIAL_EXPEDITIONS
+  INITIAL_EXPEDITIONS,
+  DEMO_USERS,
+  DEMO_ACCOUNTS,
+  DEMO_BOOKS,
+  DEMO_PROMOS,
+  DEMO_IDENTITAS,
+  DEMO_ORDERS,
+  DEMO_MUTASI,
+  DEMO_PENGAJUAN,
+  DEMO_PENJUALAN,
+  DEMO_PENYALURAN,
+  DEMO_LOGISTIC_LOGS,
+  DEMO_PRODUCTION_LOGS,
+  DEMO_ACTIVITY_LOGS
 } from '../lib/initialData';
 import {
   hashPasswordServer,
@@ -151,11 +164,42 @@ interface AppContextType {
   deleteUser: (id: number) => void;
   bulkDeleteUsers: (ids: number[]) => void;
 
-  // Reset database state
+  // Reset and demo state operations
   resetToDefault: () => void;
+  clearAllData: () => void;
+  loadDemoData: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+// Clean-slate check for published release: ensures previous mock seed data in browser's localStorage is wiped cleanly
+const CLEAN_STORAGE_VERSION = 'v4_clean_start_register_first';
+try {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    const currentVer = localStorage.getItem('mis_data_version');
+    if (currentVer !== CLEAN_STORAGE_VERSION) {
+      localStorage.removeItem('mis_books');
+      localStorage.removeItem('mis_orders');
+      localStorage.removeItem('mis_mutasis');
+      localStorage.removeItem('mis_promos');
+      localStorage.removeItem('mis_identitas');
+      localStorage.removeItem('mis_pengajuans');
+      localStorage.removeItem('mis_penjualans');
+      localStorage.removeItem('mis_penyalurans');
+      localStorage.removeItem('mis_logistic_logs');
+      localStorage.removeItem('mis_production_logs');
+      localStorage.removeItem('mis_activity_logs');
+      localStorage.removeItem('mis_wa_logs');
+      localStorage.removeItem('mis_accounts');
+      localStorage.removeItem('mis_users');
+      localStorage.removeItem('mis_current_user');
+      localStorage.removeItem('mis_is_auth');
+      localStorage.setItem('mis_data_version', CLEAN_STORAGE_VERSION);
+    }
+  }
+} catch (e) {
+  console.warn('Storage migration check error:', e);
+}
 
 function getStoredItem<T>(key: string, defaultVal: T): T {
   try {
@@ -200,10 +244,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Authentication states
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     const stored = localStorage.getItem('mis_is_auth');
-    return stored !== null ? stored === 'true' : true;
+    return stored === 'true';
   });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('register');
 
   const openLoginModal = () => {
     setAuthModalMode('login');
@@ -1125,6 +1169,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const logout = () => {
     recordActivity('Logout User', 'Auth', `Pengguna "${currentUser.name}" keluar dari sesi aplikasi.`);
     setIsAuthenticated(false);
+    setAuthModalMode('login');
     localStorage.setItem('mis_is_auth', 'false');
   };
 
@@ -1208,27 +1253,91 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     recordActivity('Hapus Massal User', 'User', `Menghapus ${safeIds.length} pengguna sistem: [${names}]`);
   };
 
-  const resetToDefault = () => {
+  const clearAllData = () => {
+    setBooks([]);
+    setPromos([]);
+    setIdentitasList([]);
+    setOrders([]);
+    setMutasis([]);
+    setPengajuans([]);
+    setPenjualans([]);
+    setPenyalurans([]);
+    setLogisticLogs([]);
+    setProductionLogs([]);
+    setActivityLogs([]);
+    setAccounts(INITIAL_ACCOUNTS);
     setUsersList(INITIAL_USERS);
     setCurrentUser(INITIAL_USERS[0]);
+    setIsAuthenticated(false);
+    setAuthModalMode('register');
+    
+    try {
+      localStorage.removeItem('mis_books');
+      localStorage.removeItem('mis_promos');
+      localStorage.removeItem('mis_identitas');
+      localStorage.removeItem('mis_orders');
+      localStorage.removeItem('mis_mutasis');
+      localStorage.removeItem('mis_pengajuans');
+      localStorage.removeItem('mis_penjualans');
+      localStorage.removeItem('mis_penyalurans');
+      localStorage.removeItem('mis_logistic_logs');
+      localStorage.removeItem('mis_production_logs');
+      localStorage.removeItem('mis_activity_logs');
+      localStorage.removeItem('mis_wa_logs');
+      localStorage.removeItem('mis_accounts');
+      localStorage.removeItem('mis_users');
+      localStorage.removeItem('mis_current_user');
+      localStorage.setItem('mis_is_auth', 'false');
+      localStorage.setItem('mis_data_version', CLEAN_STORAGE_VERSION);
+    } catch (e) {
+      console.warn('Storage clear error:', e);
+    }
+  };
+
+  const loadDemoData = () => {
+    setBooks(DEMO_BOOKS);
+    setPromos(DEMO_PROMOS);
+    setIdentitasList(DEMO_IDENTITAS);
+    setOrders(DEMO_ORDERS);
+    setMutasis(DEMO_MUTASI);
+    setPengajuans(DEMO_PENGAJUAN);
+    setPenjualans(DEMO_PENJUALAN);
+    setPenyalurans(DEMO_PENYALURAN);
+    setLogisticLogs(DEMO_LOGISTIC_LOGS);
+    setProductionLogs(DEMO_PRODUCTION_LOGS);
+    setActivityLogs(DEMO_ACTIVITY_LOGS);
+    setAccounts(DEMO_ACCOUNTS);
+    setUsersList(DEMO_USERS);
+    setCurrentUser(DEMO_USERS[0]);
     setIsAuthenticated(true);
-    setCategories(INITIAL_CATEGORIES);
-    setAccounts(INITIAL_ACCOUNTS);
-    setBooks(INITIAL_BOOKS);
-    setPromos(INITIAL_PROMOS);
-    setSalesChannels(INITIAL_SALES_CHANNELS);
-    setExpeditions(INITIAL_EXPEDITIONS);
-    setIdentitasList(INITIAL_IDENTITAS);
-    setOrders(INITIAL_ORDERS);
-    setMutasis(INITIAL_MUTASI);
-    setPengajuans(INITIAL_PENGAJUAN);
-    setPenjualans(INITIAL_PENJUALAN);
-    setPenyalurans(INITIAL_PENYALURAN);
-    setLogisticLogs(INITIAL_LOGISTIC_LOGS);
-    setProductionLogs(INITIAL_PRODUCTION_LOGS);
-    setActivityLogs(INITIAL_ACTIVITY_LOGS);
-    localStorage.clear();
-    recordActivity('Reset Database', 'System', 'Mengembalikan seluruh data MIS SAPA-ALL ke seed awal pabrik.');
+    setAuthModalMode('login');
+
+    try {
+      localStorage.setItem('mis_books', JSON.stringify(DEMO_BOOKS));
+      localStorage.setItem('mis_promos', JSON.stringify(DEMO_PROMOS));
+      localStorage.setItem('mis_identitas', JSON.stringify(DEMO_IDENTITAS));
+      localStorage.setItem('mis_orders', JSON.stringify(DEMO_ORDERS));
+      localStorage.setItem('mis_mutasis', JSON.stringify(DEMO_MUTASI));
+      localStorage.setItem('mis_pengajuans', JSON.stringify(DEMO_PENGAJUAN));
+      localStorage.setItem('mis_penjualans', JSON.stringify(DEMO_PENJUALAN));
+      localStorage.setItem('mis_penyalurans', JSON.stringify(DEMO_PENYALURAN));
+      localStorage.setItem('mis_logistic_logs', JSON.stringify(DEMO_LOGISTIC_LOGS));
+      localStorage.setItem('mis_production_logs', JSON.stringify(DEMO_PRODUCTION_LOGS));
+      localStorage.setItem('mis_activity_logs', JSON.stringify(DEMO_ACTIVITY_LOGS));
+      localStorage.setItem('mis_accounts', JSON.stringify(DEMO_ACCOUNTS));
+      localStorage.setItem('mis_users', JSON.stringify(DEMO_USERS));
+      localStorage.setItem('mis_current_user', JSON.stringify(DEMO_USERS[0]));
+      localStorage.setItem('mis_is_auth', 'true');
+      localStorage.setItem('mis_data_version', CLEAN_STORAGE_VERSION);
+    } catch (e) {
+      console.warn('Storage sync demo data error:', e);
+    }
+
+    recordActivity('Muat Data Sampel', 'System', 'Memuat seluruh data demo/sampel MIS untuk evaluasi fitur.', 1, DEMO_USERS[0].name);
+  };
+
+  const resetToDefault = () => {
+    clearAllData();
   };
 
   return (
@@ -1318,7 +1427,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateUserProfile,
         deleteUser,
         bulkDeleteUsers,
-        resetToDefault
+        resetToDefault,
+        clearAllData,
+        loadDemoData
       }}
     >
       {children}

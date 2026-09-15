@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
 import { DivisionId } from '../types';
+import { SHOW_DUMMY_BUTTON } from '../lib/config';
 import { NotificationBell } from './NotificationBell';
 import { MascotAvatar } from './MascotAvatar';
 import { EditProfileModal } from './profile/EditProfileModal';
@@ -23,6 +24,7 @@ import {
   ShieldCheck,
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
   RotateCcw,
   Sparkles,
   LogOut,
@@ -33,7 +35,11 @@ import {
   FileDown,
   Printer,
   FileText,
-  Award
+  Award,
+  Trash2,
+  Database,
+  Menu,
+  X
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -58,6 +64,8 @@ export const Header: React.FC<HeaderProps> = ({
     toggleTheme,
     pengajuans,
     resetToDefault,
+    clearAllData,
+    loadDemoData,
     isAuthenticated,
     logout,
     openLoginModal,
@@ -67,10 +75,44 @@ export const Header: React.FC<HeaderProps> = ({
 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showDivisiMenu, setShowDivisiMenu] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showSwitchUserModal, setShowSwitchUserModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showAnnualReportModal, setShowAnnualReportModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (showMobileMenu) {
+      document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') setShowMobileMenu(false);
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = '';
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [showMobileMenu]);
+
+  const handleLoadDemoWithToast = () => {
+    loadDemoData();
+    setShowProfileMenu(false);
+    setToastMessage('✅ Seluruh data sampel berhasil dimuat! (10 Buku, 5 Mutasi Kas, 2 Invoice, 5 Anggota)');
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4500);
+  };
+
+  const handleClearDataWithToast = () => {
+    clearAllData();
+    setShowProfileMenu(false);
+    setToastMessage('🗑️ Seluruh data aplikasi berhasil dikosongkan (0 Data Bersih).');
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4500);
+  };
 
   const pendingPengajuansCount = pengajuans.filter(p => p.status === 'pending').length;
 
@@ -86,7 +128,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#1A1D21]/95 backdrop-blur-md text-slate-800 dark:text-white border-b border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-200">
+    <header className="print:hidden sticky top-0 z-40 bg-white/95 dark:bg-[#1A1D21]/95 backdrop-blur-md text-slate-800 dark:text-white border-b border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           
@@ -138,58 +180,9 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Right Action Icons & Profile */}
-          <div className="flex items-center space-x-2.5">
-            {/* Mobile Division Selector Dropdown */}
-            <div className="relative lg:hidden">
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.96 }}
-                onClick={() => setShowDivisiMenu(!showDivisiMenu)}
-                className="flex items-center space-x-1 px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-medium border border-slate-300 dark:border-slate-700"
-              >
-                {getDivisionIcon(currentUser.divisi_id)}
-                <span>{divisiList.find(d => d.id === currentUser.divisi_id)?.kode}</span>
-                <ChevronDown className="w-3.5 h-3.5" />
-              </motion.button>
-
-              <AnimatePresence>
-                {showDivisiMenu && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -8, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -8, scale: 0.96 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute left-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl py-1 z-50 overflow-hidden"
-                  >
-                    <div className="px-3 py-1.5 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800">
-                      Pilih Divisi MIS
-                    </div>
-                    {divisiList.map(div => (
-                      <motion.button
-                        key={div.id}
-                        whileHover={{ x: 2, backgroundColor: 'rgba(99, 102, 241, 0.08)' }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => {
-                          switchDivision(div.id);
-                          setShowDivisiMenu(false);
-                        }}
-                        className={`w-full flex items-center justify-between px-3 py-2 text-xs text-left ${
-                          currentUser.divisi_id === div.id
-                            ? 'bg-indigo-50 dark:bg-indigo-600/30 text-indigo-600 dark:text-indigo-300 font-semibold'
-                            : 'text-slate-700 dark:text-slate-300'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-2">
-                          {getDivisionIcon(div.id)}
-                          <span>{div.nama_divisi}</span>
-                        </div>
-                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">{div.kode}</span>
-                      </motion.button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+          <div className="flex items-center space-x-2 sm:space-x-2.5">
+            {/* Desktop Actions Container (Hidden on Mobile < lg) */}
+            <div className="hidden lg:flex items-center space-x-2.5">
 
             {/* Download PDF Report Button */}
             <motion.button
@@ -286,7 +279,24 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             ) : (
               /* Authenticated User Profile & Actions Dropdown */
-              <div className="relative">
+              <>
+                {SHOW_DUMMY_BUTTON && (
+                  <button
+                    id="btn-header-quick-dummy"
+                    type="button"
+                    onClick={handleLoadDemoWithToast}
+                    className="hidden sm:flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-xs font-semibold hover:bg-amber-500/20 transition-all cursor-pointer shadow-xs"
+                    title="Pintasan Uji Coba: Muat Data Dummy (Otomatis tidak muncul di versi publish)"
+                  >
+                    <Database className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <span>Data Dummy</span>
+                    <span className="text-[9px] bg-amber-400/25 text-amber-800 dark:text-amber-200 px-1 py-0.2 rounded font-mono font-bold">
+                      DEV
+                    </span>
+                  </button>
+                )}
+
+                <div className="relative">
                 <motion.button
                   id="btn-user-profile"
                   whileHover={{ scale: 1.03 }}
@@ -500,29 +510,92 @@ export const Header: React.FC<HeaderProps> = ({
                       </button>
 
                       <button
-                        id="btn-reset-data"
-                        onClick={() => {
-                          if (confirm('Kembalikan database ke seed awal pabrik?')) {
-                            resetToDefault();
-                            setShowProfileMenu(false);
-                          }
-                        }}
-                        className="w-full flex items-center px-4 py-2 text-xs text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        id="btn-clear-all-data"
+                        onClick={handleClearDataWithToast}
+                        className="w-full flex items-center px-4 py-2 text-xs text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-slate-800 transition-colors"
                       >
-                        <RotateCcw className="w-4 h-4 mr-2.5" />
-                        <span>Reset Data Default</span>
+                        <Trash2 className="w-4 h-4 mr-2.5" />
+                        <span>Kosongkan Semua Data (0 Data)</span>
                       </button>
+
+                      {SHOW_DUMMY_BUTTON && (
+                        <button
+                          id="btn-load-demo-data"
+                          onClick={handleLoadDemoWithToast}
+                          className="w-full flex items-center px-4 py-2 text-xs text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-800 transition-colors"
+                        >
+                          <Database className="w-4 h-4 mr-2.5" />
+                          <span>Muat Data Demo / Sampel</span>
+                          <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-mono">
+                            DEV ONLY
+                          </span>
+                        </button>
+                      )}
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
-            )}
+          </>
+        )}
+            </div>
+
+            {/* Mobile Actions Container (Visible on Mobile/Tablet < lg) */}
+            <div className="flex lg:hidden items-center space-x-1.5 sm:space-x-2">
+              {/* Quick AI Trigger */}
+              <motion.button
+                id="btn-mobile-ai-trigger"
+                onClick={onOpenAI}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.93 }}
+                className="flex items-center justify-center p-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/60 border border-teal-300 dark:border-teal-700/60 text-teal-800 dark:text-teal-200 shadow-xs cursor-pointer"
+                title="Tanya Asisten AI MIS Lamrimnesia"
+              >
+                <MascotAvatar size="xs" variant="badge" interactive={false} className="w-5 h-5" />
+              </motion.button>
+
+              {/* Mobile Notification Bell */}
+              <NotificationBell
+                onOpenPersetujuan={onOpenPersetujuan}
+                onOpenAuditLogs={onOpenAuditLogs}
+              />
+
+              {/* Mobile Hamburger Menu Toggle Button */}
+              <motion.button
+                id="btn-mobile-menu-toggle"
+                type="button"
+                onClick={() => setShowMobileMenu(true)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.94 }}
+                aria-label="Buka Menu Navigasi Modul"
+                aria-expanded={showMobileMenu}
+                className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 shadow-xs cursor-pointer transition-colors"
+              >
+                <Menu className="w-5 h-5" />
+                {pendingPengajuansCount > 0 && (
+                  <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-white dark:ring-slate-900 animate-pulse" />
+                )}
+              </motion.button>
+            </div>
 
           </div>
 
         </div>
       </div>
+
+      {/* Toast Notification Banner */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 bg-slate-900/95 dark:bg-slate-800/95 backdrop-blur-md text-white text-xs font-semibold rounded-xl shadow-2xl border border-teal-500/40 flex items-center space-x-2 pointer-events-auto"
+          >
+            <span>{toastMessage}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Switch User Modal */}
       {showSwitchUserModal && createPortal(
@@ -619,6 +692,348 @@ export const Header: React.FC<HeaderProps> = ({
         isOpen={showAnnualReportModal}
         onClose={() => setShowAnnualReportModal(false)}
       />
+
+      {/* Mobile Navigation Drawer Portal (Small Screens < lg) */}
+      {showMobileMenu && createPortal(
+        <div className="fixed inset-0 z-50 lg:hidden flex justify-end">
+          {/* Backdrop Overlay */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setShowMobileMenu(false)}
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs cursor-pointer"
+            aria-hidden="true"
+          />
+
+          {/* Drawer Slide-in Panel */}
+          <motion.div
+            id="mobile-navigation-drawer"
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            className="relative w-full max-w-sm h-full bg-white dark:bg-[#15181C] border-l border-slate-200 dark:border-slate-800 shadow-2xl z-10 flex flex-col overflow-hidden text-slate-800 dark:text-slate-100"
+          >
+            {/* Top Bar with Logo & Close */}
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 shrink-0">
+              <div className="flex items-center space-x-2.5">
+                <img
+                  src="/img/logo-lamrimnesia.png"
+                  alt="Logo Lamrimnesia"
+                  className="h-8 w-auto object-contain rounded-lg shadow-xs"
+                />
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900 dark:text-white tracking-wide">SAPA-ALL MIS</h2>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">Navigasi Modul & Operasional</p>
+                </div>
+              </div>
+
+              <button
+                id="btn-close-mobile-menu"
+                onClick={() => setShowMobileMenu(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                title="Tutup Menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Drawer Body */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* User Account / Auth Card */}
+              {isAuthenticated ? (
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-xs">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-xs shrink-0 ring-2 ring-indigo-500/20">
+                      {currentUser.avatar ? (
+                        <img
+                          src={currentUser.avatar}
+                          alt={currentUser.name}
+                          className="w-full h-full object-cover rounded-full"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        currentUser.name.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{currentUser.name}</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{currentUser.email}</p>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300">
+                          {currentUser.role}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {divisiList.find(d => d.id === currentUser.divisi_id)?.kode}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+                    <button
+                      id="btn-mobile-switch-user"
+                      onClick={() => {
+                        setShowMobileMenu(false);
+                        setShowSwitchUserModal(true);
+                      }}
+                      className="flex items-center justify-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium hover:bg-slate-100 dark:hover:bg-slate-750 transition-colors cursor-pointer"
+                    >
+                      <Users className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                      <span>Ganti Akun</span>
+                    </button>
+                    <button
+                      id="btn-mobile-edit-profile"
+                      onClick={() => {
+                        setShowMobileMenu(false);
+                        setShowEditProfileModal(true);
+                      }}
+                      className="flex items-center justify-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium hover:bg-slate-100 dark:hover:bg-slate-750 transition-colors cursor-pointer"
+                    >
+                      <UserCog className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
+                      <span>Edit Profil</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 flex items-center gap-2">
+                  <button
+                    id="btn-mobile-login"
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      openLoginModal();
+                    }}
+                    className="flex-1 flex items-center justify-center space-x-1.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
+                    <span>Masuk</span>
+                  </button>
+                  <button
+                    id="btn-mobile-register"
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      openRegisterModal();
+                    }}
+                    className="flex-1 flex items-center justify-center space-x-1.5 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-teal-700 dark:text-teal-300 border border-teal-500/30 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>Daftar</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Modul Divisi Navigasi Section */}
+              <div>
+                <div className="flex items-center justify-between px-1 mb-2">
+                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Modul Divisi Operasional ({divisiList.length})
+                  </span>
+                  <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium">
+                    Sentuh untuk buka
+                  </span>
+                </div>
+
+                <div className="space-y-1.5">
+                  {divisiList.map((div) => {
+                    const isActive = currentUser.divisi_id === div.id;
+                    return (
+                      <button
+                        key={div.id}
+                        id={`btn-mobile-nav-div-${div.kode.toLowerCase()}`}
+                        onClick={() => {
+                          switchDivision(div.id);
+                          setShowMobileMenu(false);
+                        }}
+                        className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-all cursor-pointer ${
+                          isActive
+                            ? 'bg-indigo-600 text-white shadow-md'
+                            : 'bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-850'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3 min-w-0">
+                          <div
+                            className={`p-2 rounded-lg shrink-0 ${
+                              isActive
+                                ? 'bg-white/20 text-white'
+                                : 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                            }`}
+                          >
+                            {getDivisionIcon(div.id)}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold leading-tight truncate">{div.nama_divisi}</p>
+                            <p className={`text-[10px] truncate ${isActive ? 'text-indigo-100' : 'text-slate-500 dark:text-slate-400'}`}>
+                              {div.deskripsi}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center space-x-2 shrink-0 ml-2">
+                          {div.id === 2 && pendingPengajuansCount > 0 && (
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                              isActive ? 'bg-amber-400 text-slate-950 font-bold' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 animate-pulse'
+                            }`}>
+                              {pendingPengajuansCount}
+                            </span>
+                          )}
+                          <span
+                            className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                              isActive
+                                ? 'bg-indigo-700/60 text-white'
+                                : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                            }`}
+                          >
+                            {div.kode}
+                          </span>
+                          <ChevronRight className={`w-3.5 h-3.5 ${isActive ? 'text-white/80' : 'text-slate-400'}`} />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Quick Action Tools & Services */}
+              <div>
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider px-1 mb-2 block">
+                  Layanan & Laporan MIS
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Tanya AI Assistant */}
+                  <button
+                    id="btn-mobile-ai-assistant"
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      onOpenAI();
+                    }}
+                    className="flex items-center space-x-2 p-2.5 rounded-xl bg-teal-50/80 dark:bg-teal-950/40 border border-teal-300/70 dark:border-teal-700/60 text-teal-900 dark:text-teal-200 text-xs font-semibold hover:bg-teal-100 dark:hover:bg-teal-900/60 transition-colors text-left cursor-pointer"
+                  >
+                    <MascotAvatar size="xs" variant="badge" interactive={false} className="w-5 h-5 shrink-0" />
+                    <span className="truncate">Tanya AI MIS</span>
+                  </button>
+
+                  {/* Unduh Laporan PDF Divisi */}
+                  <button
+                    id="btn-mobile-pdf-report"
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      setShowReportModal(true);
+                    }}
+                    className="flex items-center space-x-2 p-2.5 rounded-xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-300/70 dark:border-indigo-700/60 text-indigo-900 dark:text-indigo-200 text-xs font-semibold hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-colors text-left cursor-pointer"
+                  >
+                    <FileDown className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                    <span className="truncate">Laporan PDF</span>
+                  </button>
+
+                  {/* Laporan Tahunan / Audit PDF */}
+                  <button
+                    id="btn-mobile-annual-report"
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      setShowAnnualReportModal(true);
+                    }}
+                    className="flex items-center space-x-2 p-2.5 rounded-xl bg-slate-100/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-left cursor-pointer"
+                  >
+                    <Award className="w-4 h-4 text-amber-500 shrink-0" />
+                    <span className="truncate">Audit Tahunan</span>
+                  </button>
+
+                  {/* Log Audit Aktivitas */}
+                  <button
+                    id="btn-mobile-audit-logs"
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      onOpenAuditLogs();
+                    }}
+                    className="flex items-center space-x-2 p-2.5 rounded-xl bg-slate-100/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-left cursor-pointer"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span className="truncate">Log Audit</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Pengaturan Tampilan & Sistem */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 space-y-3">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-600 dark:text-slate-300 flex items-center gap-2 font-medium">
+                    {theme === 'dark' ? (
+                      <Moon className="w-4 h-4 text-cyan-400" />
+                    ) : (
+                      <Sun className="w-4 h-4 text-amber-500" />
+                    )}
+                    <span>Mode Tampilan</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={toggleTheme}
+                    className="px-2.5 py-1 text-[11px] font-semibold rounded-md bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 cursor-pointer transition-colors shadow-xs"
+                  >
+                    {theme === 'dark' ? 'Mode Gelap 🌙' : 'Mode Terang ☀️'}
+                  </button>
+                </div>
+
+                {SHOW_DUMMY_BUTTON && (
+                  <button
+                    id="btn-mobile-load-dummy"
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      handleLoadDemoWithToast();
+                    }}
+                    className="w-full flex items-center justify-between p-2 text-xs font-semibold rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-300/70 dark:border-amber-700/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <Database className="w-4 h-4 text-amber-500 shrink-0" />
+                      <span>Muat Data Demo / Sampel</span>
+                    </div>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-200/80 dark:bg-amber-900 text-amber-800 dark:text-amber-200 font-mono">
+                      DEV
+                    </span>
+                  </button>
+                )}
+
+                <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-1.5">
+                  <button
+                    id="btn-mobile-clear-all"
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      handleClearDataWithToast();
+                    }}
+                    className="w-full flex items-center px-2 py-1.5 text-xs text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2 shrink-0" />
+                    <span>Kosongkan Semua Data (0 Data)</span>
+                  </button>
+
+                  {isAuthenticated && (
+                    <button
+                      id="btn-mobile-logout"
+                      onClick={() => {
+                        setShowMobileMenu(false);
+                        logout();
+                      }}
+                      className="w-full flex items-center px-2 py-1.5 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <LogOut className="w-4 h-4 mr-2 shrink-0" />
+                      <span>Keluar (Logout)</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Footer */}
+            <div className="px-4 py-2.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 text-center shrink-0">
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+                SAPA-ALL MIS v4.0 • Yayasan Lamrimnesia
+              </p>
+            </div>
+          </motion.div>
+        </div>,
+        document.body
+      )}
     </header>
   );
 };

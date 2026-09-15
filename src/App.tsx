@@ -39,7 +39,7 @@ const AppContent: React.FC = () => {
         <AuthModal
           isOpen={true}
           isForcedScreen={true}
-          initialMode="login"
+          initialMode={authModalMode || 'register'}
         />
       </div>
     );
@@ -63,11 +63,12 @@ const AppContent: React.FC = () => {
         <AnimatePresence mode="wait">
           <motion.div
             key={currentUser.divisi_id}
+            id="printable-area"
             initial={{ opacity: 0, y: 12, scale: 0.99 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -12, scale: 0.99 }}
             transition={{ duration: 0.22, ease: 'easeOut' }}
-            className="w-full"
+            className="w-full printable-dashboard"
           >
             {currentUser.divisi_id === 1 && <DirektoratDashboard />}
             {currentUser.divisi_id === 2 && <FinanceDashboard />}

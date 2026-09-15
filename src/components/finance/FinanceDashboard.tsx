@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import { FinanceCharts } from '../charts/FinanceCharts';
 import { ConfirmModal } from '../modals/ConfirmModal';
+import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
+import { PrintReportHeader } from '../common/PrintReportHeader';
 
 interface FinanceDashboardProps {
   initialSubTab?: 'grafik' | 'mutasi' | 'persetujuan' | 'penjualan' | 'akun';
@@ -259,6 +261,23 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
   return (
     <div className="space-y-6">
       
+      {/* Official Print Header */}
+      <PrintReportHeader
+        divisionName="Keuangan & Finansial"
+        divisionCode="KEU"
+        subTabTitle={
+          activeSubTab === 'grafik'
+            ? 'Grafik & Analisis Finansial'
+            : activeSubTab === 'mutasi'
+            ? 'Jurnal Mutasi Kas & Transaksi'
+            : activeSubTab === 'persetujuan'
+            ? 'Persetujuan Pengajuan Anggaran Cetak'
+            : activeSubTab === 'penjualan'
+            ? 'Rekapitulasi Penjualan Buku'
+            : 'Daftar Akun Kas & Bank'
+        }
+      />
+
       {/* Top Stat Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
@@ -302,7 +321,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
       </div>
 
       {/* Sub tabs & Actions */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+      <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
         <div className="flex items-center space-x-1.5 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl">
           <button
             onClick={() => setActiveSubTab('grafik')}
@@ -371,6 +390,9 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
         </div>
 
         <div className="flex items-center space-x-2">
+          {/* Print Current View Action Button */}
+          <PrintCurrentViewButton id="btn-print-finance" />
+
           {activeSubTab === 'mutasi' && (
             <>
               <button

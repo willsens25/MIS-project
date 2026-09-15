@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { SuratJalanPrintModal } from '../modals/SuratJalanPrintModal';
 import { ConfirmModal } from '../modals/ConfirmModal';
+import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
+import { PrintReportHeader } from '../common/PrintReportHeader';
 
 export const LogistikDashboard: React.FC = () => {
   const {
@@ -279,8 +281,21 @@ export const LogistikDashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       
+      {/* Official Print Header */}
+      <PrintReportHeader
+        divisionName="Logistik & Distribusi"
+        divisionCode="LOG"
+        subTabTitle={
+          activeSubTab === 'antrean'
+            ? 'Antrean Packing & Pengiriman Pesanan'
+            : activeSubTab === 'manual'
+            ? 'Pengeluaran Manual Stok Gudang'
+            : 'Riwayat Logistik & Distribusi Keluar'
+        }
+      />
+
       {/* Sub tabs */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+      <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
         <div className="flex items-center space-x-1.5 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl">
           <button
             onClick={() => setActiveSubTab('antrean')}
@@ -322,6 +337,11 @@ export const LogistikDashboard: React.FC = () => {
             <History className="w-3.5 h-3.5" />
             <span>Riwayat Pengeluaran ({logisticLogs.length})</span>
           </button>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          {/* Print Current View Action Button */}
+          <PrintCurrentViewButton id="btn-print-logistik" />
         </div>
       </div>
 

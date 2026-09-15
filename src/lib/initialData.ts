@@ -30,7 +30,47 @@ export const INITIAL_DIVISI: Divisi[] = [
 // Pre-hashed with bcrypt (salt rounds 10) for 'password123'
 const DEFAULT_BCRYPT_PASSWORD_HASH = '$2b$10$S7ml9yWVoI1Kg0HGHponxOO053AboWyPCZCEINT6h9qA/Z9x2T0tm';
 
+// Production Clean Slate: Only 1 Admin account initially
 export const INITIAL_USERS: User[] = [
+  { id: 1, name: 'Direktur Utama (Admin)', email: 'admin@lamrimnesia.org', password: DEFAULT_BCRYPT_PASSWORD_HASH, divisi_id: 1, role: 'Direktur', phone: '081234567890' },
+];
+
+// Production Clean Slate: Standard financial accounts starting at Rp 0
+export const INITIAL_ACCOUNTS: Account[] = [
+  { id: 1, nama_akun: 'Kas Operasional (Tunai)', kode_akun: 'ACC-CASH-01', saldo_awal: 0 },
+  { id: 2, nama_akun: 'Bank BCA - Yayasan Lamrimnesia', kode_akun: 'ACC-BCA-789', saldo_awal: 0 },
+  { id: 3, nama_akun: 'Bank Mandiri Penerbitan', kode_akun: 'ACC-MDR-442', saldo_awal: 0 },
+  { id: 4, nama_akun: 'QRIS & Gateway Penjualan', kode_akun: 'ACC-QRIS-99', saldo_awal: 0 },
+];
+
+export const INITIAL_CATEGORIES: Category[] = [
+  { id: 1, nama_kategori: 'Penjualan Buku / POS', jenis: 'Masuk' },
+  { id: 2, nama_kategori: 'Dana Donasi & Sponsorship', jenis: 'Masuk' },
+  { id: 3, nama_kategori: 'Pendapatan Lain-lain', jenis: 'Masuk' },
+  { id: 4, nama_kategori: 'Biaya Cetak & Produksi Buku', jenis: 'Keluar' },
+  { id: 5, nama_kategori: 'Operasional Kantor & Utilitas', jenis: 'Keluar' },
+  { id: 6, nama_kategori: 'Logistik & Pengiriman Paket', jenis: 'Keluar' },
+  { id: 7, nama_kategori: 'Honorarium & Gaji Staf', jenis: 'Keluar' },
+  { id: 8, nama_kategori: 'Kegiatan Puja & Event Dharma', jenis: 'Keluar' },
+];
+
+// Production Clean Slate: 0 books, 0 promos, 0 members, 0 orders, 0 mutasi, 0 logs
+export const INITIAL_BOOKS: Book[] = [];
+export const INITIAL_PROMOS: Promo[] = [];
+export const INITIAL_IDENTITAS: Identitas[] = [];
+export const INITIAL_ORDERS: Order[] = [];
+export const INITIAL_MUTASI: Mutasi[] = [];
+export const INITIAL_PENGAJUAN: PengajuanCetak[] = [];
+export const INITIAL_PENJUALAN: Penjualan[] = [];
+export const INITIAL_PENYALURAN: Penyaluran[] = [];
+export const INITIAL_LOGISTIC_LOGS: LogisticLog[] = [];
+export const INITIAL_PRODUCTION_LOGS: ProductionLog[] = [];
+export const INITIAL_ACTIVITY_LOGS: ActivityLog[] = [];
+
+// ==========================================
+// DEMO / SAMPLE DATA (Available on request)
+// ==========================================
+export const DEMO_USERS: User[] = [
   { id: 1, name: 'Direktur Utama (Admin)', email: 'admin@lamrimnesia.org', password: DEFAULT_BCRYPT_PASSWORD_HASH, divisi_id: 1, role: 'Direktur', phone: '081234567890' },
   { id: 2, name: 'Siti Rahmawati (Bendahara)', email: 'finance@lamrimnesia.org', password: DEFAULT_BCRYPT_PASSWORD_HASH, divisi_id: 2, role: 'Bendahara', phone: '081234567891' },
   { id: 3, name: 'Budi Santoso (Penerbitan)', email: 'penerbitan@lamrimnesia.org', password: DEFAULT_BCRYPT_PASSWORD_HASH, divisi_id: 3, role: 'Editor Kepala', phone: '081234567892' },
@@ -39,25 +79,14 @@ export const INITIAL_USERS: User[] = [
   { id: 6, name: 'Hendra Gunawan (Logistik)', email: 'logistik@lamrimnesia.org', password: DEFAULT_BCRYPT_PASSWORD_HASH, divisi_id: 6, role: 'Staff Gudang', phone: '081234567895' },
 ];
 
-export const INITIAL_CATEGORIES: Category[] = [
-  { id: 1, nama_kategori: 'Penjualan Buku (S-SALUR)', jenis: 'Masuk' },
-  { id: 2, nama_kategori: 'Donasi Umum', jenis: 'Masuk' },
-  { id: 3, nama_kategori: 'Pemasukan Ajar Dharma', jenis: 'Masuk' },
-  { id: 4, nama_kategori: 'Gaji & Honorarium', jenis: 'Keluar' },
-  { id: 5, nama_kategori: 'Operasional Kantor', jenis: 'Keluar' },
-  { id: 6, nama_kategori: 'Biaya Cetak Buku', jenis: 'Keluar' },
-  { id: 7, nama_kategori: 'Transportasi & Logistik', jenis: 'Keluar' },
-  { id: 8, nama_kategori: 'Konsumsi & Kegiatan', jenis: 'Keluar' },
-];
-
-export const INITIAL_ACCOUNTS: Account[] = [
+export const DEMO_ACCOUNTS: Account[] = [
   { id: 1, nama_akun: 'Kas Operasional (Tunai)', kode_akun: 'ACC-CASH-01', saldo_awal: 12500000 },
   { id: 2, nama_akun: 'Bank BCA - Yayasan Lamrimnesia', kode_akun: 'ACC-BCA-789', saldo_awal: 85400000 },
   { id: 3, nama_akun: 'Bank Mandiri Penerbitan', kode_akun: 'ACC-MDR-442', saldo_awal: 34200000 },
   { id: 4, nama_akun: 'QRIS & Gateway Penjualan', kode_akun: 'ACC-QRIS-99', saldo_awal: 8750000 },
 ];
 
-export const INITIAL_BOOKS: Book[] = [
+export const DEMO_BOOKS: Book[] = [
   { id: 1, judul: 'Pembebasan di Tangan Kita (Lamrim)', penulis: 'Pabongka Rinpoche', harga_jual: 145000, stok_gudang: 48, isbn: '978-602-1234-01-1', kategori: 'Filosofi' },
   { id: 2, judul: 'Untaian Permata Ajaran Buddha', penulis: 'Dagpo Rinpoche', harga_jual: 95000, stok_gudang: 32, isbn: '978-602-1234-02-8', kategori: 'Meditasi' },
   { id: 3, judul: 'Bodhicaryavatara (Panduan Hidup Bodhisattva)', penulis: 'Shantideva', harga_jual: 120000, stok_gudang: 24, isbn: '978-602-1234-03-5', kategori: 'Sutra' },
@@ -70,37 +99,7 @@ export const INITIAL_BOOKS: Book[] = [
   { id: 10, judul: 'Jalan Cahaya Pencerahan Batin', penulis: 'Geshe Lhundub Sopa', harga_jual: 130000, stok_gudang: 27, isbn: '978-602-1234-10-3', kategori: 'Filosofi' },
 ];
 
-export const INITIAL_SALES_CHANNELS: SalesChannel[] = [
-  { id: 1, nama_channel: 'Tokopedia', kategori: 'Marketplace', deskripsi: 'Official Store Tokopedia Yayasan Lamrimnesia', aktif: true },
-  { id: 2, nama_channel: 'Shopee', kategori: 'Marketplace', deskripsi: 'Shopee Mall / Official Shop Lamrimnesia', aktif: true },
-  { id: 3, nama_channel: 'TikTok Shop', kategori: 'Marketplace', deskripsi: 'Live shopping & etalase TikTok', aktif: true },
-  { id: 4, nama_channel: 'WhatsApp Marketing', kategori: 'Direct / WhatsApp', deskripsi: 'Chat CS Hotline WhatsApp Yayasan', aktif: true },
-  { id: 5, nama_channel: 'Bazar / Event Vihara', kategori: 'Offline / Event', deskripsi: 'Stand bazar acara keagamaan & pameran buku', aktif: true },
-  { id: 6, nama_channel: 'Call Center / Hotline', kategori: 'Call Center', deskripsi: 'Pemesanan melalui telepon langsung', aktif: true },
-  { id: 7, nama_channel: 'Direct Order Offline', kategori: 'Offline / Event', deskripsi: 'Kunjungan walk-in ke sekretariat kantor pusat', aktif: true },
-  { id: 8, nama_channel: 'Website Lamrimnesia', kategori: 'Marketplace', deskripsi: 'Pemesanan otomatis portal web resmi', aktif: true },
-  { id: 9, nama_channel: 'Blibli', kategori: 'Marketplace', deskripsi: 'Official Merchant Blibli', aktif: true }
-];
-
-export const INITIAL_EXPEDITIONS: Expedition[] = [
-  { id: 1, nama_ekspedisi: 'JNE Reguler', kode: 'JNE-REG', kategori: 'Reguler', estimasi: '2-3 Hari', aktif: true },
-  { id: 2, nama_ekspedisi: 'JNE YES (Yakin Esok Sampai)', kode: 'JNE-YES', kategori: 'Express / Kilat', estimasi: '1 Hari', aktif: true },
-  { id: 3, nama_ekspedisi: 'JNE Trucking (JTR)', kode: 'JNE-JTR', kategori: 'Cargo / Berat', estimasi: '3-7 Hari', aktif: true },
-  { id: 4, nama_ekspedisi: 'J&T Express (EZ)', kode: 'J&T-EZ', kategori: 'Reguler', estimasi: '2-3 Hari', aktif: true },
-  { id: 5, nama_ekspedisi: 'SiCepat Reguler', kode: 'SICEPAT-REG', kategori: 'Reguler', estimasi: '1-2 Hari', aktif: true },
-  { id: 6, nama_ekspedisi: 'SiCepat Cargo / Gokil', kode: 'SICEPAT-GKL', kategori: 'Cargo / Berat', estimasi: '3-5 Hari', aktif: true },
-  { id: 7, nama_ekspedisi: 'Anteraja Reguler', kode: 'ANTERAJA', kategori: 'Reguler', estimasi: '2-3 Hari', aktif: true },
-  { id: 8, nama_ekspedisi: 'Pos Indonesia Kilat Khusus', kode: 'POS-KILAT', kategori: 'Reguler', estimasi: '2-4 Hari', aktif: true },
-  { id: 9, nama_ekspedisi: 'GoSend Instant', kode: 'GOSEND-INS', kategori: 'Instant / Sameday', estimasi: '1-3 Jam', aktif: true },
-  { id: 10, nama_ekspedisi: 'GrabExpress Instant', kode: 'GRAB-INS', kategori: 'Instant / Sameday', estimasi: '1-3 Jam', aktif: true },
-  { id: 11, nama_ekspedisi: 'Wahana Prestasi Logistik', kode: 'WAHANA', kategori: 'Reguler', estimasi: '3-5 Hari', aktif: true },
-  { id: 12, nama_ekspedisi: 'Lion Parcel REGPACK', kode: 'LION-REG', kategori: 'Reguler', estimasi: '2-3 Hari', aktif: true },
-  { id: 13, nama_ekspedisi: 'Indah Logistik Cargo', kode: 'INDAH-CRG', kategori: 'Cargo / Berat', estimasi: '4-7 Hari', aktif: true },
-  { id: 14, nama_ekspedisi: 'Ambil Sendiri di Gudang', kode: 'PICKUP-OFFLINE', kategori: 'Internal / Ambil Sendiri', estimasi: 'Hari H', aktif: true },
-  { id: 15, nama_ekspedisi: 'Kurir Internal Yayasan', kode: 'KURIR-INTERNAL', kategori: 'Internal / Ambil Sendiri', estimasi: '1-2 Hari', aktif: true }
-];
-
-export const INITIAL_PROMOS: Promo[] = [
+export const DEMO_PROMOS: Promo[] = [
   {
     id: 1,
     code: 'DHARMA10',
@@ -181,7 +180,7 @@ export const INITIAL_PROMOS: Promo[] = [
   }
 ];
 
-export const INITIAL_IDENTITAS: Identitas[] = [
+export const DEMO_IDENTITAS: Identitas[] = [
   {
     id: 1,
     nama_lengkap: 'ANAND KRISHNA WIJAYA',
@@ -314,7 +313,7 @@ export const INITIAL_IDENTITAS: Identitas[] = [
   }
 ];
 
-export const INITIAL_ORDERS: Order[] = [
+export const DEMO_ORDERS: Order[] = [
   {
     id: 1,
     no_invoice: 'INV-20260830-0001',
@@ -370,7 +369,7 @@ export const INITIAL_ORDERS: Order[] = [
   }
 ];
 
-export const INITIAL_MUTASI: Mutasi[] = [
+export const DEMO_MUTASI: Mutasi[] = [
   { id: 1, account_id: 2, category_id: 1, user_id: 2, tipe: 'Masuk', nominal: 395000, keterangan: 'Pelunasan Invoice #INV-20260830-0001 (ANAND KRISHNA WIJAYA)', tanggal: '2026-08-30', jenis: 'INVOICE' },
   { id: 2, account_id: 2, category_id: 2, user_id: 2, tipe: 'Masuk', nominal: 5000000, keterangan: 'Donasi Dana Cetak Sutra dari Bapak Surya Dharma', tanggal: '2026-08-28', jenis: 'MANUAL' },
   { id: 3, account_id: 1, category_id: 5, user_id: 2, tipe: 'Keluar', nominal: 1450000, keterangan: 'Biaya langganan internet, listrik, dan ATK kantor', tanggal: '2026-08-29', jenis: 'MANUAL' },
@@ -378,59 +377,67 @@ export const INITIAL_MUTASI: Mutasi[] = [
   { id: 5, account_id: 2, category_id: 1, user_id: 2, tipe: 'Masuk', nominal: 1850000, keterangan: 'Penjualan Bazar Buku Dharma Vihara Pluit', tanggal: '2026-08-27', jenis: 'MANUAL' },
 ];
 
-export const INITIAL_PENGAJUAN: PengajuanCetak[] = [
+export const DEMO_PENGAJUAN: PengajuanCetak[] = [
   { id: 1, buku_id: 5, jumlah_pengajuan: 150, status: 'pending', created_at: '2026-08-30 11:00:00' },
   { id: 2, buku_id: 3, jumlah_pengajuan: 200, status: 'approved', catatan_bendahara: 'Disetujui. Dana cair dari Mandiri Penerbitan.', created_at: '2026-08-24 14:00:00' },
 ];
 
-export const INITIAL_PENJUALAN: Penjualan[] = [
+export const DEMO_PENJUALAN: Penjualan[] = [
   { id: 1, no_invoice: 'INV-20260830-0001', nama_pelanggan: 'ANAND KRISHNA WIJAYA', total_item: 3, total_bayar: 395000, tanggal_penjualan: '2026-08-30 10:35:00' },
   { id: 2, no_invoice: 'INV-20260827-0099', nama_pelanggan: 'Bazar Buku Dharma Pluit', total_item: 18, total_bayar: 1850000, tanggal_penjualan: '2026-08-27 16:40:00' },
 ];
 
-export const INITIAL_PENYALURAN: Penyaluran[] = [
+export const DEMO_PENYALURAN: Penyaluran[] = [
   { id: 1, no_invoice: 'INV-20260830-0001', buku_id: 1, qty: 2, nama_agen: 'Anand Krishna Wijaya', status: 'proses packing', created_at: '2026-08-30 10:31:00' },
   { id: 2, no_invoice: 'INV-20260830-0001', buku_id: 3, qty: 1, nama_agen: 'Anand Krishna Wijaya', status: 'proses packing', created_at: '2026-08-30 10:31:00' },
 ];
 
-export const INITIAL_LOGISTIC_LOGS: LogisticLog[] = [
+export const DEMO_LOGISTIC_LOGS: LogisticLog[] = [
   { id: 1, buku_id: 1, qty_keluar: 2, tujuan: 'Anand Krishna Wijaya (Jakarta)', keterangan: 'Invoice #INV-20260830-0001', created_at: '2026-08-30 15:00:00' },
   { id: 2, buku_id: 4, qty_keluar: 10, tujuan: 'Distribusi Donasi Vihara Semarang', keterangan: 'Penyaluran Buku Dharma', created_at: '2026-08-28 09:30:00' },
 ];
 
-export const INITIAL_PRODUCTION_LOGS: ProductionLog[] = [
+export const DEMO_PRODUCTION_LOGS: ProductionLog[] = [
   { id: 1, buku_id: 1, qty_produksi: 100, tanggal_produksi: '2026-08-26 14:00:00' },
   { id: 2, buku_id: 6, qty_produksi: 150, tanggal_produksi: '2026-08-22 10:00:00' },
 ];
 
-export const INITIAL_ACTIVITY_LOGS: ActivityLog[] = [
-  // Divisi 4: Marketing & Distribution
+export const DEMO_ACTIVITY_LOGS: ActivityLog[] = [
   { id: 1, user_id: 4, user_name: 'Diana Wijaya', divisi_id: 4, divisi_name: 'Marketing & Distribution', aksi: 'Konfirmasi Lunas', model: 'Order', keterangan: 'Mengubah status invoice INV-20260830-0001 menjadi LUNAS. Data disinkronkan ke Finance & antrean packing Logistik.', created_at: '2026-08-30 10:35:00' },
   { id: 5, user_id: 4, user_name: 'Diana Wijaya', divisi_id: 4, divisi_name: 'Marketing & Distribution', aksi: 'Tambah Pesanan', model: 'Order', keterangan: 'Membuat invoice baru INV-20260831-0002 untuk Meiliana Susanto (Surabaya) senilai Rp 725.000.', created_at: '2026-08-31 09:15:00' },
   { id: 6, user_id: 4, user_name: 'Diana Wijaya', divisi_id: 4, divisi_name: 'Marketing & Distribution', aksi: 'Tambah Promo', model: 'Promo', keterangan: 'Menerbitkan kode promo baru DHARMA10 (Diskon 10% untuk buku filosofi).', created_at: '2026-08-25 14:00:00' },
-
-  // Divisi 1: Direktorat & HRD
   { id: 2, user_id: 1, user_name: 'Direktur Utama', divisi_id: 1, divisi_name: 'Direktorat & HRD', aksi: 'Tambah Identitas', model: 'Identitas', keterangan: 'Mendaftarkan anggota kehormatan baru: "VENERABLE BHIKKHU DHAMMAVIRA" status VIP.', created_at: '2026-08-20 10:15:00' },
-  { id: 7, user_id: 1, user_name: 'Direktur Utama', divisi_id: 1, divisi_name: 'Direktorat & HRD', aksi: 'Update User', model: 'User', keterangan: 'Memperbarui hak akses dan role Diana Wijaya sebagai Koordinator Marketing & Distribusi.', created_at: '2026-08-27 16:30:00' },
-  { id: 8, user_id: 1, user_name: 'Direktur Utama', divisi_id: 1, divisi_name: 'Direktorat & HRD', aksi: 'Audit Sistem', model: 'Identitas', keterangan: 'Melakukan verifikasi berkala terhadap 6 basis data anggota Dharma Patriot.', created_at: '2026-08-29 11:20:00' },
-
-  // Divisi 2: Bendahara / Finance
   { id: 3, user_id: 2, user_name: 'Siti Rahmawati', divisi_id: 2, divisi_name: 'Bendahara / Finance', aksi: 'Setujui Cetak Buku', model: 'PengajuanCetak', keterangan: 'Menyetujui cetak ulang buku "Bodhicaryavatara" sejumlah 200 Eks (Biaya: Rp 4.000.000 cair dari Bank Mandiri).', created_at: '2026-08-24 14:30:00' },
-  { id: 9, user_id: 2, user_name: 'Siti Rahmawati', divisi_id: 2, divisi_name: 'Bendahara / Finance', aksi: 'Tambah Transaksi', model: 'Mutasi', keterangan: 'Mencatat donasi dana cetak sutra dari Bapak Surya Dharma sebesar Rp 5.000.000 ke rekening BCA Yayasan.', created_at: '2026-08-28 15:40:00' },
-  { id: 10, user_id: 2, user_name: 'Siti Rahmawati', divisi_id: 2, divisi_name: 'Bendahara / Finance', aksi: 'Rekonsiliasi Kas', model: 'Mutasi', keterangan: 'Verifikasi mutasi kas operasional kantor dan ATK bulan Agustus sebesar Rp 1.450.000.', created_at: '2026-08-29 17:00:00' },
-
-  // Divisi 3: Penerbitan
   { id: 4, user_id: 3, user_name: 'Budi Santoso', divisi_id: 3, divisi_name: 'Penerbitan', aksi: 'Tambah Buku', model: 'Book', keterangan: 'Mendaftarkan buku baru ke katalog: "Jalan Cahaya Pencerahan Batin" karya Geshe Lhundub Sopa.', created_at: '2026-08-18 11:20:00' },
-  { id: 11, user_id: 3, user_name: 'Budi Santoso', divisi_id: 3, divisi_name: 'Penerbitan', aksi: 'Ajukan Cetak Buku', model: 'PengajuanCetak', keterangan: 'Mengajukan cetak ulang buku "Sutra Inti Hati Kebijaksanaan" sebanyak 150 Eks ke Finance.', created_at: '2026-08-30 11:00:00' },
-  { id: 12, user_id: 3, user_name: 'Budi Santoso', divisi_id: 3, divisi_name: 'Penerbitan', aksi: 'Update Buku', model: 'Book', keterangan: 'Memperbarui penetapan HPP dan harga jual resmi buku "Untaian Permata Ajaran Buddha".', created_at: '2026-08-28 09:45:00' },
+];
 
-  // Divisi 5: Produksi
-  { id: 13, user_id: 5, user_name: 'Agus Priyono', divisi_id: 5, divisi_name: 'Produksi', aksi: 'Tambah Hasil Produksi', model: 'ProductionLog', keterangan: 'Menyelesaikan pencetakan 100 Eks buku "Pembebasan di Tangan Kita" dan telah masuk gudang.', created_at: '2026-08-26 14:00:00' },
-  { id: 14, user_id: 5, user_name: 'Agus Priyono', divisi_id: 5, divisi_name: 'Produksi', aksi: 'Tambah Hasil Produksi', model: 'ProductionLog', keterangan: 'Menyelesaikan batch cetak 150 Eks buku "Kidung Agung Pencerahan" bersama percetakan mitra.', created_at: '2026-08-22 10:00:00' },
-  { id: 15, user_id: 5, user_name: 'Agus Priyono', divisi_id: 5, divisi_name: 'Produksi', aksi: 'Quality Check', model: 'ProductionLog', keterangan: 'Inspeksi kualitas cetak sampul embossed dan laminasi doff untuk seri buku Dharma Klasik.', created_at: '2026-08-29 13:15:00' },
 
-  // Divisi 6: Logistik & Gudang
-  { id: 16, user_id: 6, user_name: 'Hendra Gunawan', divisi_id: 6, divisi_name: 'Logistik & Gudang', aksi: 'Kirim Pesanan Logistik', model: 'LogisticLog', keterangan: 'Memproses pengiriman pesanan Invoice #INV-20260830-0001 (2 eks) via JNE YES ke Anand Krishna Wijaya.', created_at: '2026-08-30 15:00:00' },
-  { id: 17, user_id: 6, user_name: 'Hendra Gunawan', divisi_id: 6, divisi_name: 'Logistik & Gudang', aksi: 'Pengeluaran Manual Gudang', model: 'LogisticLog', keterangan: 'Mengeluarkan stok 10 pcs buku untuk distribusi donasi Vihara Semarang.', created_at: '2026-08-28 09:30:00' },
-  { id: 18, user_id: 6, user_name: 'Hendra Gunawan', divisi_id: 6, divisi_name: 'Logistik & Gudang', aksi: 'Stock Opname', model: 'LogisticLog', keterangan: 'Pemeriksaan fisik stok rak utama gudang: seluruh jumlah fisik cocok dengan angka sistem.', created_at: '2026-08-31 08:30:00' },
+export const INITIAL_SALES_CHANNELS: SalesChannel[] = [
+  { id: 1, nama_channel: 'Tokopedia', kategori: 'Marketplace', deskripsi: 'Official Store Tokopedia Yayasan Lamrimnesia', aktif: true },
+  { id: 2, nama_channel: 'Shopee', kategori: 'Marketplace', deskripsi: 'Shopee Mall / Official Shop Lamrimnesia', aktif: true },
+  { id: 3, nama_channel: 'TikTok Shop', kategori: 'Marketplace', deskripsi: 'Live shopping & etalase TikTok', aktif: true },
+  { id: 4, nama_channel: 'WhatsApp Marketing', kategori: 'Direct / WhatsApp', deskripsi: 'Chat CS Hotline WhatsApp Yayasan', aktif: true },
+  { id: 5, nama_channel: 'Bazar / Event Vihara', kategori: 'Offline / Event', deskripsi: 'Stand bazar acara keagamaan & pameran buku', aktif: true },
+  { id: 6, nama_channel: 'Call Center / Hotline', kategori: 'Call Center', deskripsi: 'Pemesanan melalui telepon langsung', aktif: true },
+  { id: 7, nama_channel: 'Direct Order Offline', kategori: 'Offline / Event', deskripsi: 'Kunjungan walk-in ke sekretariat kantor pusat', aktif: true },
+  { id: 8, nama_channel: 'Website Lamrimnesia', kategori: 'Marketplace', deskripsi: 'Pemesanan otomatis portal web resmi', aktif: true },
+  { id: 9, nama_channel: 'Blibli', kategori: 'Marketplace', deskripsi: 'Official Merchant Blibli', aktif: true }
+];
+
+export const INITIAL_EXPEDITIONS: Expedition[] = [
+  { id: 1, nama_ekspedisi: 'JNE Reguler', kode: 'JNE-REG', kategori: 'Reguler', estimasi: '2-3 Hari', aktif: true },
+  { id: 2, nama_ekspedisi: 'JNE YES (Yakin Esok Sampai)', kode: 'JNE-YES', kategori: 'Express / Kilat', estimasi: '1 Hari', aktif: true },
+  { id: 3, nama_ekspedisi: 'JNE Trucking (JTR)', kode: 'JNE-JTR', kategori: 'Cargo / Berat', estimasi: '3-7 Hari', aktif: true },
+  { id: 4, nama_ekspedisi: 'J&T Express (EZ)', kode: 'J&T-EZ', kategori: 'Reguler', estimasi: '2-3 Hari', aktif: true },
+  { id: 5, nama_ekspedisi: 'SiCepat Reguler', kode: 'SICEPAT-REG', kategori: 'Reguler', estimasi: '1-2 Hari', aktif: true },
+  { id: 6, nama_ekspedisi: 'SiCepat Cargo / Gokil', kode: 'SICEPAT-GKL', kategori: 'Cargo / Berat', estimasi: '3-5 Hari', aktif: true },
+  { id: 7, nama_ekspedisi: 'Anteraja Reguler', kode: 'ANTERAJA', kategori: 'Reguler', estimasi: '2-3 Hari', aktif: true },
+  { id: 8, nama_ekspedisi: 'Pos Indonesia Kilat Khusus', kode: 'POS-KILAT', kategori: 'Reguler', estimasi: '2-4 Hari', aktif: true },
+  { id: 9, nama_ekspedisi: 'GoSend Instant', kode: 'GOSEND-INS', kategori: 'Instant / Sameday', estimasi: '1-3 Jam', aktif: true },
+  { id: 10, nama_ekspedisi: 'GrabExpress Instant', kode: 'GRAB-INS', kategori: 'Instant / Sameday', estimasi: '1-3 Jam', aktif: true },
+  { id: 11, nama_ekspedisi: 'Wahana Prestasi Logistik', kode: 'WAHANA', kategori: 'Reguler', estimasi: '3-5 Hari', aktif: true },
+  { id: 12, nama_ekspedisi: 'Lion Parcel REGPACK', kode: 'LION-REG', kategori: 'Reguler', estimasi: '2-3 Hari', aktif: true },
+  { id: 13, nama_ekspedisi: 'Indah Logistik Cargo', kode: 'INDAH-CRG', kategori: 'Cargo / Berat', estimasi: '4-7 Hari', aktif: true },
+  { id: 14, nama_ekspedisi: 'Ambil Sendiri di Gudang', kode: 'PICKUP-OFFLINE', kategori: 'Internal / Ambil Sendiri', estimasi: 'Hari H', aktif: true },
+  { id: 15, nama_ekspedisi: 'Kurir Internal Yayasan', kode: 'KURIR-INTERNAL', kategori: 'Internal / Ambil Sendiri', estimasi: '1-2 Hari', aktif: true }
 ];
