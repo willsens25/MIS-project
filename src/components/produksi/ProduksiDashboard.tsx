@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
+import { DownloadPdfButton } from '../common/DownloadPdfButton';
 
 export const ProduksiDashboard: React.FC = () => {
   const {
@@ -157,7 +158,17 @@ export const ProduksiDashboard: React.FC = () => {
 
         <div className="flex items-center space-x-2">
           {/* Print Current View Action Button */}
-          <PrintCurrentViewButton id="btn-print-produksi" />
+          <PrintCurrentViewButton
+            id="btn-print-produksi"
+            fallbackFilename={`Laporan_Produksi_${activeSubTab}`}
+          />
+
+          {/* Download Current Table View directly as PDF */}
+          <DownloadPdfButton
+            id="btn-download-pdf-produksi"
+            filename={`Laporan_Produksi_${activeSubTab}`}
+            tooltip="Unduh tampilan produksi saat ini langsung sebagai file PDF resmi berformat cetak"
+          />
         </div>
       </div>
 

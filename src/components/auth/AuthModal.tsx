@@ -18,6 +18,7 @@ import {
   Factory,
   Truck,
   ShieldCheck,
+  ShieldAlert,
   Sparkles,
   CheckCircle2,
   AlertCircle,
@@ -81,6 +82,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sessionTimeoutNotice, setSessionTimeoutNotice] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('mis_session_timeout_notice');
+    } catch {
+      return null;
+    }
+  });
+
+  React.useEffect(() => {
+    try {
+      const notice = localStorage.getItem('mis_session_timeout_notice');
+      if (notice) {
+        setSessionTimeoutNotice(notice);
+        setMode('login');
+      }
+    } catch {
+      // Ignored
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -111,6 +131,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setLoading(false);
       if (res.success) {
         setSuccessMsg(res.message);
+        setSessionTimeoutNotice(null);
+        try { localStorage.removeItem('mis_session_timeout_notice'); } catch {}
         setTimeout(() => {
           if (onClose) onClose();
         }, 600);
@@ -157,6 +179,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setLoading(false);
       if (res.success) {
         setSuccessMsg(res.message);
+        setSessionTimeoutNotice(null);
+        try { localStorage.removeItem('mis_session_timeout_notice'); } catch {}
         setTimeout(() => {
           if (onClose) onClose();
         }, 800);
@@ -173,6 +197,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setErrorMsg('');
     setSuccessMsg('');
     quickLoginAs(userId);
+    setSessionTimeoutNotice(null);
+    try { localStorage.removeItem('mis_session_timeout_notice'); } catch {}
     const target = usersList.find(u => u.id === userId);
     setSuccessMsg(`Berhasil login sebagai ${target?.name}`);
     setTimeout(() => {
@@ -312,6 +338,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           )}
 
           {/* Alerts */}
+          {sessionTimeoutNotice && (
+            <div className="flex items-start space-x-2.5 p-3.5 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-200 text-xs shadow-sm">
+              <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <div className="font-bold text-amber-300">Sesi Kedaluwarsa Otomatis:</div>
+                <p className="mt-0.5 leading-relaxed text-amber-200/90">{sessionTimeoutNotice}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSessionTimeoutNotice(null);
+                  try { localStorage.removeItem('mis_session_timeout_notice'); } catch {}
+                }}
+                className="text-amber-400/80 hover:text-white p-0.5 cursor-pointer"
+                title="Tutup pesan"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {errorMsg && (
             <div className="flex items-start space-x-2 p-3.5 rounded-xl bg-rose-950/60 border border-rose-800 text-rose-300 text-xs">
               <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />

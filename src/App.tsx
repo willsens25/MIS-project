@@ -12,6 +12,8 @@ import { LogistikDashboard } from './components/logistik/LogistikDashboard';
 import { AIAssistantModal } from './components/AIAssistantModal';
 import { MascotAvatar } from './components/MascotAvatar';
 import { AuthModal } from './components/auth/AuthModal';
+import { SessionTimeoutModal } from './components/modals/SessionTimeoutModal';
+import { useAutoLogout } from './hooks/useAutoLogout';
 
 const AppContent: React.FC = () => {
   const {
@@ -20,9 +22,25 @@ const AppContent: React.FC = () => {
     isAuthModalOpen,
     setIsAuthModalOpen,
     authModalMode,
-    switchDivision
+    switchDivision,
+    logout,
+    recordActivity,
   } = useApp();
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+
+  // Auto-logout after 30 minutes of inactivity
+  const {
+    showWarningModal,
+    remainingSeconds,
+    refreshActivity,
+    simulateTimeoutWarning,
+  } = useAutoLogout({
+    isAuthenticated,
+    onLogout: logout,
+    onAutoLogoutRecord: (reason) => {
+      recordActivity('Auto-Logout Sesi', 'Auth', reason);
+    },
+  });
 
   const handleOpenPersetujuan = () => {
     switchDivision(2, 'persetujuan');
@@ -53,6 +71,7 @@ const AppContent: React.FC = () => {
         onOpenAI={() => setIsAiModalOpen(true)}
         onOpenAuditLogs={handleOpenAuditLogs}
         onOpenPersetujuan={handleOpenPersetujuan}
+        onSimulateAutoLogout={simulateTimeoutWarning}
       />
 
       {/* Breadcrumb Navigation Bar */}
@@ -120,6 +139,14 @@ const AppContent: React.FC = () => {
         onClose={() => setIsAuthModalOpen(false)}
         initialMode={authModalMode}
         isForcedScreen={false}
+      />
+
+      {/* 30-Minute Inactivity Auto-Logout Warning Modal */}
+      <SessionTimeoutModal
+        isOpen={showWarningModal}
+        remainingSeconds={remainingSeconds}
+        onStayLoggedIn={refreshActivity}
+        onLogoutNow={logout}
       />
 
     </div>

@@ -29,6 +29,7 @@ import { DirektoratCharts } from '../charts/DirektoratCharts';
 import { AnnualReportModal } from '../modals/AnnualReportModal';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
+import { DownloadPdfButton } from '../common/DownloadPdfButton';
 
 interface DirektoratDashboardProps {
   initialSubTab?: 'overview' | 'identitas' | 'users' | 'audit';
@@ -342,7 +343,17 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
 
         <div className="flex items-center space-x-2">
           {/* Print Current View Action Button */}
-          <PrintCurrentViewButton id="btn-print-direktorat" />
+          <PrintCurrentViewButton
+            id="btn-print-direktorat"
+            fallbackFilename={`Laporan_Direktorat_${activeSubTab}`}
+          />
+
+          {/* Download Current Table View directly as PDF */}
+          <DownloadPdfButton
+            id="btn-download-pdf-direktorat"
+            filename={`Laporan_Direktorat_${activeSubTab}`}
+            tooltip="Unduh tampilan ringkasan eksekutif langsung sebagai file PDF resmi berformat cetak"
+          />
 
           {activeSubTab === 'overview' && (
             <button

@@ -23,6 +23,7 @@ import { PenerbitanCharts } from '../charts/PenerbitanCharts';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
+import { DownloadPdfButton } from '../common/DownloadPdfButton';
 
 export const PenerbitanDashboard: React.FC = () => {
   const {
@@ -194,7 +195,17 @@ export const PenerbitanDashboard: React.FC = () => {
 
         <div className="flex items-center space-x-2">
           {/* Print Current View Action Button */}
-          <PrintCurrentViewButton id="btn-print-penerbitan" />
+          <PrintCurrentViewButton
+            id="btn-print-penerbitan"
+            fallbackFilename={`Laporan_Penerbitan_${activeSubTab}`}
+          />
+
+          {/* Download Current Table View directly as PDF */}
+          <DownloadPdfButton
+            id="btn-download-pdf-penerbitan"
+            filename={`Laporan_Penerbitan_${activeSubTab}`}
+            tooltip="Unduh tampilan naskah & katalog buku langsung sebagai file PDF resmi berformat cetak"
+          />
 
           <button
             onClick={() => {

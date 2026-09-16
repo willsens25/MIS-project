@@ -1,26 +1,37 @@
 import React from 'react';
 import { Printer } from 'lucide-react';
+import { exportCurrentViewToPdf } from '../../utils/exportPdf';
 
 interface PrintCurrentViewButtonProps {
   id?: string;
   label?: string;
   className?: string;
   variant?: 'default' | 'outline' | 'subtle';
+  targetElementId?: string;
+  fallbackFilename?: string;
 }
 
 export const PrintCurrentViewButton: React.FC<PrintCurrentViewButtonProps> = ({
   id = 'btn-print-current-view',
   label = 'Print Current View',
   className = '',
-  variant = 'default'
+  variant = 'default',
+  targetElementId = 'printable-area',
+  fallbackFilename = 'laporan_sapa_mis'
 }) => {
-  const handlePrint = () => {
+  const handlePrint = async () => {
     try {
       window.print();
     } catch (err) {
-      console.error('Error invoking print dialog:', err);
+      console.warn('Direct window.print failed or blocked, falling back to direct PDF download:', err);
+      await exportCurrentViewToPdf({
+        targetElementId,
+        filename: fallbackFilename,
+        orientation: 'landscape'
+      });
     }
   };
+
 
   return (
     <button

@@ -44,6 +44,7 @@ import { WhatsAppModal } from './WhatsAppModal';
 import { WhatsAppAutomationTab } from './WhatsAppAutomationTab';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
+import { DownloadPdfButton } from '../common/DownloadPdfButton';
 
 export const MarketingDashboard: React.FC = () => {
   const {
@@ -602,7 +603,17 @@ export const MarketingDashboard: React.FC = () => {
 
         <div className="flex items-center space-x-2">
           {/* Print Current View Action Button */}
-          <PrintCurrentViewButton id="btn-print-marketing" />
+          <PrintCurrentViewButton
+            id="btn-print-marketing"
+            fallbackFilename={`Laporan_Marketing_${activeSubTab}`}
+          />
+
+          {/* Download Current Table View directly as PDF */}
+          <DownloadPdfButton
+            id="btn-download-pdf-marketing"
+            filename={`Laporan_Marketing_${activeSubTab}`}
+            tooltip="Unduh tampilan tabel saat ini langsung sebagai file PDF resmi berformat cetak"
+          />
 
           {activeSubTab === 'invoices' && (
             <button

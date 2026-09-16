@@ -46,6 +46,7 @@ interface HeaderProps {
   onOpenAI: () => void;
   onOpenAuditLogs: () => void;
   onOpenPersetujuan: () => void;
+  onSimulateAutoLogout?: () => void;
   activeTab?: string;
   setActiveTab?: (tab: string) => void;
 }
@@ -54,6 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAI,
   onOpenAuditLogs,
   onOpenPersetujuan,
+  onSimulateAutoLogout,
 }) => {
   const {
     currentUser,
@@ -476,6 +478,36 @@ export const Header: React.FC<HeaderProps> = ({
                         <ShieldCheck className="w-4 h-4 text-amber-500 dark:text-amber-400 mr-2.5" />
                         <span>Audit System Log</span>
                       </button>
+                    </div>
+
+                    {/* Session Security Status */}
+                    <div className="border-t border-slate-100 dark:border-slate-800 px-4 py-2.5 bg-slate-50/70 dark:bg-slate-950/40">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 font-medium">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>Auto-Logout Sesi</span>
+                        </span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                          30 Menit Aktif
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                        Sesi ditutup otomatis setelah 30 menit tidak aktif demi keamanan data.
+                      </p>
+                      {onSimulateAutoLogout && (
+                        <button
+                          id="btn-simulate-inactivity-warning"
+                          type="button"
+                          onClick={() => {
+                            setShowProfileMenu(false);
+                            onSimulateAutoLogout();
+                          }}
+                          className="mt-1.5 text-[10px] text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline flex items-center gap-1 font-semibold cursor-pointer"
+                          title="Simulasi 28.5 menit tidak aktif untuk menguji dialog hitung mundur auto-logout"
+                        >
+                          <span>⏱️ Uji Peringatan Sesi (Simulasi)</span>
+                        </button>
+                      )}
                     </div>
 
                     <div className="border-t border-slate-100 dark:border-slate-800 px-4 py-2 flex items-center justify-between text-xs">

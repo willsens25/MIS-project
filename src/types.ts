@@ -166,6 +166,7 @@ export interface PengajuanCetak {
   buku?: Book;
   jumlah_pengajuan: number;
   status: 'pending' | 'approved' | 'rejected';
+  account_id?: number;
   catatan_bendahara?: string;
   created_at: string;
 }
