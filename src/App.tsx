@@ -13,7 +13,11 @@ import { AIAssistantModal } from './components/AIAssistantModal';
 import { MascotAvatar } from './components/MascotAvatar';
 import { AuthModal } from './components/auth/AuthModal';
 import { SessionTimeoutModal } from './components/modals/SessionTimeoutModal';
+import { DivisionReportModal } from './components/modals/DivisionReportModal';
+import { AnnualReportModal } from './components/modals/AnnualReportModal';
+import { QuickActionsFloatingMenu } from './components/navigation/QuickActionsFloatingMenu';
 import { useAutoLogout } from './hooks/useAutoLogout';
+import { DivisionId } from './types';
 
 const AppContent: React.FC = () => {
   const {
@@ -27,6 +31,9 @@ const AppContent: React.FC = () => {
     recordActivity,
   } = useApp();
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [showDivisionReportModal, setShowDivisionReportModal] = useState(false);
+  const [showAnnualReportModal, setShowAnnualReportModal] = useState(false);
+  const [reportTargetDivisi, setReportTargetDivisi] = useState<DivisionId | undefined>(undefined);
 
   // Auto-logout after 30 minutes of inactivity
   const {
@@ -132,6 +139,29 @@ const AppContent: React.FC = () => {
           </span>
         </div>
       </motion.button>
+
+      {/* Floating Quick Actions Menu */}
+      <QuickActionsFloatingMenu
+        onOpenAI={() => setIsAiModalOpen(true)}
+        onOpenDivisionReport={(divId) => {
+          setReportTargetDivisi(divId || currentUser.divisi_id);
+          setShowDivisionReportModal(true);
+        }}
+        onOpenAnnualReport={() => setShowAnnualReportModal(true)}
+      />
+
+      {/* Division Report Modal triggered from Quick Actions */}
+      <DivisionReportModal
+        isOpen={showDivisionReportModal}
+        onClose={() => setShowDivisionReportModal(false)}
+        targetDivisionId={reportTargetDivisi || currentUser.divisi_id}
+      />
+
+      {/* Annual Report Modal triggered from Quick Actions */}
+      <AnnualReportModal
+        isOpen={showAnnualReportModal}
+        onClose={() => setShowAnnualReportModal(false)}
+      />
 
       {/* Overlay Auth Modal (for Register/Login from inside dashboard) */}
       <AuthModal

@@ -21,6 +21,8 @@
         document.documentElement.classList.remove('dark');
         document.documentElement.setAttribute('data-theme', 'light');
       }
+      var savedPreset = localStorage.getItem('mis_color_preset') || 'royal-indigo';
+      document.documentElement.setAttribute('data-color-preset', savedPreset);
     } catch (e) {}
   </script>
 </head>

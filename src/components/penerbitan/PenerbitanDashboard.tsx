@@ -17,10 +17,14 @@ import {
   FileText,
   TrendingUp,
   Layers,
-  Check
+  Check,
+  PieChart,
+  ScanBarcode
 } from 'lucide-react';
 import { PenerbitanCharts } from '../charts/PenerbitanCharts';
+import { UnitEconomicsAnalysis } from './UnitEconomicsAnalysis';
 import { ConfirmModal } from '../modals/ConfirmModal';
+import { BarcodeScannerModal } from '../modals/BarcodeScannerModal';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
@@ -43,10 +47,10 @@ export const PenerbitanDashboard: React.FC = () => {
   } = useApp();
 
   const [searchBook, setSearchBook] = useState('');
-  const activeSubTab = (['katalog', 'grafik', 'pengajuan'].includes(currentSubTab)
+  const activeSubTab = (['katalog', 'ekonomi', 'grafik', 'pengajuan'].includes(currentSubTab)
     ? currentSubTab
-    : 'katalog') as 'katalog' | 'grafik' | 'pengajuan';
-  const setActiveSubTab = (tab: 'katalog' | 'grafik' | 'pengajuan') => setCurrentSubTab(tab);
+    : 'katalog') as 'katalog' | 'ekonomi' | 'grafik' | 'pengajuan';
+  const setActiveSubTab = (tab: 'katalog' | 'ekonomi' | 'grafik' | 'pengajuan') => setCurrentSubTab(tab);
   const [selectedBookIds, setSelectedBookIds] = useState<number[]>([]);
   const [selectedPengajuanIds, setSelectedPengajuanIds] = useState<number[]>([]);
   
@@ -70,8 +74,17 @@ export const PenerbitanDashboard: React.FC = () => {
 
   // Modals
   const [modalBookOpen, setModalBookOpen] = useState(false);
+  const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
-  const [bookForm, setBookForm] = useState({ judul: '', penulis: '', harga_jual: 0, stok_gudang: 0 });
+  const [bookForm, setBookForm] = useState({
+    judul: '',
+    penulis: '',
+    harga_jual: 0,
+    biaya_pokok: 0,
+    stok_gudang: 0,
+    kategori: 'Filosofi',
+    isbn: ''
+  });
 
   // Ajukan Cetak Modal
   const [modalAjukanOpen, setModalAjukanOpen] = useState(false);
@@ -152,10 +165,27 @@ export const PenerbitanDashboard: React.FC = () => {
       alert('Judul, Penulis, dan Harga Jual wajib diisi dengan benar!');
       return;
     }
+    const hpp = bookForm.biaya_pokok > 0 ? bookForm.biaya_pokok : Math.round(bookForm.harga_jual * 0.4);
     if (editingBook) {
-      updateBook(editingBook.id, bookForm.judul, bookForm.penulis, bookForm.harga_jual);
+      updateBook(
+        editingBook.id,
+        bookForm.judul,
+        bookForm.penulis,
+        bookForm.harga_jual,
+        hpp,
+        bookForm.kategori,
+        bookForm.isbn
+      );
     } else {
-      addBook(bookForm.judul, bookForm.penulis, bookForm.harga_jual, bookForm.stok_gudang);
+      addBook(
+        bookForm.judul,
+        bookForm.penulis,
+        bookForm.harga_jual,
+        bookForm.stok_gudang,
+        hpp,
+        bookForm.kategori,
+        bookForm.isbn
+      );
     }
     setModalBookOpen(false);
   };
@@ -177,6 +207,8 @@ export const PenerbitanDashboard: React.FC = () => {
         subTabTitle={
           activeSubTab === 'katalog'
             ? 'Katalog Judul Buku & Valuasi'
+            : activeSubTab === 'ekonomi'
+            ? 'Analisis Unit Ekonomi Buku & Margin Laba'
             : activeSubTab === 'grafik'
             ? 'Grafik Stok & Analisis Valuasi'
             : 'Riwayat Pengajuan Anggaran Cetak'
@@ -208,12 +240,29 @@ export const PenerbitanDashboard: React.FC = () => {
           />
 
           <button
+            onClick={() => setIsBarcodeModalOpen(true)}
+            className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer"
+            title="Pindai barcode kamera atau ketik ISBN manual untuk memasukkan buku & stok fisik"
+          >
+            <ScanBarcode className="w-4 h-4" />
+            <span>Scan Barcode / ISBN</span>
+          </button>
+
+          <button
             onClick={() => {
               setEditingBook(null);
-              setBookForm({ judul: '', penulis: '', harga_jual: 85000, stok_gudang: 0 });
+              setBookForm({
+                judul: '',
+                penulis: '',
+                harga_jual: 85000,
+                biaya_pokok: 34000,
+                stok_gudang: 0,
+                kategori: 'Filosofi',
+                isbn: ''
+              });
               setModalBookOpen(true);
             }}
-            className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm"
+            className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Tambah Judul Buku</span>
@@ -233,6 +282,21 @@ export const PenerbitanDashboard: React.FC = () => {
         >
           <BookOpen className="w-3.5 h-3.5" />
           <span>Katalog Judul ({books.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('ekonomi')}
+          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            activeSubTab === 'ekonomi'
+              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <PieChart className="w-3.5 h-3.5" />
+          <span>Analisis Unit Ekonomi</span>
+          <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] rounded-full font-bold">
+            HPP & BEP
+          </span>
         </button>
 
         <button
@@ -259,6 +323,11 @@ export const PenerbitanDashboard: React.FC = () => {
           <span>Riwayat Pengajuan Cetak ({pengajuans.length})</span>
         </button>
       </div>
+
+      {/* UNIT ECONOMICS VIEW */}
+      {activeSubTab === 'ekonomi' && (
+        <UnitEconomicsAnalysis />
+      )}
 
       {/* GRAFIK VIEW */}
       {activeSubTab === 'grafik' && (
@@ -313,13 +382,19 @@ export const PenerbitanDashboard: React.FC = () => {
                 </th>
                 <th className="p-3.5">Judul Buku & ISBN</th>
                 <th className="p-3.5">Penulis / Guru</th>
+                <th className="p-3.5 text-right">HPP Cetak</th>
                 <th className="p-3.5 text-right">Harga Jual</th>
+                <th className="p-3.5 text-center">Margin %</th>
                 <th className="p-3.5 text-center">Stok Gudang</th>
                 <th className="p-3.5 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {filteredBooks.map((book) => (
+              {filteredBooks.map((book) => {
+                const hpp = book.biaya_pokok || Math.round(book.harga_jual * 0.4);
+                const marginPercent = book.harga_jual > 0 ? Math.round(((book.harga_jual - hpp) / book.harga_jual) * 100) : 0;
+
+                return (
                 <tr key={book.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
                   <td className="p-3.5">
                     <input
@@ -334,8 +409,20 @@ export const PenerbitanDashboard: React.FC = () => {
                     <div className="text-[11px] text-slate-400 font-mono">{book.isbn || 'ISBN: 978-602-...'}</div>
                   </td>
                   <td className="p-3.5 font-medium text-slate-700 dark:text-slate-300">{book.penulis}</td>
+                  <td className="p-3.5 text-right text-slate-600 dark:text-slate-400 font-mono">
+                    Rp {hpp.toLocaleString('id-ID')}
+                  </td>
                   <td className="p-3.5 text-right font-extrabold text-indigo-600 dark:text-indigo-400">
                     Rp {book.harga_jual.toLocaleString('id-ID')}
+                  </td>
+                  <td className="p-3.5 text-center">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      marginPercent >= 60
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                        : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300'
+                    }`}>
+                      {marginPercent}%
+                    </span>
                   </td>
                   <td className="p-3.5 text-center">
                     <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
@@ -366,7 +453,10 @@ export const PenerbitanDashboard: React.FC = () => {
                           judul: book.judul,
                           penulis: book.penulis,
                           harga_jual: book.harga_jual,
-                          stok_gudang: book.stok_gudang
+                          biaya_pokok: book.biaya_pokok || Math.round(book.harga_jual * 0.4),
+                          stok_gudang: book.stok_gudang,
+                          kategori: book.kategori || 'Filosofi',
+                          isbn: book.isbn || ''
                         });
                         setModalBookOpen(true);
                       }}
@@ -397,7 +487,8 @@ export const PenerbitanDashboard: React.FC = () => {
                     </button>
                   </td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>
@@ -553,17 +644,73 @@ export const PenerbitanDashboard: React.FC = () => {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">Harga Jual Resmi (Rupiah) *</label>
-                  <input
-                    type="number"
-                    required
-                    min="1000"
-                    value={bookForm.harga_jual || ''}
-                    onChange={e => setBookForm({ ...bookForm, harga_jual: parseInt(e.target.value) || 0 })}
-                    placeholder="145000"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-indigo-600 dark:text-indigo-400"
-                  />
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">Harga Jual Resmi (Rp) *</label>
+                    <input
+                      type="number"
+                      required
+                      min="1000"
+                      value={bookForm.harga_jual || ''}
+                      onChange={e => {
+                        const val = parseInt(e.target.value) || 0;
+                        setBookForm(prev => ({
+                          ...prev,
+                          harga_jual: val,
+                          biaya_pokok: prev.biaya_pokok > 0 ? prev.biaya_pokok : Math.round(val * 0.4)
+                        }));
+                      }}
+                      placeholder="145000"
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-indigo-600 dark:text-indigo-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">HPP / Biaya Cetak (Rp) *</label>
+                    <input
+                      type="number"
+                      required
+                      min="1000"
+                      value={bookForm.biaya_pokok || ''}
+                      onChange={e => setBookForm({ ...bookForm, biaya_pokok: parseInt(e.target.value) || 0 })}
+                      placeholder="58000"
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-amber-600 dark:text-amber-400"
+                    />
+                  </div>
+                </div>
+
+                {/* Instant Unit Economics Badge */}
+                {bookForm.harga_jual > 0 && bookForm.biaya_pokok > 0 && (
+                  <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl border border-indigo-200 dark:border-indigo-800 flex items-center justify-between text-[11px]">
+                    <span className="text-indigo-900 dark:text-indigo-300">
+                      Margin: <span className="font-bold text-emerald-600">Rp {(bookForm.harga_jual - bookForm.biaya_pokok).toLocaleString('id-ID')}</span>
+                    </span>
+                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 rounded-md font-bold">
+                      {Math.round(((bookForm.harga_jual - bookForm.biaya_pokok) / bookForm.harga_jual) * 100)}% Profit Margin
+                    </span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">Kategori Buku</label>
+                    <input
+                      type="text"
+                      value={bookForm.kategori}
+                      onChange={e => setBookForm({ ...bookForm, kategori: e.target.value })}
+                      placeholder="Contoh: Lamrim, Tantra, Meditasi"
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">ISBN</label>
+                    <input
+                      type="text"
+                      value={bookForm.isbn}
+                      onChange={e => setBookForm({ ...bookForm, isbn: e.target.value })}
+                      placeholder="978-602-..."
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-[11px]"
+                    />
+                  </div>
                 </div>
 
                 {!editingBook && (
@@ -665,6 +812,16 @@ export const PenerbitanDashboard: React.FC = () => {
         </div>,
         document.body
       )}
+
+      {/* Barcode Scanner & ISBN Modal */}
+      <BarcodeScannerModal
+        isOpen={isBarcodeModalOpen}
+        onClose={() => setIsBarcodeModalOpen(false)}
+        onSuccess={(msg) => {
+          setToastMessage(msg);
+          setTimeout(() => setToastMessage(null), 4000);
+        }}
+      />
 
       {/* Generic Confirmation Modal */}
       <ConfirmModal

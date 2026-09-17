@@ -25,6 +25,7 @@ export interface Book {
   judul: string;
   penulis: string;
   harga_jual: number;
+  biaya_pokok?: number;
   stok_gudang: number;
   isbn?: string;
   kategori?: string;
@@ -221,3 +222,11 @@ export interface ActivityLog {
   ip_address?: string;
   created_at: string;
 }
+
+export type ColorPresetId =
+  | 'corporate-blue'
+  | 'deep-forest'
+  | 'royal-indigo'
+  | 'crimson-dharma'
+  | 'ocean-teal'
+  | 'sunset-amber';

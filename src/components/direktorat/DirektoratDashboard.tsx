@@ -30,6 +30,7 @@ import { AnnualReportModal } from '../modals/AnnualReportModal';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
+import { ConfigurableDashboardGrid } from '../dashboard-layout/ConfigurableDashboardGrid';
 
 interface DirektoratDashboardProps {
   initialSubTab?: 'overview' | 'identitas' | 'users' | 'audit';
@@ -405,70 +406,11 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
       {/* OVERVIEW SUB TAB */}
       {activeSubTab === 'overview' && (
         <div className="space-y-6">
-          {/* Top Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Saldo Bersih Kas</span>
-                <div className="p-2 bg-emerald-500/10 text-emerald-600 rounded-lg">
-                  <CreditCard className="w-4 h-4" />
-                </div>
-              </div>
-              <p className="text-xl font-extrabold text-slate-900 dark:text-white mt-2">
-                Rp {saldoKasBersih.toLocaleString('id-ID')}
-              </p>
-              <div className="flex items-center space-x-2 text-[11px] text-slate-500 mt-1">
-                <span className="text-emerald-600 font-semibold">+{totalKasMasuk.toLocaleString('id-ID')}</span>
-                <span>/</span>
-                <span className="text-rose-500">-{totalKasKeluar.toLocaleString('id-ID')}</span>
-              </div>
-            </div>
-
-            <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Anggota</span>
-                <div className="p-2 bg-indigo-500/10 text-indigo-600 rounded-lg">
-                  <Users className="w-4 h-4" />
-                </div>
-              </div>
-              <p className="text-xl font-extrabold text-slate-900 dark:text-white mt-2">
-                {identitasList.length} <span className="text-xs font-normal text-slate-500">Jiwa</span>
-              </p>
-              <p className="text-[11px] text-slate-500 mt-1">
-                {identitasList.filter(i => i.is_dharma_patriot).length} Dharma Patriot / Donatur
-              </p>
-            </div>
-
-            <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Invoice Lunas</span>
-                <div className="p-2 bg-cyan-500/10 text-cyan-600 rounded-lg">
-                  <CheckCircle2 className="w-4 h-4" />
-                </div>
-              </div>
-              <p className="text-xl font-extrabold text-slate-900 dark:text-white mt-2">
-                {totalInvoiceLunas} <span className="text-xs font-normal text-slate-500">/ {orders.length} Invoice</span>
-              </p>
-              <p className="text-[11px] text-slate-500 mt-1">
-                {orders.filter(o => o.status === 'Pending').length} menunggu pelunasan
-              </p>
-            </div>
-
-            <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Stok Gudang</span>
-                <div className="p-2 bg-amber-500/10 text-amber-600 rounded-lg">
-                  <Layers className="w-4 h-4" />
-                </div>
-              </div>
-              <p className="text-xl font-extrabold text-slate-900 dark:text-white mt-2">
-                {totalBukuStok} <span className="text-xs font-normal text-slate-500">Eksemplar</span>
-              </p>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Dari {books.length} judul buku aktif
-              </p>
-            </div>
-          </div>
+          {/* Configurable Dashboard Layout Grid */}
+          <ConfigurableDashboardGrid
+            onOpenAnnualReport={() => setAnnualReportOpen(true)}
+            onOpenIdentitasTab={() => setActiveSubTab('identitas')}
+          />
 
           {/* Annual Report Quick Access Banner */}
           <div className="p-4 sm:p-5 bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border border-amber-300/70 dark:border-amber-700/50 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">

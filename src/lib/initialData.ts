@@ -87,16 +87,16 @@ export const DEMO_ACCOUNTS: Account[] = [
 ];
 
 export const DEMO_BOOKS: Book[] = [
-  { id: 1, judul: 'Pembebasan di Tangan Kita (Lamrim)', penulis: 'Pabongka Rinpoche', harga_jual: 145000, stok_gudang: 48, isbn: '978-602-1234-01-1', kategori: 'Filosofi' },
-  { id: 2, judul: 'Untaian Permata Ajaran Buddha', penulis: 'Dagpo Rinpoche', harga_jual: 95000, stok_gudang: 32, isbn: '978-602-1234-02-8', kategori: 'Meditasi' },
-  { id: 3, judul: 'Bodhicaryavatara (Panduan Hidup Bodhisattva)', penulis: 'Shantideva', harga_jual: 120000, stok_gudang: 24, isbn: '978-602-1234-03-5', kategori: 'Sutra' },
-  { id: 4, judul: 'Meditasi & Jalan Menuju Ketenangan Batin', penulis: 'Geshe Yeshe Tobden', harga_jual: 80000, stok_gudang: 65, isbn: '978-602-1234-04-2', kategori: 'Praktik' },
-  { id: 5, judul: 'Sutra Inti Hati Kebijaksanaan (Prajnaparamita)', penulis: 'Penerjemah Nusantara', harga_jual: 65000, stok_gudang: 15, isbn: '978-602-1234-05-9', kategori: 'Sutra' },
-  { id: 6, judul: 'Transformasi Pikiran Delapan Bait (Lojong)', penulis: 'Langri Tangpa', harga_jual: 55000, stok_gudang: 80, isbn: '978-602-1234-06-6', kategori: 'Mindset' },
-  { id: 7, judul: 'Dharmapada Bergambar Edisi Nusantara', penulis: 'Tim Kreatif Lamrim', harga_jual: 175000, stok_gudang: 18, isbn: '978-602-1234-07-3', kategori: 'Koleksi' },
-  { id: 8, judul: 'Seni Welas Asih Sehari-hari', penulis: 'Lama Zopa Rinpoche', harga_jual: 90000, stok_gudang: 40, isbn: '978-602-1234-08-0', kategori: 'Praktik' },
-  { id: 9, judul: 'Pohon Perlindungan Tiga Permata', penulis: 'Atisha Dipamkara', harga_jual: 110000, stok_gudang: 12, isbn: '978-602-1234-09-7', kategori: 'Klasik' },
-  { id: 10, judul: 'Jalan Cahaya Pencerahan Batin', penulis: 'Geshe Lhundub Sopa', harga_jual: 130000, stok_gudang: 27, isbn: '978-602-1234-10-3', kategori: 'Filosofi' },
+  { id: 1, judul: 'Pembebasan di Tangan Kita (Lamrim)', penulis: 'Pabongka Rinpoche', harga_jual: 145000, biaya_pokok: 52000, stok_gudang: 48, isbn: '978-602-1234-01-1', kategori: 'Filosofi' },
+  { id: 2, judul: 'Untaian Permata Ajaran Buddha', penulis: 'Dagpo Rinpoche', harga_jual: 95000, biaya_pokok: 36000, stok_gudang: 32, isbn: '978-602-1234-02-8', kategori: 'Meditasi' },
+  { id: 3, judul: 'Bodhicaryavatara (Panduan Hidup Bodhisattva)', penulis: 'Shantideva', harga_jual: 120000, biaya_pokok: 45000, stok_gudang: 24, isbn: '978-602-1234-03-5', kategori: 'Sutra' },
+  { id: 4, judul: 'Meditasi & Jalan Menuju Ketenangan Batin', penulis: 'Geshe Yeshe Tobden', harga_jual: 80000, biaya_pokok: 29000, stok_gudang: 65, isbn: '978-602-1234-04-2', kategori: 'Praktik' },
+  { id: 5, judul: 'Sutra Inti Hati Kebijaksanaan (Prajnaparamita)', penulis: 'Penerjemah Nusantara', harga_jual: 65000, biaya_pokok: 22000, stok_gudang: 15, isbn: '978-602-1234-05-9', kategori: 'Sutra' },
+  { id: 6, judul: 'Transformasi Pikiran Delapan Bait (Lojong)', penulis: 'Langri Tangpa', harga_jual: 55000, biaya_pokok: 19000, stok_gudang: 80, isbn: '978-602-1234-06-6', kategori: 'Mindset' },
+  { id: 7, judul: 'Dharmapada Bergambar Edisi Nusantara', penulis: 'Tim Kreatif Lamrim', harga_jual: 175000, biaya_pokok: 68000, stok_gudang: 18, isbn: '978-602-1234-07-3', kategori: 'Koleksi' },
+  { id: 8, judul: 'Seni Welas Asih Sehari-hari', penulis: 'Lama Zopa Rinpoche', harga_jual: 90000, biaya_pokok: 32000, stok_gudang: 40, isbn: '978-602-1234-08-0', kategori: 'Praktik' },
+  { id: 9, judul: 'Pohon Perlindungan Tiga Permata', penulis: 'Atisha Dipamkara', harga_jual: 110000, biaya_pokok: 41000, stok_gudang: 12, isbn: '978-602-1234-09-7', kategori: 'Klasik' },
+  { id: 10, judul: 'Jalan Cahaya Pencerahan Batin', penulis: 'Geshe Lhundub Sopa', harga_jual: 130000, biaya_pokok: 48000, stok_gudang: 27, isbn: '978-602-1234-10-3', kategori: 'Filosofi' },
 ];
 
 export const DEMO_PROMOS: Promo[] = [

@@ -18,10 +18,12 @@ import {
   LayoutGrid,
   Table as TableIcon,
   ArrowUpRight,
-  Filter
+  Filter,
+  ScanBarcode
 } from 'lucide-react';
 import { SuratJalanPrintModal } from '../modals/SuratJalanPrintModal';
 import { ConfirmModal } from '../modals/ConfirmModal';
+import { BarcodeScannerModal } from '../modals/BarcodeScannerModal';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { ExportCsvButton } from '../common/ExportCsvButton';
@@ -75,6 +77,7 @@ export const LogistikDashboard: React.FC = () => {
 
   // Surat Jalan Print Modal
   const [printingInvoiceNo, setPrintingInvoiceNo] = useState<string | null>(null);
+  const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
 
   // Manual Dispatch Form
   const [manualBookId, setManualBookId] = useState<number>(books[0]?.id || 1);
@@ -466,6 +469,16 @@ export const LogistikDashboard: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-2">
+          {/* Scan Barcode Button */}
+          <button
+            onClick={() => setIsBarcodeModalOpen(true)}
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer"
+            title="Scan barcode fisik buku atau ketik ISBN manual untuk memasukkan stok gudang"
+          >
+            <ScanBarcode className="w-4 h-4" />
+            <span>Scan Barcode (Stok)</span>
+          </button>
+
           {/* Print Current View Action Button */}
           <PrintCurrentViewButton
             id="btn-print-logistik"
@@ -1155,6 +1168,16 @@ export const LogistikDashboard: React.FC = () => {
         </div>,
         document.body
       )}
+
+      {/* Barcode Scanner & ISBN Modal */}
+      <BarcodeScannerModal
+        isOpen={isBarcodeModalOpen}
+        onClose={() => setIsBarcodeModalOpen(false)}
+        onSuccess={(msg) => {
+          setToastMessage(msg);
+          setTimeout(() => setToastMessage(null), 4000);
+        }}
+      />
 
       {/* Generic Confirm Modal */}
       <ConfirmModal

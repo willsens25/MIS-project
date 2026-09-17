@@ -17,8 +17,10 @@ import {
   Order,
   DivisionId,
   SalesChannel,
-  Expedition
+  Expedition,
+  ColorPresetId
 } from '../types';
+import { DEFAULT_COLOR_PRESET } from '../lib/themePresets';
 import {
   INITIAL_DIVISI,
   INITIAL_USERS,
@@ -67,6 +69,8 @@ interface AppContextType {
   theme: 'light' | 'dark';
   setTheme: (theme: 'light' | 'dark') => void;
   toggleTheme: () => void;
+  colorPreset: ColorPresetId;
+  setColorPreset: (preset: ColorPresetId) => void;
   
   // Auth state & methods
   isAuthenticated: boolean;
@@ -105,8 +109,10 @@ interface AppContextType {
   recordActivity: (aksi: string, model: string, keterangan: string, customDivisiId?: DivisionId, customUserName?: string) => void;
   
   // Book actions
-  addBook: (judul: string, penulis: string, harga_jual: number, stok?: number) => Book;
-  updateBook: (id: number, judul: string, penulis: string, harga_jual: number) => void;
+  addBook: (judul: string, penulis: string, harga_jual: number, stok?: number, biaya_pokok?: number, kategori?: string, isbn?: string) => Book;
+  updateBook: (id: number, judul: string, penulis: string, harga_jual: number, biaya_pokok?: number, kategori?: string, isbn?: string) => void;
+  updateBookCost: (id: number, biaya_pokok: number) => void;
+  adjustBookStock: (id: number, qty: number, mode: 'add' | 'set', catatan?: string) => { success: boolean; message: string; newStock?: number };
   deleteBook: (id: number) => void;
   bulkDeleteBooks: (ids: number[]) => void;
   ajukanCetak: (bookId: number, jumlah: number) => void;
@@ -234,6 +240,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return 'light';
   });
 
+  const [colorPreset, setColorPresetState] = useState<ColorPresetId>(() => {
+    try {
+      const stored = localStorage.getItem('mis_color_preset');
+      if (stored && ['corporate-blue', 'deep-forest', 'royal-indigo', 'crimson-dharma', 'ocean-teal', 'sunset-amber'].includes(stored)) {
+        return stored as ColorPresetId;
+      }
+    } catch (e) {
+      console.warn('Error reading color preset from storage:', e);
+    }
+    return DEFAULT_COLOR_PRESET;
+  });
+
   const [divisiList] = useState<Divisi[]>(INITIAL_DIVISI);
   const [usersList, setUsersList] = useState<User[]>(() => getStoredItem('mis_users', INITIAL_USERS));
   const [currentUser, setCurrentUser] = useState<User>(() => {
@@ -350,16 +368,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [theme]);
 
-  // Listen to external theme changes across tabs/windows
+  // Synchronize color preset to DOM and localStorage
+  useEffect(() => {
+    try {
+      const root = document.documentElement;
+      root.setAttribute('data-color-preset', colorPreset);
+      localStorage.setItem('mis_color_preset', colorPreset);
+    } catch (e) {
+      console.warn('Error saving color preset to localStorage:', e);
+    }
+  }, [colorPreset]);
+
+  // Listen to external theme and color preset changes across tabs/windows
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'mis_theme' && (e.newValue === 'light' || e.newValue === 'dark')) {
         setTheme(e.newValue);
       }
+      if (e.key === 'mis_color_preset' && e.newValue) {
+        if (['corporate-blue', 'deep-forest', 'royal-indigo', 'crimson-dharma', 'ocean-teal', 'sunset-amber'].includes(e.newValue)) {
+          setColorPresetState(e.newValue as ColorPresetId);
+        }
+      }
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
+
+  const handleSetColorPreset = (preset: ColorPresetId) => {
+    try {
+      localStorage.setItem('mis_color_preset', preset);
+      document.documentElement.setAttribute('data-color-preset', preset);
+    } catch (e) {
+      console.warn('Error persisting color preset:', e);
+    }
+    setColorPresetState(preset);
+  };
 
   const handleSetTheme = (newTheme: 'light' | 'dark') => {
     try {
@@ -470,23 +514,100 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Book CRUD
-  const addBook = (judul: string, penulis: string, harga_jual: number, stok: number = 0): Book => {
+  const addBook = (
+    judul: string,
+    penulis: string,
+    harga_jual: number,
+    stok: number = 0,
+    biaya_pokok?: number,
+    kategori?: string,
+    isbn?: string
+  ): Book => {
+    const calculatedHpp = biaya_pokok !== undefined && biaya_pokok >= 0
+      ? biaya_pokok
+      : Math.round(harga_jual * 0.4);
     const newBook: Book = {
       id: Date.now(),
       judul,
       penulis,
       harga_jual,
+      biaya_pokok: calculatedHpp,
       stok_gudang: stok,
+      kategori: kategori || 'Umum',
+      isbn: isbn || '',
       created_at: new Date().toISOString()
     };
     setBooks(prev => [newBook, ...prev]);
-    recordActivity('Tambah Buku', 'Book', `Mendaftarkan buku baru: "${judul}" karya ${penulis} (Harga: Rp ${harga_jual.toLocaleString('id-ID')})`);
+    recordActivity(
+      'Tambah Buku',
+      'Book',
+      `Mendaftarkan buku baru: "${judul}" karya ${penulis} (Harga: Rp ${harga_jual.toLocaleString('id-ID')}, HPP: Rp ${calculatedHpp.toLocaleString('id-ID')})`
+    );
     return newBook;
   };
 
-  const updateBook = (id: number, judul: string, penulis: string, harga_jual: number) => {
-    setBooks(prev => prev.map(b => (b.id === id ? { ...b, judul, penulis, harga_jual, updated_at: new Date().toISOString() } : b)));
-    recordActivity('Update Informasi Buku', 'Book', `Mengubah informasi buku ID #${id}: "${judul}" (${penulis}) - Rp ${harga_jual.toLocaleString('id-ID')}`);
+  const updateBook = (
+    id: number,
+    judul: string,
+    penulis: string,
+    harga_jual: number,
+    biaya_pokok?: number,
+    kategori?: string,
+    isbn?: string
+  ) => {
+    setBooks(prev =>
+      prev.map(b => {
+        if (b.id !== id) return b;
+        const newHpp = biaya_pokok !== undefined ? biaya_pokok : (b.biaya_pokok || Math.round(harga_jual * 0.4));
+        return {
+          ...b,
+          judul,
+          penulis,
+          harga_jual,
+          biaya_pokok: newHpp,
+          kategori: kategori !== undefined ? kategori : b.kategori,
+          isbn: isbn !== undefined ? isbn : b.isbn,
+          updated_at: new Date().toISOString()
+        };
+      })
+    );
+    recordActivity('Update Informasi Buku', 'Book', `Mengubah informasi buku ID #${id}: "${judul}" (${penulis}) - Harga: Rp ${harga_jual.toLocaleString('id-ID')}`);
+  };
+
+  const updateBookCost = (id: number, biaya_pokok: number) => {
+    const book = books.find(b => b.id === id);
+    setBooks(prev =>
+      prev.map(b => (b.id === id ? { ...b, biaya_pokok, updated_at: new Date().toISOString() } : b))
+    );
+    recordActivity(
+      'Update HPP Buku',
+      'Book',
+      `Memperbarui HPP / Biaya Cetak Satuan buku "${book?.judul || id}" menjadi Rp ${biaya_pokok.toLocaleString('id-ID')}`
+    );
+  };
+
+  const adjustBookStock = (id: number, qty: number, mode: 'add' | 'set', catatan?: string) => {
+    const book = books.find(b => b.id === id);
+    if (!book) return { success: false, message: 'Buku tidak ditemukan.' };
+
+    const newStock = mode === 'add' ? Math.max(0, book.stok_gudang + qty) : Math.max(0, qty);
+    const selisih = newStock - book.stok_gudang;
+
+    setBooks(prev =>
+      prev.map(b => (b.id === id ? { ...b, stok_gudang: newStock, updated_at: new Date().toISOString() } : b))
+    );
+
+    const aksiDesc = mode === 'add'
+      ? `Penambahan stok buku "${book.judul}" sebanyak +${qty} eksemplar (Stok kini: ${newStock} eks). ${catatan ? `[${catatan}]` : ''}`
+      : `Penyesuaian stok opname buku "${book.judul}" menjadi ${newStock} eksemplar (Perubahan: ${selisih >= 0 ? `+${selisih}` : selisih} eks). ${catatan ? `[${catatan}]` : ''}`;
+
+    recordActivity(mode === 'add' ? 'Tambah Stok Buku' : 'Stock Opname', 'Book', aksiDesc);
+
+    return {
+      success: true,
+      message: `Stok buku "${book.judul}" berhasil diperbarui menjadi ${newStock} eksemplar.`,
+      newStock
+    };
   };
 
   const deleteBook = (id: number) => {
@@ -1351,6 +1472,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         theme,
         setTheme: handleSetTheme,
         toggleTheme,
+        colorPreset,
+        setColorPreset: handleSetColorPreset,
         isAuthenticated,
         setIsAuthenticated,
         login,
@@ -1383,6 +1506,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         recordActivity,
         addBook,
         updateBook,
+        updateBookCost,
+        adjustBookStock,
         deleteBook,
         bulkDeleteBooks,
         ajukanCetak,
