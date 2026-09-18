@@ -32,7 +32,8 @@ import {
   MapPin,
   ExternalLink,
   ChevronDown,
-  MessageSquare
+  MessageSquare,
+  Zap
 } from 'lucide-react';
 import { InvoicePrintModal } from '../modals/InvoicePrintModal';
 import { MarketingCharts } from '../charts/MarketingCharts';
@@ -42,6 +43,7 @@ import { ExpeditionModal } from './ExpeditionModal';
 import { ChannelsAndExpeditionsTab } from './ChannelsAndExpeditionsTab';
 import { WhatsAppModal } from './WhatsAppModal';
 import { WhatsAppAutomationTab } from './WhatsAppAutomationTab';
+import { EventPOSDashboard } from './EventPOSDashboard';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
@@ -75,10 +77,10 @@ export const MarketingDashboard: React.FC = () => {
     setCurrentSubTab
   } = useApp();
 
-  const activeSubTab = (['pos', 'grafik', 'invoices', 'promos', 'saluran', 'agen', 'whatsapp'].includes(currentSubTab)
+  const activeSubTab = (['pos', 'event_pos', 'grafik', 'invoices', 'promos', 'saluran', 'agen', 'whatsapp'].includes(currentSubTab)
     ? currentSubTab
-    : 'pos') as 'pos' | 'grafik' | 'invoices' | 'promos' | 'saluran' | 'agen' | 'whatsapp';
-  const setActiveSubTab = (tab: 'pos' | 'grafik' | 'invoices' | 'promos' | 'saluran' | 'agen' | 'whatsapp') => setCurrentSubTab(tab);
+    : 'pos') as 'pos' | 'event_pos' | 'grafik' | 'invoices' | 'promos' | 'saluran' | 'agen' | 'whatsapp';
+  const setActiveSubTab = (tab: 'pos' | 'event_pos' | 'grafik' | 'invoices' | 'promos' | 'saluran' | 'agen' | 'whatsapp') => setCurrentSubTab(tab);
   const [invoiceSearch, setInvoiceSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [channelFilter, setChannelFilter] = useState<string>('all');
@@ -488,7 +490,9 @@ export const MarketingDashboard: React.FC = () => {
         divisionName="Marketing & Penjualan"
         divisionCode="MKT"
         subTabTitle={
-          activeSubTab === 'grafik'
+          activeSubTab === 'event_pos'
+            ? 'Kasir Cepat POS Event & Bazar (Touch POS)'
+            : activeSubTab === 'grafik'
             ? 'Grafik & Analisis Penjualan'
             : activeSubTab === 'pos'
             ? 'Point of Sale (POS) & Buat Pesanan'
@@ -507,6 +511,18 @@ export const MarketingDashboard: React.FC = () => {
       {/* Sub tabs */}
       <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
         <div className="flex items-center space-x-1.5 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl flex-wrap">
+          <button
+            onClick={() => setActiveSubTab('event_pos')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              activeSubTab === 'event_pos'
+                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-sm'
+                : 'text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-white hover:bg-amber-100/50'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5 fill-current" />
+            <span>⚡ Kasir Event / Bazar</span>
+          </button>
+
           <button
             onClick={() => setActiveSubTab('grafik')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
@@ -636,6 +652,11 @@ export const MarketingDashboard: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* KASIR CEPAT EVENT & BAZAR SUB TAB */}
+      {activeSubTab === 'event_pos' && (
+        <EventPOSDashboard />
+      )}
 
       {/* GRAFIK & ANALISIS SUB TAB */}
       {activeSubTab === 'grafik' && (

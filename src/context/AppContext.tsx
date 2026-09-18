@@ -118,7 +118,7 @@ interface AppContextType {
   ajukanCetak: (bookId: number, jumlah: number) => void;
 
   // Order & Marketing actions
-  createOrder: (orderData: Omit<Order, 'id' | 'created_at'>) => { success: boolean; message: string; invoice?: string };
+  createOrder: (orderData: Omit<Order, 'id' | 'created_at'>, targetAccountId?: number) => { success: boolean; message: string; invoice?: string; orderId?: number; order?: Order };
   tandaiLunasOrder: (orderId: number, targetAccountId?: number) => { success: boolean; message: string };
   cancelOrder: (orderId: number) => void;
   bulkDeleteOrders: (ids: number[]) => void;
@@ -772,7 +772,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Order & POS
-  const createOrder = (orderData: Omit<Order, 'id' | 'created_at'>) => {
+  const createOrder = (orderData: Omit<Order, 'id' | 'created_at'>, targetAccountId?: number) => {
     // 1. Check stocks
     for (const item of orderData.items) {
       const book = books.find(b => b.id === item.buku_id);
@@ -804,8 +804,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setOrders(prev => [newOrder, ...prev]);
-    recordActivity('Tambah Pesanan', 'Order', `Membuat pesanan baru ${newOrder.no_invoice} untuk agen ${newOrder.nama_pembeli} via ${newOrder.via} (Total: Rp ${newOrder.total_tagihan.toLocaleString('id-ID')})`);
-    return { success: true, message: `Invoice #${newOrder.no_invoice} berhasil disimpan dan stok gudang terpotong!`, invoice: newOrder.no_invoice };
+
+    // If order is created directly with status 'Lunas' (e.g. Kasir Event POS instant checkout)
+    if (newOrder.status === 'Lunas') {
+      // 1. Mutasi Kas Masuk di Finance
+      const selectedAcc = targetAccountId ? accounts.find(a => a.id === targetAccountId) : undefined;
+      const kasAccount = selectedAcc || accounts.find(a => a.nama_akun.toLowerCase().includes('kas')) || accounts.find(a => a.nama_akun.toLowerCase().includes('qris')) || accounts[0] || {
+        id: 1,
+        nama_akun: 'Kas Operasional (Tunai)',
+        kode_akun: 'ACC-CASH-01',
+        saldo_awal: 0
+      };
+      const categoryPenjualan = categories.find(c => c.nama_kategori.toLowerCase().includes('penjualan')) || categories[0] || {
+        id: 1,
+        nama_kategori: 'Penjualan Buku / POS',
+        jenis: 'Masuk'
+      };
+
+      const newMutasi: Mutasi = {
+        id: Date.now() + 100,
+        account_id: kasAccount.id,
+        account: kasAccount,
+        category_id: categoryPenjualan.id,
+        category: categoryPenjualan,
+        user_id: currentUser?.id || 1,
+        tipe: 'Masuk',
+        nominal: newOrder.total_tagihan,
+        keterangan: `POS Event: Pembayaran #${newOrder.no_invoice} (${newOrder.nama_pembeli} - ${newOrder.via})${newOrder.donasi ? ` [Termasuk Donasi Rp ${newOrder.donasi.toLocaleString('id-ID')}]` : ''}`,
+        tanggal: new Date().toISOString().substring(0, 10),
+        jenis: 'INVOICE'
+      };
+      setMutasis(prev => [newMutasi, ...prev]);
+
+      // 2. Rekap Penjualan
+      const totalItems = newOrder.items.reduce((sum, it) => sum + it.jumlah, 0);
+      const newPenjualan: Penjualan = {
+        id: Date.now() + 200,
+        no_invoice: newOrder.no_invoice,
+        nama_pelanggan: newOrder.nama_pembeli,
+        total_item: totalItems,
+        total_bayar: newOrder.total_tagihan,
+        tanggal_penjualan: new Date().toISOString().replace('T', ' ').substring(0, 19)
+      };
+      setPenjualans(prev => [newPenjualan, ...prev]);
+    }
+
+    recordActivity('Tambah Pesanan', 'Order', `Membuat pesanan baru ${newOrder.no_invoice} untuk ${newOrder.nama_pembeli} via ${newOrder.via} (Total: Rp ${newOrder.total_tagihan.toLocaleString('id-ID')})`);
+    return { success: true, message: `Invoice #${newOrder.no_invoice} berhasil disimpan dan stok gudang terpotong!`, invoice: newOrder.no_invoice, orderId: newOrder.id, order: newOrder };
   };
 
   const tandaiLunasOrder = (orderId: number, targetAccountId?: number) => {

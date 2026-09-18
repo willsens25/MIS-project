@@ -223,7 +223,8 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
   const handleSaveMutasi = (e: React.FormEvent) => {
     e.preventDefault();
     if (mutasiForm.nominal <= 0 || !mutasiForm.keterangan.trim()) {
-      alert('Nominal harus lebih dari 0 dan keterangan wajib diisi!');
+      setToastMessage('⚠️ Nominal harus lebih dari 0 dan keterangan wajib diisi!');
+      setTimeout(() => setToastMessage(null), 3500);
       return;
     }
     if (editingMutasi) {
@@ -1423,7 +1424,8 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
                     type="button"
                     onClick={() => {
                       if (!rejectNote.trim()) {
-                        alert('Harap masukkan alasan penolakan.');
+                        setToastMessage('⚠️ Harap masukkan alasan penolakan.');
+                        setTimeout(() => setToastMessage(null), 3000);
                         return;
                       }
                       rejectPengajuanCetak(rejectingPengajuanId, rejectNote);

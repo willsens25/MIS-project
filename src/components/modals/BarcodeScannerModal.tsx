@@ -86,11 +86,16 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
   const [manualStok, setManualStok] = useState<number>(20);
   const [stockAdjustmentMode, setStockAdjustmentMode] = useState<'add' | 'set'>('add');
   const [catatanStok, setCatatanStok] = useState('Penerimaan stok via Barcode Scanner');
+  const [autoFilledTitle, setAutoFilledTitle] = useState(false);
 
   const [isSaving, setIsSaving] = useState(false);
   const [toastFeedback, setToastFeedback] = useState<string | null>(null);
 
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const isStartingRef = useRef<boolean>(false);
+  const isMountedRef = useRef<boolean>(true);
+  const stockInputRef = useRef<HTMLInputElement | null>(null);
+  const priceInputRef = useRef<HTMLInputElement | null>(null);
   const readerElementId = 'sapa-barcode-reader-viewport';
 
   // Available categories
@@ -107,9 +112,12 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
 
   // Initialize camera list on mount or tab switch
   useEffect(() => {
+    isMountedRef.current = true;
+
     if (isOpen && activeTab === 'camera') {
       Html5Qrcode.getCameras()
         .then((devices) => {
+          if (!isMountedRef.current) return;
           if (devices && devices.length > 0) {
             setAvailableCameras(devices);
             // Default to back/environment camera if available
@@ -120,12 +128,14 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
           }
         })
         .catch((err) => {
+          if (!isMountedRef.current) return;
           console.warn('Camera detection error:', err);
           setCameraError('Izin akses kamera belum diberikan atau kamera tidak tersedia.');
         });
     }
 
     return () => {
+      isMountedRef.current = false;
       stopCameraScanner();
     };
   }, [isOpen, activeTab]);
@@ -139,27 +149,54 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
   }, [isOpen]);
 
   const stopCameraScanner = async () => {
-    if (scannerRef.current) {
-      try {
-        if (scannerRef.current.isScanning) {
-          await scannerRef.current.stop();
-        }
-        await scannerRef.current.clear();
-      } catch (e) {
-        console.warn('Error stopping scanner:', e);
-      }
-      scannerRef.current = null;
-    }
     setIsScanningCamera(false);
+    const scanner = scannerRef.current;
+    scannerRef.current = null;
+
+    if (scanner) {
+      try {
+        if (scanner.isScanning) {
+          await scanner.stop();
+        }
+      } catch (e) {
+        // Ignore play interruption or transition errors
+      }
+      try {
+        await scanner.clear();
+      } catch (e) {
+        // Ignore clear errors
+      }
+    }
   };
 
   const startCameraScanner = async (cameraId?: string) => {
+    if (isStartingRef.current) return;
+    isStartingRef.current = true;
     setCameraError(null);
+
     const targetCameraId = cameraId || selectedCameraId;
 
     try {
-      if (scannerRef.current && scannerRef.current.isScanning) {
-        await scannerRef.current.stop();
+      // Clean up previous instance cleanly
+      if (scannerRef.current) {
+        try {
+          if (scannerRef.current.isScanning) {
+            await scannerRef.current.stop();
+          }
+        } catch {
+          // ignore
+        }
+        try {
+          await scannerRef.current.clear();
+        } catch {
+          // ignore
+        }
+        scannerRef.current = null;
+      }
+
+      if (!isMountedRef.current) {
+        isStartingRef.current = false;
+        return;
       }
 
       const html5QrCode = new Html5Qrcode(readerElementId, {
@@ -196,13 +233,37 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
         () => {
           // Frame error callback, safe to ignore
         }
-      );
+      ).catch((startErr) => {
+        const msg = String(startErr?.message || startErr || '');
+        if (!msg.includes('interrupted') && !msg.includes('AbortError')) {
+          throw startErr;
+        }
+      });
 
-      setIsScanningCamera(true);
+      if (isMountedRef.current) {
+        setIsScanningCamera(true);
+      } else {
+        // Component unmounted while camera was initializing
+        try {
+          if (html5QrCode.isScanning) {
+            await html5QrCode.stop();
+          }
+          await html5QrCode.clear();
+        } catch {
+          // ignore
+        }
+      }
     } catch (err: any) {
-      console.error('Failed to start camera:', err);
-      setCameraError(err?.message || 'Gagal memulai kamera. Pastikan izin kamera telah disetujui pada browser.');
-      setIsScanningCamera(false);
+      if (isMountedRef.current) {
+        const msg = String(err?.message || err || '');
+        if (!msg.includes('interrupted') && !msg.includes('AbortError')) {
+          console.error('Failed to start camera:', err);
+          setCameraError(err?.message || 'Gagal memulai kamera. Pastikan izin kamera telah disetujui pada browser.');
+        }
+        setIsScanningCamera(false);
+      }
+    } finally {
+      isStartingRef.current = false;
     }
   };
 
@@ -218,6 +279,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
     setManualStok(20);
     setStockAdjustmentMode('add');
     setCatatanStok('Penerimaan stok via Barcode Scanner');
+    setAutoFilledTitle(false);
   };
 
   const handleBarcodeDetected = (rawCode: string) => {
@@ -235,10 +297,20 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
     setExistingBook(null);
     setOnlineResult(null);
 
+    // Helper to auto-focus on stock input so the user only types stock & price
+    const focusStockInput = () => {
+      setTimeout(() => {
+        if (stockInputRef.current) {
+          stockInputRef.current.focus();
+          stockInputRef.current.select();
+        }
+      }, 150);
+    };
+
     // 1. Check local database first
     const foundLocal = books.find(b => {
       const bIsbn = cleanIsbn(b.isbn || '');
-      return bIsbn && bIsbn === cleaned;
+      return bIsbn && (bIsbn === cleaned || bIsbn.includes(cleaned) || cleaned.includes(bIsbn));
     });
 
     if (foundLocal) {
@@ -249,32 +321,40 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
       setHargaJual(foundLocal.harga_jual);
       setBiayaPokok(foundLocal.biaya_pokok || Math.round(foundLocal.harga_jual * 0.4));
       setSearchStatus('found_local');
+      setAutoFilledTitle(true);
       setIsSearching(false);
-      setToastFeedback(`Buku "${foundLocal.judul}" ditemukan di database lokal!`);
+      setToastFeedback(`✨ Judul "${foundLocal.judul}" otomatis terdeteksi! Silakan input stok & harga.`);
+      focusStockInput();
       return;
     }
 
-    // 2. Lookup online from Google Books / Open Library
+    // 2. Lookup online from AI / Catalog
     const online = await lookupIsbnOnline(cleaned);
     setIsSearching(false);
 
-    if (online.found && online.judul) {
+    if (online && online.judul) {
       setOnlineResult(online);
       setJudul(online.judul);
       setPenulis(online.penulis || 'Penulis Lamrimnesia');
       setKategori(online.kategori || 'Filosofi');
-      const estimatedPrice = online.estimasi_harga && online.estimasi_harga > 10000 ? online.estimasi_harga : 85000;
+      const estimatedPrice = online.estimasi_harga && online.estimasi_harga > 1000 ? online.estimasi_harga : 85000;
       setHargaJual(estimatedPrice);
-      setBiayaPokok(Math.round(estimatedPrice * 0.4));
+      setBiayaPokok(online.biaya_pokok || Math.round(estimatedPrice * 0.4));
       setSearchStatus('found_online');
-      setToastFeedback(`Data buku berhasil didapatkan dari ${online.source === 'google_books' ? 'Google Books' : 'Open Library'}!`);
+      setAutoFilledTitle(true);
+      setToastFeedback(`✨ Judul "${online.judul}" berhasil terisi otomatis! Silakan input stok & harga.`);
+      focusStockInput();
     } else {
-      setSearchStatus('manual_needed');
-      setJudul('');
-      setPenulis('');
+      const fallbackJudul = `Buku Terbitan (ISBN ${cleaned})`;
+      setJudul(fallbackJudul);
+      setPenulis('Penerbit Lamrimnesia');
+      setKategori('Filosofi');
       setHargaJual(85000);
       setBiayaPokok(34000);
-      setToastFeedback('ISBN belum terindeks online. Silakan lengkapi judul dan penulis.');
+      setSearchStatus('found_online');
+      setAutoFilledTitle(true);
+      setToastFeedback(`✨ Judul otomatis disiapkan ("${fallbackJudul}"). Silakan input stok & harga.`);
+      focusStockInput();
     }
   };
 
@@ -286,7 +366,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
 
   const handleSaveBookAndStock = () => {
     if (!judul.trim()) {
-      alert('Judul buku wajib diisi!');
+      setToastFeedback('⚠️ Judul buku wajib diisi sebelum menyimpan data!');
       return;
     }
 
@@ -347,10 +427,23 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
       }
     } catch (err: any) {
       console.error('Error saving book:', err);
-      alert('Terjadi kesalahan saat menyimpan data buku.');
+      setToastFeedback('⚠️ Terjadi kesalahan saat menyimpan data buku. Silakan periksa kembali.');
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleCloseModal = async () => {
+    await stopCameraScanner();
+    onClose();
+  };
+
+  const handleSwitchTab = async (newTab: 'camera' | 'manual') => {
+    if (newTab === activeTab) return;
+    if (activeTab === 'camera') {
+      await stopCameraScanner();
+    }
+    setActiveTab(newTab);
   };
 
   if (!isOpen) return null;
@@ -377,7 +470,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleCloseModal}
             className="p-1.5 rounded-lg text-indigo-200 hover:text-white hover:bg-white/10 transition-colors"
             title="Tutup Modal"
           >
@@ -389,10 +482,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
         <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-6 pt-3 shrink-0">
           <button
             type="button"
-            onClick={() => {
-              stopCameraScanner();
-              setActiveTab('manual');
-            }}
+            onClick={() => handleSwitchTab('manual')}
             className={`pb-3 px-4 text-xs font-semibold flex items-center gap-2 border-b-2 transition-colors ${
               activeTab === 'manual'
                 ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
@@ -404,9 +494,7 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => {
-              setActiveTab('camera');
-            }}
+            onClick={() => handleSwitchTab('camera')}
             className={`pb-3 px-4 text-xs font-semibold flex items-center gap-2 border-b-2 transition-colors ${
               activeTab === 'camera'
                 ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
@@ -437,22 +525,25 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
             </div>
           )}
 
-          {/* TAB 1: CAMERA SCANNER */}
-          {activeTab === 'camera' && (
-            <div className="space-y-4">
-              <div className="bg-slate-900 rounded-2xl p-4 text-center text-white relative overflow-hidden border border-slate-800">
-                {/* HTML5 QRCODE VIEWPORT */}
+          {/* TAB 1: CAMERA SCANNER (Preserved in DOM to prevent media play interruptions) */}
+          <div className={activeTab === 'camera' ? 'space-y-4' : 'hidden'}>
+            <div className="bg-slate-900 rounded-2xl p-4 text-center text-white relative overflow-hidden border border-slate-800">
+              {/* HTML5 QRCODE VIEWPORT WRAPPER */}
+              <div className="relative w-full max-w-md mx-auto rounded-xl overflow-hidden bg-black/60 aspect-video flex items-center justify-center text-slate-400">
+                {/* Dedicated element for html5-qrcode. Kept child-free for React virtual DOM reconciliation */}
                 <div
                   id={readerElementId}
-                  className="w-full max-w-md mx-auto rounded-xl overflow-hidden bg-black/60 aspect-video flex items-center justify-center text-slate-400"
-                >
-                  {!isScanningCamera && !cameraError && (
-                    <div className="p-6 text-center space-y-2">
-                      <Camera className="w-10 h-10 text-indigo-400 mx-auto animate-pulse" />
-                      <p className="text-xs text-slate-300">Kamera siap. Klik tombol di bawah untuk mulai memindai barcode.</p>
-                    </div>
-                  )}
-                </div>
+                  className="w-full h-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover"
+                />
+
+                {/* React placeholder overlay */}
+                {!isScanningCamera && !cameraError && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center space-y-2 pointer-events-none bg-black/70">
+                    <Camera className="w-10 h-10 text-indigo-400 mx-auto animate-pulse" />
+                    <p className="text-xs text-slate-300">Kamera siap. Klik tombol di bawah untuk mulai memindai barcode.</p>
+                  </div>
+                )}
+              </div>
 
                 {/* Camera control buttons */}
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
@@ -510,7 +601,6 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
                 )}
               </div>
             </div>
-          )}
 
           {/* TAB 2: MANUAL / USB BARCODE SCANNER INPUT */}
           <div className="space-y-4">
@@ -679,143 +769,241 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
             {/* EDITABLE FORM & MANUAL STOCK INPUT */}
             {(searchStatus !== 'idle' || isbnInput.trim().length > 0) && (
               <div className="space-y-4 pt-2 border-t border-slate-200 dark:border-slate-800">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Auto-filled Notification Banner */}
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 rounded-xl flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 dark:text-emerald-200">
+                    <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>
+                      Judul buku <strong>otomatis terisi</strong> saat barcode dipindai! Anda hanya perlu mengisi <strong>Stok Fisik</strong> dan <strong>Harga Jual</strong> di bawah.
+                    </span>
+                  </div>
+                  <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-200 text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100">
+                    Auto-Fill Aktif
+                  </span>
+                </div>
+
+                {/* Section 1: Book Identity (Auto-filled) */}
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700/80 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <BookOpen className="w-4 h-4 text-slate-500" />
+                      Identitas Buku:
+                    </span>
+                    {autoFilledTitle && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300 flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" />
+                        Judul Terisi Otomatis
+                      </span>
+                    )}
+                  </div>
+
                   {/* Judul Buku */}
-                  <div className="sm:col-span-2">
+                  <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Judul Buku:
+                      Judul Buku (Otomatis):
                     </label>
                     <input
                       type="text"
                       value={judul}
                       onChange={(e) => setJudul(e.target.value)}
-                      placeholder="Masukkan judul buku..."
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                    />
-                  </div>
-
-                  {/* Penulis */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Penulis / Penyusun:
-                    </label>
-                    <input
-                      type="text"
-                      value={penulis}
-                      onChange={(e) => setPenulis(e.target.value)}
-                      placeholder="Nama penulis buku..."
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                    />
-                  </div>
-
-                  {/* Kategori */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Kategori Buku:
-                    </label>
-                    <select
-                      value={kategori}
-                      onChange={(e) => setKategori(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                    >
-                      {categories.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Harga Jual */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Harga Jual Satuan (Rp):
-                    </label>
-                    <input
-                      type="number"
-                      value={hargaJual || ''}
-                      onChange={(e) => {
-                        const val = Number(e.target.value);
-                        setHargaJual(val);
-                        if (!existingBook) {
-                          setBiayaPokok(Math.round(val * 0.4));
-                        }
-                      }}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                    />
-                  </div>
-
-                  {/* Biaya Pokok / HPP */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Biaya Pokok / HPP Satuan (Rp):
-                    </label>
-                    <input
-                      type="number"
-                      value={biayaPokok || ''}
-                      onChange={(e) => setBiayaPokok(Number(e.target.value))}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                      placeholder="Judul terisi otomatis saat scan barcode..."
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                     />
                     <span className="text-[10px] text-slate-400 mt-0.5 block">
-                      Estimasi standar: 40% dari harga jual (Rp {(Math.round((hargaJual || 0) * 0.4)).toLocaleString('id-ID')})
+                      💡 Anda tidak perlu mengetik judul ini secara manual, kecuali ingin mengubah atau menyempurnakannya.
                     </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Penulis */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Penulis / Penyusun:
+                      </label>
+                      <input
+                        type="text"
+                        value={penulis}
+                        onChange={(e) => setPenulis(e.target.value)}
+                        placeholder="Nama penulis..."
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Kategori */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        Kategori Buku:
+                      </label>
+                      <select
+                        value={kategori}
+                        onChange={(e) => setKategori(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                      >
+                        {categories.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
 
-                {/* MANUAL STOCK INPUT BLOCK (MAIN REQUESTED FEATURE) */}
-                <div className="p-4 bg-indigo-50/70 dark:bg-slate-800/80 rounded-2xl border border-indigo-200/80 dark:border-indigo-900/50 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-2">
-                      <Package className="w-4 h-4 text-indigo-600" />
-                      {existingBook
-                        ? stockAdjustmentMode === 'add'
-                          ? 'Jumlah Stok Masuk yang Ditambahkan (Eksemplar):'
-                          : 'Set Total Stok Fisik Baru (Stock Opname):'
-                        : 'Jumlah Stok Fisik Buku (Ketik Manual):'}
-                    </label>
-                    {existingBook && (
-                      <span className="text-[11px] font-semibold text-slate-500">
-                        {stockAdjustmentMode === 'add'
-                          ? `Total setelah simpan: ${existingBook.stok_gudang + manualStok} eks`
-                          : `Perubahan: ${manualStok - existingBook.stok_gudang >= 0 ? `+${manualStok - existingBook.stok_gudang}` : manualStok - existingBook.stok_gudang} eks`}
-                      </span>
-                    )}
+                {/* Section 2: MANUAL INPUT SECTION (STOCK + PRICE) */}
+                <div className="p-4 bg-indigo-50/90 dark:bg-slate-800/90 rounded-2xl border-2 border-indigo-400 dark:border-indigo-600 shadow-sm space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-pulse"></span>
+                      <h4 className="text-xs font-black text-indigo-950 dark:text-indigo-100 uppercase tracking-wider">
+                        Bagian Yang Diketik Manual: Stok & Harga
+                      </h4>
+                    </div>
+                    <span className="text-[11px] font-semibold text-indigo-700 dark:text-indigo-300 bg-white dark:bg-slate-900 px-2.5 py-1 rounded-md border border-indigo-200 dark:border-indigo-800">
+                      ⌨️ Tekan [Enter] untuk Simpan Cepat
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <div className="relative w-40">
-                      <input
-                        type="number"
-                        min="0"
-                        value={manualStok}
-                        onChange={(e) => setManualStok(Math.max(0, parseInt(e.target.value) || 0))}
-                        className="w-full px-4 py-2.5 rounded-xl border-2 border-indigo-500 bg-white dark:bg-slate-900 text-indigo-950 dark:text-white text-lg font-black tracking-wide text-center focus:outline-none focus:ring-2 focus:ring-indigo-600"
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400">
-                        Eks
-                      </span>
+                  {/* Dual Grid: 1. Stok Masuk, 2. Harga Jual */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* 1. JUMLAH STOK */}
+                    <div className="p-3.5 bg-white dark:bg-slate-900 rounded-xl border border-indigo-200 dark:border-indigo-900 shadow-xs space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <Package className="w-4 h-4 text-indigo-600" />
+                          {existingBook
+                            ? stockAdjustmentMode === 'add'
+                              ? '1. Tambah Stok Masuk:'
+                              : '1. Set Total Stok Baru:'
+                            : '1. Jumlah Stok Fisik:'}
+                        </label>
+                        {existingBook && (
+                          <span className="text-[10px] font-medium text-slate-500">
+                            Stok Saat Ini: {existingBook.stok_gudang} eks
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="relative">
+                        <input
+                          ref={stockInputRef}
+                          type="number"
+                          min="0"
+                          value={manualStok}
+                          onChange={(e) => setManualStok(Math.max(0, parseInt(e.target.value) || 0))}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleSaveBookAndStock();
+                            }
+                          }}
+                          className="w-full px-3 py-2 rounded-xl border-2 border-indigo-500 bg-indigo-50/40 dark:bg-slate-800 text-indigo-950 dark:text-white text-xl font-black tracking-wide text-center focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                          placeholder="0"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                          eks
+                        </span>
+                      </div>
+
+                      {/* Quick increment buttons */}
+                      <div className="flex flex-wrap items-center gap-1">
+                        {[5, 10, 20, 50, 100].map((step) => (
+                          <button
+                            key={step}
+                            type="button"
+                            onClick={() => setManualStok((prev) => prev + step)}
+                            className="px-2 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 rounded text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:text-indigo-600 transition-colors"
+                          >
+                            +{step}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => setManualStok(0)}
+                          className="px-2 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 rounded text-[11px] font-semibold text-slate-500"
+                        >
+                          0
+                        </button>
+                      </div>
+
+                      {existingBook && (
+                        <div className="text-[11px] text-slate-500 font-semibold pt-1 border-t border-slate-100 dark:border-slate-800">
+                          {stockAdjustmentMode === 'add'
+                            ? `Total gudang setelah simpan: ${existingBook.stok_gudang + manualStok} eks`
+                            : `Selisih opname: ${manualStok - existingBook.stok_gudang >= 0 ? `+${manualStok - existingBook.stok_gudang}` : manualStok - existingBook.stok_gudang} eks`}
+                        </div>
+                      )}
                     </div>
 
-                    {/* Quick increment buttons */}
-                    <div className="flex flex-wrap items-center gap-1.5 flex-1">
-                      {[5, 10, 25, 50, 100].map((step) => (
-                        <button
-                          key={step}
-                          type="button"
-                          onClick={() => setManualStok((prev) => prev + step)}
-                          className="px-2.5 py-1.5 bg-white dark:bg-slate-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-indigo-600 transition-colors"
-                        >
-                          +{step}
-                        </button>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => setManualStok(0)}
-                        className="px-2 py-1.5 bg-slate-200/70 dark:bg-slate-700/60 hover:bg-slate-300 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300"
-                        title="Reset ke 0"
-                      >
-                        Reset
-                      </button>
+                    {/* 2. HARGA JUAL SATUAN */}
+                    <div className="p-3.5 bg-white dark:bg-slate-900 rounded-xl border border-indigo-200 dark:border-indigo-900 shadow-xs space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <DollarSign className="w-4 h-4 text-emerald-600" />
+                          2. Harga Jual Satuan (Rp):
+                        </label>
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          HPP: Rp {(biayaPokok || 0).toLocaleString('id-ID')}
+                        </span>
+                      </div>
+
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                          Rp
+                        </span>
+                        <input
+                          ref={priceInputRef}
+                          type="number"
+                          min="0"
+                          step="1000"
+                          value={hargaJual || ''}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            setHargaJual(val);
+                            if (!existingBook) {
+                              setBiayaPokok(Math.round(val * 0.4));
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleSaveBookAndStock();
+                            }
+                          }}
+                          className="w-full pl-9 pr-3 py-2 rounded-xl border-2 border-emerald-500 bg-emerald-50/30 dark:bg-slate-800 text-slate-900 dark:text-white text-lg font-black focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                          placeholder="85000"
+                        />
+                      </div>
+
+                      {/* Quick price chips */}
+                      <div className="flex flex-wrap items-center gap-1">
+                        {[65000, 85000, 95000, 120000, 145000].map((prc) => (
+                          <button
+                            key={prc}
+                            type="button"
+                            onClick={() => {
+                              setHargaJual(prc);
+                              setBiayaPokok(Math.round(prc * 0.4));
+                            }}
+                            className={`px-1.5 py-1 rounded text-[10px] font-bold transition-colors ${
+                              hargaJual === prc
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60'
+                            }`}
+                          >
+                            {prc / 1000}k
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                        <span>Biaya Pokok (HPP 40%):</span>
+                        <input
+                          type="number"
+                          value={biayaPokok || ''}
+                          onChange={(e) => setBiayaPokok(Number(e.target.value))}
+                          className="w-20 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-transparent text-[10px] font-mono"
+                        />
+                      </div>
                     </div>
                   </div>
 

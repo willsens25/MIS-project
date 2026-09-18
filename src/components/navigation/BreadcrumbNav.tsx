@@ -28,7 +28,8 @@ import {
   Send,
   Calendar,
   Layers,
-  Check
+  Check,
+  Zap
 } from 'lucide-react';
 
 export interface BreadcrumbTabConfig {
@@ -172,6 +173,13 @@ export const NAVIGATION_CONFIG: Record<DivisionId, DivisionNavConfig> = {
     description: 'Kasir POS, Invoicing, Promo & Ekspedisi',
     defaultTab: 'pos',
     tabs: [
+      {
+        id: 'event_pos',
+        name: 'Kasir Cepat POS Event / Bazar',
+        shortName: '⚡ POS Event',
+        icon: Zap,
+        description: 'Layar kasir touch-screen instan bazar, scan barcode & struk thermal'
+      },
       {
         id: 'pos',
         name: 'Kasir POS & Order Baru',

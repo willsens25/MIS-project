@@ -139,6 +139,20 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
       keywords: ['approval', 'persetujuan', 'pending', 'anggaran', 'spk', 'acc', 'verifikasi'],
     },
     {
+      id: 'open-event-pos',
+      title: '⚡ Kasir Cepat POS Event / Pameran / Bazar',
+      description: 'Layar kasir touch-screen instan, scan barcode, diskon bazar, dan cetak struk',
+      category: 'priority',
+      icon: Zap,
+      badge: 'Kasir',
+      badgeColor: 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800',
+      action: () => {
+        switchDivision(4, 'event_pos');
+        setIsOpen(false);
+      },
+      keywords: ['kasir', 'pos', 'event', 'bazar', 'pameran', 'struk', 'penjualan', 'thermal', 'qris'],
+    },
+    {
       id: 'scan-barcode-isbn',
       title: 'Scan Barcode & Input Stok ISBN',
       description: 'Pindai barcode kamera / ketik manual ISBN buku, dan masukkan stok fisik',

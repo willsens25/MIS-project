@@ -45,6 +45,7 @@ export const PendingApprovalsModal: React.FC<PendingApprovalsModalProps> = ({
   const [selectedAccountId, setSelectedAccountId] = useState<number>(accounts[0]?.id || 1);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState<string>('');
+  const [rejectError, setRejectError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -67,9 +68,10 @@ export const PendingApprovalsModal: React.FC<PendingApprovalsModalProps> = ({
 
   const handleReject = (id: number) => {
     if (!rejectReason.trim()) {
-      alert('Mohon isi alasan penolakan.');
+      setRejectError('Mohon isi alasan penolakan.');
       return;
     }
+    setRejectError(null);
     rejectPengajuanCetak(id, rejectReason.trim());
     setRejectingId(null);
     setRejectReason('');
@@ -281,12 +283,20 @@ export const PendingApprovalsModal: React.FC<PendingApprovalsModalProps> = ({
                                   <label className="block text-xs font-bold text-rose-700 dark:text-rose-300">
                                     Alasan Penolakan Pengajuan:
                                   </label>
+                                  {rejectError && (
+                                    <p className="text-[11px] text-rose-600 dark:text-rose-400 font-semibold animate-in fade-in">
+                                      {rejectError}
+                                    </p>
+                                  )}
                                   <div className="flex items-center space-x-2">
                                     <input
                                       type="text"
                                       placeholder="Contoh: Anggaran belum mencukupi / Oplah perlu disesuaikan"
                                       value={rejectReason}
-                                      onChange={(e) => setRejectReason(e.target.value)}
+                                      onChange={(e) => {
+                                        setRejectReason(e.target.value);
+                                        if (rejectError) setRejectError(null);
+                                      }}
                                       className="flex-1 px-3 py-1.5 rounded-xl border border-rose-300 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-950/30 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500"
                                     />
                                     <button

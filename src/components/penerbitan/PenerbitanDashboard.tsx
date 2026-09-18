@@ -162,7 +162,8 @@ export const PenerbitanDashboard: React.FC = () => {
   const handleSaveBook = (e: React.FormEvent) => {
     e.preventDefault();
     if (!bookForm.judul.trim() || !bookForm.penulis.trim() || bookForm.harga_jual <= 0) {
-      alert('Judul, Penulis, dan Harga Jual wajib diisi dengan benar!');
+      setToastMessage('⚠️ Judul, Penulis, dan Harga Jual wajib diisi dengan benar!');
+      setTimeout(() => setToastMessage(null), 3500);
       return;
     }
     const hpp = bookForm.biaya_pokok > 0 ? bookForm.biaya_pokok : Math.round(bookForm.harga_jual * 0.4);
