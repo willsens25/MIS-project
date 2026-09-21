@@ -55,16 +55,24 @@ export const DashboardCardWrapper: React.FC<DashboardCardWrapperProps> = ({
   };
 
   return (
-    <div
+    <motion.div
+      layout
+      layoutId={card.id}
+      initial={{ opacity: 0, scale: 0.94 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+      transition={{
+        layout: { type: 'spring', damping: 28, stiffness: 320 },
+        opacity: { duration: 0.2 },
+        scale: { duration: 0.2 }
+      }}
       draggable={isConfigMode}
-      onDragStart={isConfigMode ? handleDragStart : undefined}
+      onDragStart={isConfigMode ? (handleDragStart as any) : undefined}
       onDragOver={isConfigMode ? (e) => onDragOver(e, index) : undefined}
-      onDragEnd={isConfigMode ? handleDragEnd : undefined}
+      onDragEnd={isConfigMode ? (handleDragEnd as any) : undefined}
       onDrop={isConfigMode ? (e) => onDrop(e, index) : undefined}
-      className={`relative group transition-all duration-200 ${
-        isConfigMode
-          ? 'cursor-grab active:cursor-grabbing select-none'
-          : ''
+      className={`relative group h-full ${
+        isConfigMode ? 'cursor-grab active:cursor-grabbing select-none' : ''
       } ${
         isDragging
           ? 'opacity-40 scale-98 ring-2 ring-indigo-500 rounded-2xl'
@@ -75,12 +83,7 @@ export const DashboardCardWrapper: React.FC<DashboardCardWrapperProps> = ({
           : ''
       }`}
     >
-      <motion.div
-        layout
-        transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-        className="h-full"
-      >
-        {/* Config Mode Controls Overlay */}
+      {/* Config Mode Controls Overlay */}
       {isConfigMode && (
         <div className="absolute -top-3 left-2 right-2 z-20 flex items-center justify-between px-2.5 py-1 bg-slate-900/90 dark:bg-slate-800/95 text-white text-[11px] rounded-lg shadow-md backdrop-blur-xs border border-slate-700/60 transition-all">
           <div className="flex items-center space-x-1.5">
@@ -143,7 +146,7 @@ export const DashboardCardWrapper: React.FC<DashboardCardWrapperProps> = ({
 
       {/* Actual Card Content with subtle styling adjustment in Config Mode */}
       <div
-        className={`h-full transition-all ${
+        className={`h-full flex flex-col transition-colors ${
           isConfigMode
             ? 'border-2 border-dashed border-indigo-400/50 dark:border-indigo-500/40 rounded-2xl pt-2 pb-1'
             : ''
@@ -152,6 +155,5 @@ export const DashboardCardWrapper: React.FC<DashboardCardWrapperProps> = ({
         {children}
       </div>
     </motion.div>
-  </div>
-);
+  );
 };

@@ -16,11 +16,14 @@ import {
   RotateCcw,
   Check,
   Eye,
+  EyeOff,
   ArrowUpRight,
   ChevronRight,
   Plus,
   Sparkles,
-  LayoutGrid
+  LayoutGrid,
+  Database,
+  Save
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDashboardLayout } from '../../hooks/useDashboardLayout';
@@ -56,6 +59,10 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
     visibleCards,
     columns,
     activePreset,
+    density,
+    lastSaved,
+    lastSavedDisplay,
+    storageKey,
     isConfigMode,
     isConfigModalOpen,
     setIsConfigMode,
@@ -66,8 +73,16 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
     toggleCardVisibility,
     applyPreset,
     setColumns,
-    resetToDefault
-  } = useDashboardLayout({ userId: currentUser.id });
+    setDensity,
+    resetToDefault,
+    persistToLocalStorage,
+    exportConfigJson,
+    importConfigJson
+  } = useDashboardLayout({
+    userId: currentUser.id,
+    userName: currentUser.name,
+    userDivisiId: currentUser.divisi_id
+  });
 
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -134,38 +149,43 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
   };
 
   // Render individual card content based on its unique card ID
+  // Render individual card content based on its unique card ID in Modern Bento Studio style
   const renderCardContent = (card: DashboardCardConfig) => {
     switch (card.id) {
       case 'card-finance-saldo':
         return (
-          <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm h-full flex flex-col justify-between hover:border-emerald-300 dark:hover:border-emerald-800/80 transition-colors">
+          <div className="p-4 sm:p-5 bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl shadow-xs hover:shadow-md hover:border-emerald-300 dark:hover:border-emerald-800/80 transition-all h-full flex flex-col justify-between group backdrop-blur-xs">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <span className="text-[10.5px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   Saldo Bersih Kas
                 </span>
-                <div className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 shadow-2xs group-hover:scale-105 transition-transform">
                   <CreditCard className="w-4 h-4" />
                 </div>
               </div>
-              <p className="text-xl font-extrabold text-slate-900 dark:text-white mt-2 font-mono">
+              <p className="text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-slate-50 mt-3">
                 Rp {saldoKasBersih.toLocaleString('id-ID')}
               </p>
-              <div className="flex items-center space-x-2 text-[11px] text-slate-500 mt-1">
-                <span className="text-emerald-600 font-semibold">+{totalKasMasuk.toLocaleString('id-ID')}</span>
-                <span>/</span>
-                <span className="text-rose-500">-{totalKasKeluar.toLocaleString('id-ID')}</span>
+              <div className="flex items-center flex-wrap gap-1.5 mt-2">
+                <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[10.5px] font-mono font-semibold border border-emerald-200/60 dark:border-emerald-800/50">
+                  +{totalKasMasuk.toLocaleString('id-ID')}
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 text-[10.5px] font-mono font-semibold border border-rose-200/60 dark:border-rose-800/50">
+                  -{totalKasKeluar.toLocaleString('id-ID')}
+                </span>
               </div>
             </div>
-            <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
-              <span className="text-slate-400">Kas & Rekening Bank</span>
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11.5px]">
+              <span className="text-slate-400 font-medium">Kas & Rekening Bank</span>
               <button
                 type="button"
                 onClick={() => switchDivision(2, 'mutasi')}
-                className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
+                className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline flex items-center gap-0.5 cursor-pointer group/link"
               >
                 <span>Buka Keuangan</span>
-                <ArrowUpRight className="w-3 h-3" />
+                <ArrowUpRight className="w-3.5 h-3.5 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
               </button>
             </div>
           </div>
@@ -173,25 +193,28 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
 
       case 'card-keanggotaan-umat':
         return (
-          <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm h-full flex flex-col justify-between hover:border-indigo-300 dark:hover:border-indigo-800/80 transition-colors">
+          <div className="p-4 sm:p-5 bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl shadow-xs hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-800/80 transition-all h-full flex flex-col justify-between group backdrop-blur-xs">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <span className="text-[10.5px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
                   Total Anggota Umat
                 </span>
-                <div className="p-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                <div className="w-8 h-8 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-500/20 shadow-2xs group-hover:scale-105 transition-transform">
                   <Users className="w-4 h-4" />
                 </div>
               </div>
-              <p className="text-xl font-extrabold text-slate-900 dark:text-white mt-2">
-                {identitasList.length} <span className="text-xs font-normal text-slate-500">Jiwa</span>
+              <p className="text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-slate-50 mt-3">
+                {identitasList.length} <span className="text-xs font-medium text-slate-400 font-sans">Jiwa</span>
               </p>
-              <p className="text-[11px] text-slate-500 mt-1">
-                {identitasList.filter((i) => i.is_dharma_patriot).length} Dharma Patriot / Donatur
-              </p>
+              <div className="flex items-center gap-1.5 mt-2">
+                <span className="px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 text-[10.5px] font-medium border border-indigo-200/60 dark:border-indigo-800/50">
+                  {identitasList.filter((i) => i.is_dharma_patriot).length} Dharma Patriot
+                </span>
+              </div>
             </div>
-            <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
-              <span className="text-slate-400">
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11.5px]">
+              <span className="text-slate-400 font-medium">
                 {identitasList.filter((i) => i.jenis_umat === 'Sangha').length} Anggota Sangha
               </span>
               <button
@@ -200,10 +223,10 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
                   if (onOpenIdentitasTab) onOpenIdentitasTab();
                   else switchDivision(1, 'identitas');
                 }}
-                className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
+                className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline flex items-center gap-0.5 cursor-pointer group/link"
               >
                 <span>Data Umat</span>
-                <ArrowUpRight className="w-3 h-3" />
+                <ArrowUpRight className="w-3.5 h-3.5 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
               </button>
             </div>
           </div>
@@ -211,34 +234,37 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
 
       case 'card-marketing-invoices':
         return (
-          <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm h-full flex flex-col justify-between hover:border-cyan-300 dark:hover:border-cyan-800/80 transition-colors">
+          <div className="p-4 sm:p-5 bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl shadow-xs hover:shadow-md hover:border-cyan-300 dark:hover:border-cyan-800/80 transition-all h-full flex flex-col justify-between group backdrop-blur-xs">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <span className="text-[10.5px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
                   Invoice & Penjualan
                 </span>
-                <div className="p-2 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 rounded-xl">
+                <div className="w-8 h-8 rounded-xl bg-cyan-500/10 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 flex items-center justify-center border border-cyan-500/20 shadow-2xs group-hover:scale-105 transition-transform">
                   <ShoppingBag className="w-4 h-4" />
                 </div>
               </div>
-              <p className="text-xl font-extrabold text-slate-900 dark:text-white mt-2">
-                {totalInvoiceLunas} <span className="text-xs font-normal text-slate-500">/ {orders.length} Lunas</span>
+              <p className="text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-slate-50 mt-3">
+                {totalInvoiceLunas} <span className="text-xs font-medium text-slate-400 font-sans">/ {orders.length} Lunas</span>
               </p>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Omset Rp {totalOmsetPenjualan.toLocaleString('id-ID')}
-              </p>
+              <div className="flex items-center gap-1.5 mt-2">
+                <span className="px-2 py-0.5 rounded-md bg-cyan-50 dark:bg-cyan-950/60 text-cyan-700 dark:text-cyan-300 text-[10.5px] font-mono font-medium border border-cyan-200/60 dark:border-cyan-800/50">
+                  Omset Rp {totalOmsetPenjualan.toLocaleString('id-ID')}
+                </span>
+              </div>
             </div>
-            <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
-              <span className="text-cyan-600 font-semibold">
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11.5px]">
+              <span className="text-cyan-600 dark:text-cyan-400 font-semibold font-mono text-[11px]">
                 {orders.filter((o) => o.status === 'Pending').length} Pending
               </span>
               <button
                 type="button"
                 onClick={() => switchDivision(4, 'invoices')}
-                className="text-cyan-600 dark:text-cyan-400 font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
+                className="text-cyan-600 dark:text-cyan-400 font-bold hover:underline flex items-center gap-0.5 cursor-pointer group/link"
               >
                 <span>Buka Marketing</span>
-                <ArrowUpRight className="w-3 h-3" />
+                <ArrowUpRight className="w-3.5 h-3.5 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
               </button>
             </div>
           </div>
@@ -246,32 +272,35 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
 
       case 'card-logistik-stok':
         return (
-          <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm h-full flex flex-col justify-between hover:border-amber-300 dark:hover:border-amber-800/80 transition-colors">
+          <div className="p-4 sm:p-5 bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl shadow-xs hover:shadow-md hover:border-amber-300 dark:hover:border-amber-800/80 transition-all h-full flex flex-col justify-between group backdrop-blur-xs">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <span className="text-[10.5px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                   Total Stok Gudang
                 </span>
-                <div className="p-2 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/10 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20 shadow-2xs group-hover:scale-105 transition-transform">
                   <Layers className="w-4 h-4" />
                 </div>
               </div>
-              <p className="text-xl font-extrabold text-slate-900 dark:text-white mt-2">
-                {totalBukuStok} <span className="text-xs font-normal text-slate-500">Eksemplar</span>
+              <p className="text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-slate-50 mt-3">
+                {totalBukuStok.toLocaleString('id-ID')} <span className="text-xs font-medium text-slate-400 font-sans">Eks</span>
               </p>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Dari {books.length} judul buku aktif
-              </p>
+              <div className="flex items-center gap-1.5 mt-2">
+                <span className="px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-[10.5px] font-medium border border-amber-200/60 dark:border-amber-800/50">
+                  {books.length} judul buku aktif
+                </span>
+              </div>
             </div>
-            <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
-              <span className="text-slate-400">Gudang Utama</span>
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11.5px]">
+              <span className="text-slate-400 font-medium">Gudang Pusat</span>
               <button
                 type="button"
                 onClick={() => switchDivision(6, 'stok')}
-                className="text-amber-600 dark:text-amber-400 font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
+                className="text-amber-600 dark:text-amber-400 font-bold hover:underline flex items-center gap-0.5 cursor-pointer group/link"
               >
                 <span>Buka Logistik</span>
-                <ArrowUpRight className="w-3 h-3" />
+                <ArrowUpRight className="w-3.5 h-3.5 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
               </button>
             </div>
           </div>
@@ -279,32 +308,35 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
 
       case 'card-finance-persetujuan':
         return (
-          <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm h-full flex flex-col justify-between hover:border-rose-300 dark:hover:border-rose-800/80 transition-colors">
+          <div className="p-4 sm:p-5 bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl shadow-xs hover:shadow-md hover:border-rose-300 dark:hover:border-rose-800/80 transition-all h-full flex flex-col justify-between group backdrop-blur-xs">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <span className="text-[10.5px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                   Persetujuan Cetak
                 </span>
-                <div className="p-2 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-xl">
+                <div className="w-8 h-8 rounded-xl bg-rose-500/10 dark:bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-500/20 shadow-2xs group-hover:scale-105 transition-transform">
                   <CheckCircle2 className="w-4 h-4" />
                 </div>
               </div>
-              <p className="text-xl font-extrabold text-slate-900 dark:text-white mt-2">
-                {pendingPengajuans.length} <span className="text-xs font-normal text-slate-500">Pengajuan Pending</span>
+              <p className="text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-slate-50 mt-3">
+                {pendingPengajuans.length} <span className="text-xs font-medium text-rose-500 font-sans">Pending</span>
               </p>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Total Biaya Rp {totalDanaDiajukan.toLocaleString('id-ID')}
-              </p>
+              <div className="flex items-center gap-1.5 mt-2">
+                <span className="px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 text-[10.5px] font-mono font-medium border border-rose-200/60 dark:border-rose-800/50">
+                  Total Biaya Rp {totalDanaDiajukan.toLocaleString('id-ID')}
+                </span>
+              </div>
             </div>
-            <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
-              <span className="text-slate-400">{pengajuans.filter((p) => p.status === 'approved').length} Disetujui</span>
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11.5px]">
+              <span className="text-slate-400 font-medium">{pengajuans.filter((p) => p.status === 'approved').length} Disetujui</span>
               <button
                 type="button"
                 onClick={() => switchDivision(2, 'persetujuan')}
-                className="text-rose-600 dark:text-rose-400 font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
+                className="text-rose-600 dark:text-rose-400 font-bold hover:underline flex items-center gap-0.5 cursor-pointer group/link"
               >
-                <span>Verifikasi Dana</span>
-                <ArrowUpRight className="w-3 h-3" />
+                <span>Verifikasi SPK</span>
+                <ArrowUpRight className="w-3.5 h-3.5 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
               </button>
             </div>
           </div>
@@ -312,32 +344,35 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
 
       case 'card-logistik-antrean':
         return (
-          <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm h-full flex flex-col justify-between hover:border-blue-300 dark:hover:border-blue-800/80 transition-colors">
+          <div className="p-4 sm:p-5 bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl shadow-xs hover:shadow-md hover:border-blue-300 dark:hover:border-blue-800/80 transition-all h-full flex flex-col justify-between group backdrop-blur-xs">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <span className="text-[10.5px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                   Antrean Packing & Kirim
                 </span>
-                <div className="p-2 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-xl">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/10 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20 shadow-2xs group-hover:scale-105 transition-transform">
                   <Truck className="w-4 h-4" />
                 </div>
               </div>
-              <p className="text-xl font-extrabold text-slate-900 dark:text-white mt-2">
-                {antreanPackingCount} <span className="text-xs font-normal text-slate-500">Paket Siap Packing</span>
+              <p className="text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-slate-50 mt-3">
+                {antreanPackingCount} <span className="text-xs font-medium text-slate-400 font-sans">Paket</span>
               </p>
-              <p className="text-[11px] text-slate-500 mt-1">
-                {penyalurans.filter((p) => p.status === 'dikirim').length} Paket Selesai Dikirim
-              </p>
+              <div className="flex items-center gap-1.5 mt-2">
+                <span className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-[10.5px] font-medium border border-blue-200/60 dark:border-blue-800/50">
+                  {penyalurans.filter((p) => p.status === 'dikirim').length} selesai dikirim
+                </span>
+              </div>
             </div>
-            <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
-              <span className="text-slate-400">Ekspedisi Logistik</span>
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11.5px]">
+              <span className="text-slate-400 font-medium">Ekspedisi Logistik</span>
               <button
                 type="button"
                 onClick={() => switchDivision(6, 'antrean')}
-                className="text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
+                className="text-blue-600 dark:text-blue-400 font-bold hover:underline flex items-center gap-0.5 cursor-pointer group/link"
               >
                 <span>Antrean Kirim</span>
-                <ArrowUpRight className="w-3 h-3" />
+                <ArrowUpRight className="w-3.5 h-3.5 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
               </button>
             </div>
           </div>
@@ -345,32 +380,35 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
 
       case 'card-marketing-agen':
         return (
-          <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm h-full flex flex-col justify-between hover:border-purple-300 dark:hover:border-purple-800/80 transition-colors">
+          <div className="p-4 sm:p-5 bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl shadow-xs hover:shadow-md hover:border-purple-300 dark:hover:border-purple-800/80 transition-all h-full flex flex-col justify-between group backdrop-blur-xs">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <span className="text-[10.5px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
                   Jaringan Agen & Mitra
                 </span>
-                <div className="p-2 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-xl">
+                <div className="w-8 h-8 rounded-xl bg-purple-500/10 dark:bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center border border-purple-500/20 shadow-2xs group-hover:scale-105 transition-transform">
                   <Store className="w-4 h-4" />
                 </div>
               </div>
-              <p className="text-xl font-extrabold text-slate-900 dark:text-white mt-2">
-                {totalAgenAktif} <span className="text-xs font-normal text-slate-500">Agen Buku Purna</span>
+              <p className="text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-slate-50 mt-3">
+                {totalAgenAktif} <span className="text-xs font-medium text-slate-400 font-sans">Agen Purna</span>
               </p>
-              <p className="text-[11px] text-slate-500 mt-1">
-                {salesChannels?.length || 4} Saluran Penjualan Aktif
-              </p>
+              <div className="flex items-center gap-1.5 mt-2">
+                <span className="px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 text-[10.5px] font-medium border border-purple-200/60 dark:border-purple-800/50">
+                  {salesChannels?.length || 4} Saluran Penjualan Aktif
+                </span>
+              </div>
             </div>
-            <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
-              <span className="text-slate-400">{promos?.length || 0} Kode Promo</span>
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11.5px]">
+              <span className="text-slate-400 font-medium">{promos?.length || 0} Kode Promo</span>
               <button
                 type="button"
                 onClick={() => switchDivision(4, 'channels')}
-                className="text-purple-600 dark:text-purple-400 font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
+                className="text-purple-600 dark:text-purple-400 font-bold hover:underline flex items-center gap-0.5 cursor-pointer group/link"
               >
                 <span>Kelola Saluran</span>
-                <ArrowUpRight className="w-3 h-3" />
+                <ArrowUpRight className="w-3.5 h-3.5 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
               </button>
             </div>
           </div>
@@ -378,32 +416,35 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
 
       case 'card-produksi-status':
         return (
-          <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm h-full flex flex-col justify-between hover:border-violet-300 dark:hover:border-violet-800/80 transition-colors">
+          <div className="p-4 sm:p-5 bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl shadow-xs hover:shadow-md hover:border-violet-300 dark:hover:border-violet-800/80 transition-all h-full flex flex-col justify-between group backdrop-blur-xs">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <span className="text-[10.5px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
                   Aktivitas Produksi Cetak
                 </span>
-                <div className="p-2 bg-violet-500/10 text-violet-600 dark:text-violet-400 rounded-xl">
+                <div className="w-8 h-8 rounded-xl bg-violet-500/10 dark:bg-violet-500/15 text-violet-600 dark:text-violet-400 flex items-center justify-center border border-violet-500/20 shadow-2xs group-hover:scale-105 transition-transform">
                   <Factory className="w-4 h-4" />
                 </div>
               </div>
-              <p className="text-xl font-extrabold text-slate-900 dark:text-white mt-2">
-                {totalEksemplarCetak.toLocaleString('id-ID')} <span className="text-xs font-normal text-slate-500">Eksemplar</span>
+              <p className="text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-slate-50 mt-3">
+                {totalEksemplarCetak.toLocaleString('id-ID')} <span className="text-xs font-medium text-slate-400 font-sans">Eks</span>
               </p>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Dari {productionLogs.length} gelombang cetak teregistrasi
-              </p>
+              <div className="flex items-center gap-1.5 mt-2">
+                <span className="px-2 py-0.5 rounded-md bg-violet-50 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 text-[10.5px] font-medium border border-violet-200/60 dark:border-violet-800/50">
+                  {productionLogs.length} gelombang cetak
+                </span>
+              </div>
             </div>
-            <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
-              <span className="text-slate-400">Percetakan Mitra</span>
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11.5px]">
+              <span className="text-slate-400 font-medium">Mitra Percetakan</span>
               <button
                 type="button"
                 onClick={() => switchDivision(5, 'overview')}
-                className="text-violet-600 dark:text-violet-400 font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
+                className="text-violet-600 dark:text-violet-400 font-bold hover:underline flex items-center gap-0.5 cursor-pointer group/link"
               >
                 <span>Buka Produksi</span>
-                <ArrowUpRight className="w-3 h-3" />
+                <ArrowUpRight className="w-3.5 h-3.5 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
               </button>
             </div>
           </div>
@@ -411,32 +452,35 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
 
       case 'card-penerbitan-katalog':
         return (
-          <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm h-full flex flex-col justify-between hover:border-indigo-300 dark:hover:border-indigo-800/80 transition-colors">
+          <div className="p-4 sm:p-5 bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl shadow-xs hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-800/80 transition-all h-full flex flex-col justify-between group backdrop-blur-xs">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <span className="text-[10.5px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
                   Katalog Penerbitan
                 </span>
-                <div className="p-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                <div className="w-8 h-8 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-500/20 shadow-2xs group-hover:scale-105 transition-transform">
                   <BookOpen className="w-4 h-4" />
                 </div>
               </div>
-              <p className="text-xl font-extrabold text-slate-900 dark:text-white mt-2">
-                {books.length} <span className="text-xs font-normal text-slate-500">Judul Buku Terbit</span>
+              <p className="text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-slate-50 mt-3">
+                {books.length} <span className="text-xs font-medium text-slate-400 font-sans">Judul Terbit</span>
               </p>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Nilai Aset Rp {totalNilaiInventaris.toLocaleString('id-ID')}
-              </p>
+              <div className="flex items-center gap-1.5 mt-2">
+                <span className="px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 text-[10.5px] font-mono font-medium border border-indigo-200/60 dark:border-indigo-800/50">
+                  Nilai Aset Rp {totalNilaiInventaris.toLocaleString('id-ID')}
+                </span>
+              </div>
             </div>
-            <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
-              <span className="text-slate-400">Hak Cipta Lamrim</span>
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11.5px]">
+              <span className="text-slate-400 font-medium">Hak Cipta Lamrim</span>
               <button
                 type="button"
                 onClick={() => switchDivision(3, 'buku')}
-                className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
+                className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline flex items-center gap-0.5 cursor-pointer group/link"
               >
                 <span>Katalog Buku</span>
-                <ArrowUpRight className="w-3 h-3" />
+                <ArrowUpRight className="w-3.5 h-3.5 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
               </button>
             </div>
           </div>
@@ -444,34 +488,37 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
 
       case 'card-annual-report':
         return (
-          <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm h-full flex flex-col justify-between hover:border-amber-300 dark:hover:border-amber-800/80 transition-colors">
+          <div className="p-4 sm:p-5 bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl shadow-xs hover:shadow-md hover:border-amber-300 dark:hover:border-amber-800/80 transition-all h-full flex flex-col justify-between group backdrop-blur-xs">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <span className="text-[10.5px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                   Laporan Tahunan Resmi
                 </span>
-                <div className="p-2 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-xl">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/10 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20 shadow-2xs group-hover:scale-105 transition-transform">
                   <Award className="w-4 h-4" />
                 </div>
               </div>
-              <p className="text-xl font-extrabold text-slate-900 dark:text-white mt-2">
-                Tervalidasi <span className="text-xs font-normal text-slate-500">Yayasan</span>
+              <p className="text-2xl font-bold font-mono tracking-tight text-slate-900 dark:text-slate-50 mt-3">
+                Tervalidasi <span className="text-xs font-medium text-amber-600 dark:text-amber-400 font-sans">Yayasan</span>
               </p>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Konsolidasi kinerja 6 divisi lengkap
-              </p>
+              <div className="flex items-center gap-1.5 mt-2">
+                <span className="px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-[10.5px] font-medium border border-amber-200/60 dark:border-amber-800/50">
+                  Konsolidasi 6 divisi terpadu
+                </span>
+              </div>
             </div>
-            <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
-              <span className="text-amber-600 font-semibold">Dewan Pembina</span>
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11.5px]">
+              <span className="text-amber-600 dark:text-amber-400 font-medium">Dewan Pembina</span>
               <button
                 type="button"
                 onClick={() => {
                   if (onOpenAnnualReport) onOpenAnnualReport();
                 }}
-                className="text-amber-600 dark:text-amber-400 font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
+                className="text-amber-600 dark:text-amber-400 font-bold hover:underline flex items-center gap-0.5 cursor-pointer group/link"
               >
                 <span>Buka Report</span>
-                <ArrowUpRight className="w-3 h-3" />
+                <ArrowUpRight className="w-3.5 h-3.5 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
               </button>
             </div>
           </div>
@@ -506,14 +553,21 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
             <LayoutGrid className="w-4 h-4" />
           </div>
           <div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 flex-wrap gap-y-1">
               <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
                 Tata Letak Kartu Divisi
               </h3>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                 {currentPresetName}
               </span>
-              <span className="text-[11px] text-slate-400 hidden md:inline">
+              <span
+                className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 flex items-center gap-1 cursor-default"
+                title={`Preferensi tersimpan di LocalStorage browser (${storageKey}) untuk akun ${currentUser.name}`}
+              >
+                <Database className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                <span>Tersimpan di LocalStorage</span>
+              </span>
+              <span className="text-[11px] text-slate-400 hidden lg:inline">
                 • {visibleCards.length} Kartu Aktif
               </span>
             </div>
@@ -628,31 +682,62 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
       </AnimatePresence>
 
       {/* Cards Grid */}
-      <div className={`grid ${getGridColsClass()} gap-4`}>
-        {visibleCards.map((card, index) => {
-          return (
-            <DashboardCardWrapper
-              key={card.id}
-              card={card}
-              index={index}
-              totalCards={visibleCards.length}
-              isConfigMode={isConfigMode}
-              onMove={(dir) => moveCard(card.id, dir)}
-              onToggleVisibility={() => {
-                toggleCardVisibility(card.id);
-                showToast(`Kartu "${card.title}" disembunyikan.`);
-              }}
-              onDragStart={handleDragStart}
-              onDragOver={handleDragOver}
-              onDragEnd={handleDragEnd}
-              onDrop={handleDrop}
-              isDragTarget={dragOverIndex === index}
+      <motion.div
+        layout
+        transition={{ layout: { type: 'spring', damping: 28, stiffness: 320 } }}
+        className={`grid ${getGridColsClass()} ${density === 'compact' ? 'gap-3' : 'gap-4'}`}
+      >
+        <AnimatePresence mode="popLayout">
+          {visibleCards.map((card, index) => {
+            return (
+              <DashboardCardWrapper
+                key={card.id}
+                card={card}
+                index={index}
+                totalCards={visibleCards.length}
+                isConfigMode={isConfigMode}
+                onMove={(dir) => moveCard(card.id, dir)}
+                onToggleVisibility={() => {
+                  toggleCardVisibility(card.id);
+                  showToast(`Kartu "${card.title}" disembunyikan & disimpan.`);
+                }}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDragEnd={handleDragEnd}
+                onDrop={handleDrop}
+                isDragTarget={dragOverIndex === index}
+              >
+                {renderCardContent(card)}
+              </DashboardCardWrapper>
+            );
+          })}
+
+          {visibleCards.length === 0 && (
+            <motion.div
+              layout
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="col-span-full p-8 text-center bg-white/80 dark:bg-slate-900/80 border border-dashed border-slate-300 dark:border-slate-800 rounded-3xl"
             >
-              {renderCardContent(card)}
-            </DashboardCardWrapper>
-          );
-        })}
-      </div>
+              <EyeOff className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Semua kartu sedang disembunyikan</p>
+              <p className="text-xs text-slate-500 mt-1">Buka Configurator atau klik Reset Default untuk memunculkan kembali metrik dashboard.</p>
+              <button
+                type="button"
+                onClick={() => {
+                  resetToDefault();
+                  showToast('Tata letak kartu dikembalikan ke default!');
+                }}
+                className="mt-3 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-semibold hover:bg-indigo-700 cursor-pointer inline-flex items-center gap-1.5 shadow-sm"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset ke Tata Letak Standar</span>
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
 
       {/* Notice if any cards are currently hidden */}
       {cards.some((c) => !c.visible) && (
@@ -680,13 +765,24 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
         cards={cards}
         columns={columns}
         activePreset={activePreset}
+        density={density}
+        lastSaved={lastSaved}
+        storageKey={storageKey}
+        userName={currentUser.name}
         onReorder={reorderCards}
         onMoveCard={moveCard}
         onToggleVisibility={toggleCardVisibility}
         onApplyPreset={applyPreset}
         onSetColumns={setColumns}
+        onSetDensity={setDensity}
         onResetToDefault={resetToDefault}
         onEnableInlineDragMode={() => setIsConfigMode(true)}
+        onExportConfig={exportConfigJson}
+        onImportConfig={importConfigJson}
+        onSaveExplicit={() => {
+          persistToLocalStorage();
+          showToast('Preferensi tata letak disimpan ke LocalStorage!');
+        }}
       />
 
       {/* Toast Notification */}

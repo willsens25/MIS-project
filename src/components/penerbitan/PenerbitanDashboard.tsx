@@ -28,6 +28,7 @@ import { BarcodeScannerModal } from '../modals/BarcodeScannerModal';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
+import { cleanIsbn, lookupIsbnOnline } from '../../utils/isbnLookup';
 
 export const PenerbitanDashboard: React.FC = () => {
   const {
@@ -85,6 +86,33 @@ export const PenerbitanDashboard: React.FC = () => {
     kategori: 'Filosofi',
     isbn: ''
   });
+  const [isAutoFillingIsbn, setIsAutoFillingIsbn] = useState(false);
+
+  const handleAutoFillFromIsbn = async (isbnRaw: string) => {
+    const cleaned = cleanIsbn(isbnRaw);
+    if (!cleaned || cleaned.length < 6) return;
+    setIsAutoFillingIsbn(true);
+    try {
+      const res = await lookupIsbnOnline(cleaned);
+      if (res && res.judul) {
+        setBookForm(prev => ({
+          ...prev,
+          isbn: cleaned,
+          judul: res.judul,
+          penulis: res.penulis || prev.penulis || 'Penulis Lamrimnesia',
+          kategori: res.kategori || prev.kategori || 'Filosofi',
+          harga_jual: prev.harga_jual > 0 ? prev.harga_jual : (res.estimasi_harga || 85000),
+          biaya_pokok: prev.biaya_pokok > 0 ? prev.biaya_pokok : (res.biaya_pokok || 34000)
+        }));
+        setToastMessage(`✨ Judul "${res.judul}" berhasil terisi otomatis dari ISBN!`);
+        setTimeout(() => setToastMessage(null), 3500);
+      }
+    } catch (err) {
+      console.warn('Auto-fill ISBN error:', err);
+    } finally {
+      setIsAutoFillingIsbn(false);
+    }
+  };
 
   // Ajukan Cetak Modal
   const [modalAjukanOpen, setModalAjukanOpen] = useState(false);
@@ -617,10 +645,63 @@ export const PenerbitanDashboard: React.FC = () => {
               className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-left animate-in zoom-in-95 duration-150"
               onClick={e => e.stopPropagation()}
             >
-              <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                {editingBook ? 'Edit Data Judul Buku' : 'Tambah Judul Buku Baru ke Katalog'}
+              <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center justify-between">
+                <span>{editingBook ? 'Edit Data Judul Buku' : 'Tambah Judul Buku Baru ke Katalog'}</span>
+                {!editingBook && (
+                  <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                    ⚡ Auto-Fill ISBN Aktif
+                  </span>
+                )}
               </h3>
               <form onSubmit={handleSaveBook} className="space-y-3 text-xs">
+                {/* ISBN Auto-fill row */}
+                <div className="p-3 bg-indigo-50/60 dark:bg-slate-800/80 rounded-xl border border-indigo-200/80 dark:border-indigo-900/50 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[11px] font-bold text-indigo-900 dark:text-indigo-200">
+                      Scan / Ketik ISBN (Otomatis Isi Judul):
+                    </label>
+                    {isAutoFillingIsbn && (
+                      <span className="text-[10px] text-indigo-600 animate-pulse font-medium">
+                        Mendeteksi data buku...
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      value={bookForm.isbn}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setBookForm(prev => ({ ...prev, isbn: val }));
+                        const cleaned = cleanIsbn(val);
+                        if (cleaned.length === 10 || cleaned.length === 13) {
+                          handleAutoFillFromIsbn(cleaned);
+                        }
+                      }}
+                      onPaste={e => {
+                        const pasted = e.clipboardData.getData('text');
+                        const cleaned = cleanIsbn(pasted);
+                        if (cleaned.length >= 6) {
+                          setTimeout(() => handleAutoFillFromIsbn(cleaned), 50);
+                        }
+                      }}
+                      placeholder="Scan barcode USB / ketik 10 atau 13 digit ISBN..."
+                      className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-700 rounded-lg font-mono text-xs text-slate-900 dark:text-white"
+                    />
+                    <button
+                      type="button"
+                      disabled={isAutoFillingIsbn || !bookForm.isbn.trim()}
+                      onClick={() => handleAutoFillFromIsbn(bookForm.isbn)}
+                      className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg font-semibold text-[11px] shrink-0 cursor-pointer"
+                    >
+                      {isAutoFillingIsbn ? 'Memuat...' : 'Auto-Isi'}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                    💡 Judul & penulis terisi otomatis begitu scan barcode atau ketik 10/13 digit ISBN.
+                  </p>
+                </div>
+
                 <div>
                   <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">Judul Lengkap Buku *</label>
                   <input
@@ -628,8 +709,8 @@ export const PenerbitanDashboard: React.FC = () => {
                     required
                     value={bookForm.judul}
                     onChange={e => setBookForm({ ...bookForm, judul: e.target.value })}
-                    placeholder="Contoh: Pembebasan di Tangan Kita"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+                    placeholder="Contoh: Pembebasan di Tangan Kita (otomatis terisi)"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium"
                   />
                 </div>
 
@@ -640,7 +721,7 @@ export const PenerbitanDashboard: React.FC = () => {
                     required
                     value={bookForm.penulis}
                     onChange={e => setBookForm({ ...bookForm, penulis: e.target.value })}
-                    placeholder="Contoh: Pabongka Rinpoche"
+                    placeholder="Contoh: Pabongka Rinpoche (otomatis terisi)"
                     className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl"
                   />
                 </div>
@@ -691,27 +772,15 @@ export const PenerbitanDashboard: React.FC = () => {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">Kategori Buku</label>
-                    <input
-                      type="text"
-                      value={bookForm.kategori}
-                      onChange={e => setBookForm({ ...bookForm, kategori: e.target.value })}
-                      placeholder="Contoh: Lamrim, Tantra, Meditasi"
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">ISBN</label>
-                    <input
-                      type="text"
-                      value={bookForm.isbn}
-                      onChange={e => setBookForm({ ...bookForm, isbn: e.target.value })}
-                      placeholder="978-602-..."
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono text-[11px]"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">Kategori Buku</label>
+                  <input
+                    type="text"
+                    value={bookForm.kategori}
+                    onChange={e => setBookForm({ ...bookForm, kategori: e.target.value })}
+                    placeholder="Contoh: Lamrim, Tantra, Meditasi, Filosofi"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+                  />
                 </div>
 
                 {!editingBook && (

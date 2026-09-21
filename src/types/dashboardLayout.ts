@@ -39,6 +39,10 @@ export interface DashboardLayoutSettings {
   columns: 2 | 3 | 4;
   cards: DashboardCardConfig[];
   activePreset?: LayoutPresetKey;
+  lastSaved?: string;
+  density?: 'comfortable' | 'compact';
+  savedByUserId?: number;
+  savedByUserName?: string;
 }
 
 export const DEFAULT_DASHBOARD_CARDS: DashboardCardConfig[] = [

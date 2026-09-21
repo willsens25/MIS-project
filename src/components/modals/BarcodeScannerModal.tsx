@@ -616,7 +616,21 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
                   <input
                     type="text"
                     value={isbnInput}
-                    onChange={(e) => setIsbnInput(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setIsbnInput(val);
+                      const cleaned = cleanIsbn(val);
+                      if (cleaned.length === 10 || cleaned.length === 13) {
+                        executeIsbnLookup(cleaned);
+                      }
+                    }}
+                    onPaste={(e) => {
+                      const pasted = e.clipboardData.getData('text');
+                      const cleaned = cleanIsbn(pasted);
+                      if (cleaned.length >= 6) {
+                        setTimeout(() => executeIsbnLookup(cleaned), 60);
+                      }
+                    }}
                     placeholder="Contoh: 9786026117304 atau scan barcode langsung..."
                     className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none tracking-wider"
                     autoFocus

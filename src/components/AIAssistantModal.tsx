@@ -124,7 +124,19 @@ const getDivisionQuickPrompts = (divisiId: number) => {
 };
 
 export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({ isOpen, onClose }) => {
-  const { books, orders, mutasis, identitasList, pengajuans, accounts, currentUser, divisiList, currentSubTab } = useApp();
+  const {
+    books,
+    orders,
+    mutasis,
+    identitasList,
+    pengajuans,
+    accounts,
+    currentUser,
+    divisiList,
+    currentSubTab,
+    setAiAppState,
+    triggerTaskSuccess
+  } = useApp();
   const [prompt, setPrompt] = useState('');
 
   const currentDivisi = divisiList.find(d => d.id === currentUser.divisi_id);
@@ -210,6 +222,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({ isOpen, onCl
     setMessages(prev => [...prev, userMessage, { role: 'assistant' as const, content: '' }]);
     setPrompt('');
     setIsLoading(true);
+    setAiAppState('thinking');
 
     // Build rich, grounded system data summary so AI can answer specific questions with real facts
     const booksCatalogSummary = books.slice(0, 15).map(b => 
@@ -345,6 +358,9 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
           }
           return updated;
         });
+        triggerTaskSuccess('Respon AI selesai');
+      } else {
+        triggerTaskSuccess('Respon AI siap ditinjau!');
       }
     } catch (streamError) {
       console.warn('Streaming error, falling back to standard API:', streamError);
@@ -368,7 +384,9 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
           }
           return updated;
         });
+        triggerTaskSuccess('Respon AI siap!');
       } catch (err: any) {
+        setAiAppState('idle');
         setMessages(prev => {
           const updated = [...prev];
           const lastIdx = updated.length - 1;
@@ -380,6 +398,7 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
       }
     } finally {
       setIsLoading(false);
+      setAiAppState(prev => prev === 'thinking' ? 'idle' : prev);
     }
   };
 

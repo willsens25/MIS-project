@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import {
   Divisi,
   User,
@@ -104,6 +104,12 @@ interface AppContextType {
   logisticLogs: LogisticLog[];
   productionLogs: ProductionLog[];
   activityLogs: ActivityLog[];
+
+  // AI & App Task Reactive State
+  aiAppState: 'idle' | 'thinking' | 'success';
+  setAiAppState: React.Dispatch<React.SetStateAction<'idle' | 'thinking' | 'success'>>;
+  triggerTaskSuccess: (customMessage?: string) => void;
+  lastCompletedTaskMessage: string;
 
   // Helper & Mutation Actions
   recordActivity: (aksi: string, model: string, keterangan: string, customDivisiId?: DivisionId, customUserName?: string) => void;
@@ -494,6 +500,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     recordActivity('Ganti Divisi', 'User', `Beralih ke divisi: ${divisiList.find(d => d.id === divisiId)?.nama_divisi}`);
   };
 
+  // AI & App Task Reactive State
+  const [aiAppState, setAiAppState] = useState<'idle' | 'thinking' | 'success'>('idle');
+  const [lastCompletedTaskMessage, setLastCompletedTaskMessage] = useState<string>('');
+  const successTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const triggerTaskSuccess = useCallback((customMessage?: string) => {
+    if (successTimerRef.current) {
+      clearTimeout(successTimerRef.current);
+    }
+    setLastCompletedTaskMessage(customMessage || 'Tugas selesai!');
+    setAiAppState('success');
+    successTimerRef.current = setTimeout(() => {
+      setAiAppState('idle');
+      setLastCompletedTaskMessage('');
+    }, 2800);
+  }, []);
+
   const recordActivity = (aksi: string, model: string, keterangan: string, customDivisiId?: DivisionId, customUserName?: string) => {
     const targetDivisiId = customDivisiId || currentUser.divisi_id;
     const currentDivisi = divisiList.find(d => d.id === targetDivisiId);
@@ -511,6 +534,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       created_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
     };
     setActivityLogs(prev => [newLog, ...prev]);
+
+    // Reactive mascot feedback on completed operational tasks
+    if (aksi !== 'Ganti Divisi' && aksi !== 'Auto-Logout Sesi' && aksi !== 'Muat Data Sampel') {
+      triggerTaskSuccess(`${aksi} Berhasil!`);
+    }
   };
 
   // Book CRUD
@@ -1548,6 +1576,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         logisticLogs,
         productionLogs,
         activityLogs,
+        aiAppState,
+        setAiAppState,
+        triggerTaskSuccess,
+        lastCompletedTaskMessage,
         recordActivity,
         addBook,
         updateBook,
