@@ -15,7 +15,9 @@ import {
   ActivityLog,
   Order,
   SalesChannel,
-  Expedition
+  Expedition,
+  BazaarEvent,
+  BazaarAllocationItem
 } from '../types';
 
 export const INITIAL_DIVISI: Divisi[] = [
@@ -66,6 +68,7 @@ export const INITIAL_PENYALURAN: Penyaluran[] = [];
 export const INITIAL_LOGISTIC_LOGS: LogisticLog[] = [];
 export const INITIAL_PRODUCTION_LOGS: ProductionLog[] = [];
 export const INITIAL_ACTIVITY_LOGS: ActivityLog[] = [];
+export const INITIAL_BAZAAR_EVENTS: BazaarEvent[] = [];
 
 // ==========================================
 // DEMO / SAMPLE DATA (Available on request)
@@ -440,4 +443,74 @@ export const INITIAL_EXPEDITIONS: Expedition[] = [
   { id: 13, nama_ekspedisi: 'Indah Logistik Cargo', kode: 'INDAH-CRG', kategori: 'Cargo / Berat', estimasi: '4-7 Hari', aktif: true },
   { id: 14, nama_ekspedisi: 'Ambil Sendiri di Gudang', kode: 'PICKUP-OFFLINE', kategori: 'Internal / Ambil Sendiri', estimasi: 'Hari H', aktif: true },
   { id: 15, nama_ekspedisi: 'Kurir Internal Yayasan', kode: 'KURIR-INTERNAL', kategori: 'Internal / Ambil Sendiri', estimasi: '1-2 Hari', aktif: true }
+];
+
+export const DEMO_BAZAAR_EVENTS: BazaarEvent[] = [
+  {
+    id: 1,
+    nama_event: 'Bazar Waisak Nasional Jakarta 2026',
+    lokasi: 'JIExpo Kemayoran Hall B, Jakarta Pusat',
+    tanggal_mulai: '2026-09-25',
+    tanggal_selesai: '2026-09-28',
+    penanggung_jawab: 'Diana Wijaya (Marketing)',
+    kontak_pic: '0812-3456-7893',
+    status: 'Sedang Berlangsung',
+    items: [
+      { buku_id: 1, judul_buku: 'Pembebasan di Tangan Kita (Lamrim)', qty_dibawa: 25, qty_terjual: 14, qty_kembali: 11, qty_rusak_hilang: 0, harga_satuan: 145000, catatan: 'Best seller di stan utama' },
+      { buku_id: 2, judul_buku: 'Untaian Permata Ajaran Buddha', qty_dibawa: 20, qty_terjual: 12, qty_kembali: 8, qty_rusak_hilang: 0, harga_satuan: 95000 },
+      { buku_id: 3, judul_buku: 'Bodhicaryavatara (Panduan Hidup Bodhisattva)', qty_dibawa: 15, qty_terjual: 9, qty_kembali: 6, qty_rusak_hilang: 0, harga_satuan: 120000 },
+      { buku_id: 6, judul_buku: 'Transformasi Pikiran Delapan Bait (Lojong)', qty_dibawa: 30, qty_terjual: 22, qty_kembali: 8, qty_rusak_hilang: 0, harga_satuan: 55000, catatan: 'Buku saku favorit pengunjung' }
+    ],
+    catatan: 'Stand B-12 berdekatan dengan panggung utama puja akbar. Tersedia pembayaran QRIS & Tunai.',
+    total_buku_dibawa: 90,
+    total_buku_terjual: 57,
+    total_buku_kembali: 33,
+    total_omzet: 5460000,
+    stok_gudang_dipotong: true,
+    created_at: '2026-09-20 09:00:00'
+  },
+  {
+    id: 2,
+    nama_event: 'Retreat Meditasi Lamrim Nusantara',
+    lokasi: 'Vihara Mendut & Padepokan Magelang, Jawa Tengah',
+    tanggal_mulai: '2026-10-10',
+    tanggal_selesai: '2026-10-14',
+    penanggung_jawab: 'Hendra Gunawan (Logistik)',
+    kontak_pic: '0812-3456-7895',
+    status: 'Buku Dialokasikan',
+    items: [
+      { buku_id: 1, judul_buku: 'Pembebasan di Tangan Kita (Lamrim)', qty_dibawa: 15, qty_terjual: 0, qty_kembali: 15, qty_rusak_hilang: 0, harga_satuan: 145000 },
+      { buku_id: 4, judul_buku: 'Meditasi & Jalan Menuju Ketenangan Batin', qty_dibawa: 25, qty_terjual: 0, qty_kembali: 25, qty_rusak_hilang: 0, harga_satuan: 80000 },
+      { buku_id: 8, judul_buku: 'Seni Welas Asih Sehari-hari', qty_dibawa: 20, qty_terjual: 0, qty_kembali: 20, qty_rusak_hilang: 0, harga_satuan: 90000 }
+    ],
+    catatan: 'Buku telah dipacking dalam 2 kardus tersegel rapi untuk dibawa tim kendaraan darat.',
+    total_buku_dibawa: 60,
+    total_buku_terjual: 0,
+    total_buku_kembali: 60,
+    total_omzet: 0,
+    stok_gudang_dipotong: true,
+    created_at: '2026-09-18 14:30:00'
+  },
+  {
+    id: 3,
+    nama_event: 'Pameran Buku Buddhis Surabaya',
+    lokasi: 'Grand City Mall Convention, Surabaya',
+    tanggal_mulai: '2026-08-20',
+    tanggal_selesai: '2026-08-23',
+    penanggung_jawab: 'Diana Wijaya (Marketing)',
+    kontak_pic: '0812-3456-7893',
+    status: 'Selesai Rekonsiliasi',
+    items: [
+      { buku_id: 3, judul_buku: 'Bodhicaryavatara (Panduan Hidup Bodhisattva)', qty_dibawa: 20, qty_terjual: 16, qty_kembali: 3, qty_rusak_hilang: 1, harga_satuan: 120000, catatan: '1 eks cacat cover saat dipajang' },
+      { buku_id: 7, judul_buku: 'Dharmapada Bergambar Edisi Nusantara', qty_dibawa: 12, qty_terjual: 10, qty_kembali: 2, qty_rusak_hilang: 0, harga_satuan: 175000 },
+      { buku_id: 10, judul_buku: 'Jalan Cahaya Pencerahan Batin', qty_dibawa: 15, qty_terjual: 12, qty_kembali: 3, qty_rusak_hilang: 0, harga_satuan: 130000 }
+    ],
+    catatan: 'Acara sukses besar, rekonsiliasi selesai, 8 buku sisa telah kembali ke gudang pusat.',
+    total_buku_dibawa: 47,
+    total_buku_terjual: 38,
+    total_buku_kembali: 8,
+    total_omzet: 5230000,
+    stok_gudang_dipotong: true,
+    created_at: '2026-08-15 10:00:00'
+  }
 ];

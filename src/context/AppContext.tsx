@@ -18,7 +18,9 @@ import {
   DivisionId,
   SalesChannel,
   Expedition,
-  ColorPresetId
+  ColorPresetId,
+  BazaarEvent,
+  BazaarAllocationItem
 } from '../types';
 import { DEFAULT_COLOR_PRESET } from '../lib/themePresets';
 import {
@@ -39,6 +41,7 @@ import {
   INITIAL_ACTIVITY_LOGS,
   INITIAL_SALES_CHANNELS,
   INITIAL_EXPEDITIONS,
+  INITIAL_BAZAAR_EVENTS,
   DEMO_USERS,
   DEMO_ACCOUNTS,
   DEMO_BOOKS,
@@ -51,7 +54,8 @@ import {
   DEMO_PENYALURAN,
   DEMO_LOGISTIC_LOGS,
   DEMO_PRODUCTION_LOGS,
-  DEMO_ACTIVITY_LOGS
+  DEMO_ACTIVITY_LOGS,
+  DEMO_BAZAAR_EVENTS
 } from '../lib/initialData';
 import {
   hashPasswordServer,
@@ -104,6 +108,7 @@ interface AppContextType {
   logisticLogs: LogisticLog[];
   productionLogs: ProductionLog[];
   activityLogs: ActivityLog[];
+  bazaarEvents: BazaarEvent[];
 
   // AI & App Task Reactive State
   aiAppState: 'idle' | 'thinking' | 'success';
@@ -140,6 +145,13 @@ interface AppContextType {
   addExpedition: (expedition: Omit<Expedition, 'id'>) => { success: boolean; message: string; expedition?: Expedition };
   updateExpedition: (id: number, expedition: Partial<Expedition>) => void;
   deleteExpedition: (id: number) => void;
+
+  // Bazaar & Consignment Event actions
+  addBazaarEvent: (event: Omit<BazaarEvent, 'id' | 'created_at' | 'total_buku_dibawa' | 'total_buku_terjual' | 'total_buku_kembali' | 'total_omzet' | 'stok_gudang_dipotong'>) => BazaarEvent;
+  updateBazaarEvent: (id: number, updates: Partial<BazaarEvent>) => void;
+  deleteBazaarEvent: (id: number) => { success: boolean; message: string };
+  allocateBazaarBooks: (eventId: number, items: BazaarAllocationItem[]) => { success: boolean; message: string };
+  reconcileBazaarEvent: (eventId: number, items: BazaarAllocationItem[], notes?: string) => { success: boolean; message: string };
 
   // Finance actions
   addMutasi: (account_id: number, nama_kategori: string, tipe: 'Masuk' | 'Keluar', nominal: number, keterangan: string, tanggal?: string) => void;
@@ -297,6 +309,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [penyalurans, setPenyalurans] = useState<Penyaluran[]>(() => getStoredItem('mis_penyalurans', INITIAL_PENYALURAN));
   const [logisticLogs, setLogisticLogs] = useState<LogisticLog[]>(() => getStoredItem('mis_logistic_logs', INITIAL_LOGISTIC_LOGS));
   const [productionLogs, setProductionLogs] = useState<ProductionLog[]>(() => getStoredItem('mis_production_logs', INITIAL_PRODUCTION_LOGS));
+  const [bazaarEvents, setBazaarEvents] = useState<BazaarEvent[]>(() => {
+    const stored = getStoredItem<BazaarEvent[]>('mis_bazaar_events', INITIAL_BAZAAR_EVENTS);
+    if (!stored || stored.length === 0) {
+      return INITIAL_BAZAAR_EVENTS;
+    }
+    return stored;
+  });
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(() => {
     const stored = getStoredItem<ActivityLog[]>('mis_activity_logs', INITIAL_ACTIVITY_LOGS);
     if (!stored || stored.length === 0) {
@@ -354,6 +373,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => { setStoredItem('mis_logistic_logs', logisticLogs); }, [logisticLogs]);
   useEffect(() => { setStoredItem('mis_production_logs', productionLogs); }, [productionLogs]);
   useEffect(() => { setStoredItem('mis_activity_logs', activityLogs); }, [activityLogs]);
+  useEffect(() => { setStoredItem('mis_bazaar_events', bazaarEvents); }, [bazaarEvents]);
 
   // Synchronize theme to DOM and localStorage
   useEffect(() => {
@@ -797,6 +817,156 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const exp = expeditions.find(e => e.id === id);
     setExpeditions(prev => prev.filter(e => e.id !== id));
     recordActivity('Hapus Ekspedisi', 'Expedition', `Menghapus ekspedisi: ${exp?.nama_ekspedisi}`);
+  };
+
+  // Bazaar & Consignment Event Operations
+  const addBazaarEvent = (eventData: Omit<BazaarEvent, 'id' | 'created_at' | 'total_buku_dibawa' | 'total_buku_terjual' | 'total_buku_kembali' | 'total_omzet' | 'stok_gudang_dipotong'>): BazaarEvent => {
+    const totalDibawa = (eventData.items || []).reduce((sum, item) => sum + (item.qty_dibawa || 0), 0);
+    const totalTerjual = (eventData.items || []).reduce((sum, item) => sum + (item.qty_terjual || 0), 0);
+    const totalKembali = (eventData.items || []).reduce((sum, item) => sum + (item.qty_kembali || 0), 0);
+    const newEvent: BazaarEvent = {
+      ...eventData,
+      id: Date.now(),
+      total_buku_dibawa: totalDibawa,
+      total_buku_terjual: totalTerjual,
+      total_buku_kembali: totalKembali,
+      total_omzet: 0,
+      stok_gudang_dipotong: false,
+      created_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    };
+    setBazaarEvents(prev => [newEvent, ...prev]);
+    recordActivity('Tambah Agenda Bazaar', 'BazaarEvent', `Mendaftarkan agenda bazaar "${newEvent.nama_event}" di ${newEvent.lokasi} (${newEvent.tanggal_mulai} s/d ${newEvent.tanggal_selesai}).`, 4);
+    triggerTaskSuccess(`Agenda Bazaar "${newEvent.nama_event}" berhasil didaftarkan!`);
+    return newEvent;
+  };
+
+  const updateBazaarEvent = (id: number, updates: Partial<BazaarEvent>) => {
+    setBazaarEvents(prev => prev.map(ev => {
+      if (ev.id === id) {
+        const updated = { ...ev, ...updates };
+        if (updates.items) {
+          updated.total_buku_dibawa = updates.items.reduce((s, i) => s + (i.qty_dibawa || 0), 0);
+          updated.total_buku_terjual = updates.items.reduce((s, i) => s + (i.qty_terjual || 0), 0);
+          updated.total_buku_kembali = updates.items.reduce((s, i) => s + (i.qty_kembali || 0), 0);
+          updated.total_omzet = updates.items.reduce((s, i) => s + ((i.qty_terjual || 0) * (i.harga_satuan || 0)), 0);
+        }
+        return updated;
+      }
+      return ev;
+    }));
+  };
+
+  const deleteBazaarEvent = (id: number): { success: boolean; message: string } => {
+    const target = bazaarEvents.find(e => e.id === id);
+    if (!target) return { success: false, message: 'Acara bazaar tidak ditemukan' };
+    
+    // Jika buku telah dialokasikan dan belum selesai rekonsiliasi, kembalikan stok tersisa ke gudang
+    if (target.stok_gudang_dipotong && target.status !== 'Selesai Rekonsiliasi') {
+      target.items.forEach(item => {
+        const remainingToReturn = (item.qty_dibawa || 0) - (item.qty_terjual || 0);
+        if (remainingToReturn > 0) {
+          setBooks(prev => prev.map(b => b.id === item.buku_id ? { ...b, stok_gudang: b.stok_gudang + remainingToReturn } : b));
+        }
+      });
+    }
+
+    setBazaarEvents(prev => prev.filter(e => e.id !== id));
+    recordActivity('Hapus Agenda Bazaar', 'BazaarEvent', `Menghapus agenda bazaar "${target.nama_event}".`, 4);
+    triggerTaskSuccess(`Agenda Bazaar "${target.nama_event}" telah dihapus.`);
+    return { success: true, message: 'Agenda bazaar berhasil dihapus' };
+  };
+
+  const allocateBazaarBooks = (eventId: number, items: BazaarAllocationItem[]): { success: boolean; message: string } => {
+    const target = bazaarEvents.find(e => e.id === eventId);
+    if (!target) return { success: false, message: 'Acara bazaar tidak ditemukan' };
+
+    // Validasi ketersediaan stok buku di gudang
+    for (const item of items) {
+      const b = books.find(book => book.id === item.buku_id);
+      if (b && b.stok_gudang < item.qty_dibawa) {
+        return {
+          success: false,
+          message: `Stok gudang tidak mencukupi untuk "${b.judul}". Tersedia: ${b.stok_gudang}, diminta: ${item.qty_dibawa}.`
+        };
+      }
+    }
+
+    // Potong stok riil di gudang dan catat ke Logistic Logs
+    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    items.forEach(item => {
+      setBooks(prev => prev.map(b => b.id === item.buku_id ? { ...b, stok_gudang: Math.max(0, b.stok_gudang - item.qty_dibawa) } : b));
+      
+      const b = books.find(book => book.id === item.buku_id);
+      const newLogisticLog: LogisticLog = {
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        buku_id: item.buku_id,
+        qty_keluar: item.qty_dibawa,
+        tujuan: `Alokasi Stan: ${target.nama_event}`,
+        keterangan: `Pengeluaran stok konsinyasi bazaar (${item.qty_dibawa} eks - ${b?.judul || 'Buku'})`,
+        created_at: timestamp
+      };
+      setLogisticLogs(prev => [newLogisticLog, ...prev]);
+    });
+
+    const totalDibawa = items.reduce((s, i) => s + (i.qty_dibawa || 0), 0);
+    setBazaarEvents(prev => prev.map(e => {
+      if (e.id === eventId) {
+        return {
+          ...e,
+          items,
+          status: 'Sedang Berlangsung',
+          stok_gudang_dipotong: true,
+          total_buku_dibawa: totalDibawa,
+          total_buku_kembali: totalDibawa
+        };
+      }
+      return e;
+    }));
+
+    recordActivity('Alokasi Buku Bazaar', 'BazaarEvent', `Mengeluarkan ${totalDibawa} eksemplar buku dari gudang untuk stan "${target.nama_event}".`, 4);
+    triggerTaskSuccess(`Berhasil mengalokasikan ${totalDibawa} buku ke ${target.nama_event}! Stok gudang telah diperbarui.`);
+    return { success: true, message: 'Buku berhasil dialokasikan dari gudang' };
+  };
+
+  const reconcileBazaarEvent = (eventId: number, items: BazaarAllocationItem[], notes?: string): { success: boolean; message: string } => {
+    const target = bazaarEvents.find(e => e.id === eventId);
+    if (!target) return { success: false, message: 'Acara bazaar tidak ditemukan' };
+
+    let totalTerjual = 0;
+    let totalKembali = 0;
+    let totalOmzet = 0;
+
+    // Kembalikan sisa buku yang kembali ke stok fisik gudang
+    items.forEach(item => {
+      const b = books.find(book => book.id === item.buku_id);
+      const unitPrice = item.harga_satuan || b?.harga_jual || 0;
+      totalTerjual += (item.qty_terjual || 0);
+      totalKembali += (item.qty_kembali || 0);
+      totalOmzet += (item.qty_terjual || 0) * unitPrice;
+
+      if (item.qty_kembali > 0) {
+        setBooks(prev => prev.map(book => book.id === item.buku_id ? { ...book, stok_gudang: book.stok_gudang + item.qty_kembali } : book));
+      }
+    });
+
+    setBazaarEvents(prev => prev.map(e => {
+      if (e.id === eventId) {
+        return {
+          ...e,
+          items,
+          status: 'Selesai Rekonsiliasi',
+          total_buku_terjual: totalTerjual,
+          total_buku_kembali: totalKembali,
+          total_omzet: totalOmzet,
+          catatan: notes ? (e.catatan ? `${e.catatan} | Rekonsiliasi: ${notes}` : notes) : e.catatan
+        };
+      }
+      return e;
+    }));
+
+    recordActivity('Rekonsiliasi Bazaar Selesai', 'BazaarEvent', `Rekonsiliasi "${target.nama_event}": ${totalTerjual} buku terjual (Omzet: Rp ${totalOmzet.toLocaleString('id-ID')}), ${totalKembali} buku kembali ke gudang.`, 4);
+    triggerTaskSuccess(`Rekonsiliasi "${target.nama_event}" tuntas! ${totalKembali} buku telah dikembalikan ke stok gudang.`);
+    return { success: true, message: 'Rekonsiliasi acara bazaar berhasil diselesaikan' };
   };
 
   // Order & POS
@@ -1480,6 +1650,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.removeItem('mis_wa_logs');
       localStorage.removeItem('mis_accounts');
       localStorage.removeItem('mis_users');
+      localStorage.removeItem('mis_bazaar_events');
       localStorage.removeItem('mis_current_user');
       localStorage.setItem('mis_is_auth', 'false');
       localStorage.setItem('mis_data_version', CLEAN_STORAGE_VERSION);
@@ -1502,6 +1673,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActivityLogs(DEMO_ACTIVITY_LOGS);
     setAccounts(DEMO_ACCOUNTS);
     setUsersList(DEMO_USERS);
+    setBazaarEvents(DEMO_BAZAAR_EVENTS);
     setCurrentUser(DEMO_USERS[0]);
     setIsAuthenticated(true);
     setAuthModalMode('login');
@@ -1520,6 +1692,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem('mis_activity_logs', JSON.stringify(DEMO_ACTIVITY_LOGS));
       localStorage.setItem('mis_accounts', JSON.stringify(DEMO_ACCOUNTS));
       localStorage.setItem('mis_users', JSON.stringify(DEMO_USERS));
+      localStorage.setItem('mis_bazaar_events', JSON.stringify(DEMO_BAZAAR_EVENTS));
       localStorage.setItem('mis_current_user', JSON.stringify(DEMO_USERS[0]));
       localStorage.setItem('mis_is_auth', 'true');
       localStorage.setItem('mis_data_version', CLEAN_STORAGE_VERSION);
@@ -1604,6 +1777,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addExpedition,
         updateExpedition,
         deleteExpedition,
+        bazaarEvents,
+        addBazaarEvent,
+        updateBazaarEvent,
+        deleteBazaarEvent,
+        allocateBazaarBooks,
+        reconcileBazaarEvent,
         addMutasi,
         updateMutasi,
         deleteMutasi,

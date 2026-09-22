@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Volume2, VolumeX, Check, Sparkles, Loader2 } from 'lucide-react';
 import { AppProvider, useApp } from './context/AppContext';
@@ -21,9 +21,199 @@ import { useAutoLogout } from './hooks/useAutoLogout';
 import { DivisionId } from './types';
 import { playPleasantClickSound, playPleasantSuccessChime, isEnvironmentMuted, toggleSoundMuted } from './utils/soundEffects';
 
+interface MascotParticle {
+  id: number;
+  x: number;
+  y: number;
+  size: number;
+  color: string;
+  delay: number;
+  isSparkle?: boolean;
+}
+
+const MASCOT_HOVER_PARTICLES: MascotParticle[] = [
+  { id: 1, x: 0, y: -38, size: 5, color: 'bg-teal-400 dark:bg-teal-300 shadow-teal-400/60', delay: 0 },
+  { id: 2, x: 26, y: -26, size: 4.5, color: 'bg-amber-400 dark:bg-amber-300 shadow-amber-400/60', delay: 0.03, isSparkle: true },
+  { id: 3, x: 38, y: 0, size: 5, color: 'bg-cyan-400 dark:bg-cyan-300 shadow-cyan-400/60', delay: 0.01 },
+  { id: 4, x: 28, y: 28, size: 4, color: 'bg-emerald-400 dark:bg-emerald-300 shadow-emerald-400/60', delay: 0.04 },
+  { id: 5, x: 0, y: 38, size: 5, color: 'bg-teal-300 dark:bg-teal-200 shadow-teal-300/60', delay: 0.02 },
+  { id: 6, x: -28, y: 28, size: 4.5, color: 'bg-violet-400 dark:bg-violet-300 shadow-violet-400/60', delay: 0.05, isSparkle: true },
+  { id: 7, x: -38, y: 0, size: 5, color: 'bg-amber-300 dark:bg-amber-200 shadow-amber-300/60', delay: 0.01 },
+  { id: 8, x: -26, y: -26, size: 4, color: 'bg-sky-400 dark:bg-sky-300 shadow-sky-400/60', delay: 0.03 },
+  { id: 9, x: 14, y: -44, size: 3.5, color: 'bg-rose-300 dark:bg-rose-200 shadow-rose-300/60', delay: 0.06 },
+  { id: 10, x: -14, y: -44, size: 3.5, color: 'bg-yellow-300 dark:bg-yellow-200 shadow-yellow-300/60', delay: 0.04, isSparkle: true },
+];
+
+interface DivisionContextInfo {
+  divisionName: string;
+  divisionCode: string;
+  badgeColor: string;
+  dotColor: string;
+  activeComponentLabel: string;
+  primaryShortcut: string; // e.g. 'Query Finance', 'Check Production'
+  suggestedPrompt: string;
+  secondaryShortcut?: string;
+  secondaryPrompt?: string;
+}
+
+const getDivisionContextInfo = (divisiId: number, subTab: string): DivisionContextInfo => {
+  switch (divisiId) {
+    case 2: // Bendahara / Finance
+      return {
+        divisionName: 'Bendahara / Finance',
+        divisionCode: 'KEU',
+        badgeColor: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+        dotColor: 'bg-emerald-500',
+        activeComponentLabel:
+          subTab === 'mutasi' ? 'Jurnal Mutasi' :
+          subTab === 'persetujuan' ? 'Persetujuan Cetak' :
+          subTab === 'laporan' ? 'Laporan Kas' : 'Kas & Bank',
+        primaryShortcut: 'Query Finance',
+        suggestedPrompt: 'Berapa saldo kas aktif dan total mutasi bulan ini?',
+        secondaryShortcut: 'Cek Verifikasi Invoice',
+        secondaryPrompt: 'Cek invoice yang belum diverifikasi atau pending pembayaran'
+      };
+    case 3: // Penerbitan
+      return {
+        divisionName: 'Penerbitan & Editorial',
+        divisionCode: 'PNB',
+        badgeColor: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30',
+        dotColor: 'bg-indigo-500',
+        activeComponentLabel:
+          subTab === 'katalog' ? 'Katalog & ISBN' :
+          subTab === 'pengajuan' ? 'Pengajuan Cetak' :
+          subTab === 'hpp' ? 'Kalkulator HPP' : 'Katalog Buku',
+        primaryShortcut: 'Query Penerbitan',
+        suggestedPrompt: 'Cek judul buku dengan margin HPP dan stok paling optimal',
+        secondaryShortcut: 'Cek Status ISBN',
+        secondaryPrompt: 'Rangkum buku yang belum memiliki nomor ISBN terdaftar'
+      };
+    case 4: // Marketing & Sales
+      return {
+        divisionName: 'Marketing & Distribution',
+        divisionCode: 'MAD',
+        badgeColor: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30',
+        dotColor: 'bg-amber-500',
+        activeComponentLabel:
+          subTab === 'bazaar' ? 'Agenda Bazaar & Konsinyasi' :
+          subTab === 'event_pos' ? 'Kasir Event Bazaar' :
+          subTab === 'pos' ? 'POS Kasir Pesanan' :
+          subTab === 'promos' ? 'Kupon Promo' :
+          subTab === 'saluran' ? 'Saluran & Ekspedisi' :
+          subTab === 'whatsapp' ? 'Otomatisasi WhatsApp' :
+          subTab === 'grafik' ? 'Grafik Penjualan' : 'Pesanan & Invoice',
+        primaryShortcut: subTab === 'bazaar' ? 'Cek Stok Bazaar' : 'Query Marketing',
+        suggestedPrompt: subTab === 'bazaar'
+          ? 'Rangkum status alokasi buku ke stan bazaar dan hitung sisa buku yang belum kembali'
+          : 'Rangkum pesanan terbaru dan kupon promo paling aktif',
+        secondaryShortcut: subTab === 'bazaar' ? 'Rekonsiliasi Stan' : 'Draft Promo WA',
+        secondaryPrompt: subTab === 'bazaar'
+          ? 'Bagaimana alur rekonsiliasi sisa buku pameran dan pengembalian stok ke gudang?'
+          : 'Buatkan draf penawaran promo WhatsApp untuk pelanggan'
+      };
+    case 5: // Produksi
+      return {
+        divisionName: 'Produksi Percetakan',
+        divisionCode: 'PRD',
+        badgeColor: 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/30',
+        dotColor: 'bg-orange-500',
+        activeComponentLabel:
+          subTab === 'spk' ? 'SPK Pabrikasi' :
+          subTab === 'qc' ? 'Quality Control' :
+          subTab === 'logs' ? 'Log Pabrikasi' : 'Jadwal Percetakan',
+        primaryShortcut: 'Check Production',
+        suggestedPrompt: 'Rangkum status antrean SPK cetak dan estimasi selesai produksi',
+        secondaryShortcut: 'Cek Kebutuhan Cetak',
+        secondaryPrompt: 'Buku apa saja yang mendesak diajukan cetak ulang?'
+      };
+    case 6: // Logistik
+      return {
+        divisionName: 'Logistik & Gudang',
+        divisionCode: 'LOG',
+        badgeColor: 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border-cyan-500/30',
+        dotColor: 'bg-cyan-500',
+        activeComponentLabel:
+          subTab === 'antrean' ? 'Antrean Packing' :
+          subTab === 'stok' ? 'Stok Gudang Riil' :
+          subTab === 'ekspedisi' ? 'Ekspedisi Pengiriman' : 'Surat Jalan Gudang',
+        primaryShortcut: 'Check Logistics',
+        suggestedPrompt: 'Berapa pesanan siap kirim dan buku dengan stok menipis (<20 pcs)?',
+        secondaryShortcut: 'Draft Surat Jalan',
+        secondaryPrompt: 'Buatkan draf surat jalan pengiriman ekspedisi hari ini'
+      };
+    case 1: // Direktorat
+    default:
+      return {
+        divisionName: 'Direktorat & HRD',
+        divisionCode: 'DIR',
+        badgeColor: 'bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/30',
+        dotColor: 'bg-teal-500',
+        activeComponentLabel:
+          subTab === 'audit' ? 'Log Audit Aktivitas' :
+          subTab === 'users' ? 'Manajemen Staf' :
+          subTab === 'kpi' ? 'KPI & Evaluasi' : 'Ringkasan Eksekutif',
+        primaryShortcut: 'Query Direktorat',
+        suggestedPrompt: 'Rangkum performa operasional seluruh divisi dan peringatan penting',
+        secondaryShortcut: 'Audit Aktivitas',
+        secondaryPrompt: 'Tampilkan rekap aktivitas pengguna terbaru lintas divisi'
+      };
+  }
+};
+
+const getDivisionGreetingOptions = (userName: string, divisiId: number): string[] => {
+  const firstName = userName ? userName.split(' ')[0] : 'Rekan';
+  switch (divisiId) {
+    case 2: // Finance
+      return [
+        `Halo ${firstName}! Butuh cek saldo kas, rekening bank, atau verifikasi invoice pending?`,
+        `Siap bantu hitung arus kas & rekonsiliasi mutasi keuangan Lamrimnesia!`,
+        `Halo ${firstName}! Ada invoice bazaar atau pengajuan dana cetak yang mau divalidasi?`,
+        `Keuangan aman, operasional lancar! Butuh saya rangkumkan kas aktif hari ini?`
+      ];
+    case 3: // Penerbitan
+      return [
+        `Halo ${firstName}! Mau cek kalkulator HPP, status ISBN, atau katalog buku Dharma?`,
+        `Siap bantu draf pengajuan cetak dan kurasi naskah penerbitan Lamrimnesia!`,
+        `Halo ${firstName}! Ada judul buku yang stoknya menipis dan perlu dicetak ulang?`,
+        `Semangat berkarya ${firstName}! Butuh saya carikan informasi naskah atau pengarang?`
+      ];
+    case 4: // Marketing
+      return [
+        `Halo ${firstName}! Mau cek pesanan terbaru, kupon diskon, atau buat draf promo WhatsApp?`,
+        `Siap bantu strategi penawaran & analisis omzet penjualan buku Dharma hari ini!`,
+        `Halo ${firstName}! Penjualan lancar? Saya siap bantu periksa transaksi kasir POS & bazaar.`,
+        `Butuh ide bundling paket buku Dharma untuk pembaca setia? Tanyakan saja!`
+      ];
+    case 5: // Produksi
+      return [
+        `Halo ${firstName}! Siap pantau antrean SPK fisik & estimasi jadwal selesai percetakan!`,
+        `Ada jadwal cetak atau log pabrikasi percetakan yang perlu diperiksa hari ini?`,
+        `Halo ${firstName}! Butuh hitung estimasi kebutuhan eksemplar cetak ulang buku?`,
+        `Kualitas cetak terjaga, manfaat meluas! Ada SPK yang mau kita verifikasi bersama?`
+      ];
+    case 6: // Logistik
+      return [
+        `Halo ${firstName}! Butuh cek antrean packing gudang atau buat draf surat jalan ekspedisi?`,
+        `Siap pantau stok fisik riil di gudang & jadwal pengiriman hari ini!`,
+        `Halo ${firstName}! Ada kiriman buku yang siap di-pickup kurir? Mari kita periksa!`,
+        `Stok akurat, kiriman tepat waktu! Mau cek pesanan yang siap dikirim hari ini?`
+      ];
+    case 1: // Direktorat
+    default:
+      return [
+        `Halo ${firstName}! Siap bantu pantau performa seluruh divisi & rekap KPI yayasan!`,
+        `Ada rekap evaluasi, data keanggotaan staf, atau draf pengumuman yang ingin disiapkan?`,
+        `Halo ${firstName}! Semua data operasional lintas 6 divisi siap saya rangkumkan.`,
+        `Manajemen terpadu Lamrimnesia! Ada ringkasan eksekutif yang ingin ditinjau hari ini?`
+      ];
+  }
+};
+
 const AppContent: React.FC = () => {
   const {
     currentUser,
+    currentSubTab,
+    divisiList,
     isAuthenticated,
     isAuthModalOpen,
     setIsAuthModalOpen,
@@ -35,12 +225,48 @@ const AppContent: React.FC = () => {
     lastCompletedTaskMessage,
   } = useApp();
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [aiInitialPrompt, setAiInitialPrompt] = useState<string>('');
   const [showDivisionReportModal, setShowDivisionReportModal] = useState(false);
   const [showAnnualReportModal, setShowAnnualReportModal] = useState(false);
   const [reportTargetDivisi, setReportTargetDivisi] = useState<DivisionId | undefined>(undefined);
   const [isSoundMuted, setIsSoundMuted] = useState<boolean>(() => isEnvironmentMuted());
   const [showMascotFeedbackRing, setShowMascotFeedbackRing] = useState(false);
+  const [isMascotHovered, setIsMascotHovered] = useState(false);
+  const [mascotBurstKey, setMascotBurstKey] = useState(0);
   const [soundNotice, setSoundNotice] = useState<string | null>(null);
+  const [speechBubbleMessage, setSpeechBubbleMessage] = useState<string>('');
+  const [isSpeechBubbleVisible, setIsSpeechBubbleVisible] = useState<boolean>(false);
+  const speechBubbleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const triggerSpeechBubble = useCallback(() => {
+    if (speechBubbleTimerRef.current) {
+      clearTimeout(speechBubbleTimerRef.current);
+    }
+    const greetings = getDivisionGreetingOptions(currentUser.name, currentUser.divisi_id);
+    const randomIndex = Math.floor(Math.random() * greetings.length);
+    setSpeechBubbleMessage(greetings[randomIndex]);
+    setIsSpeechBubbleVisible(true);
+
+    // Auto-fades after 4.2 seconds
+    speechBubbleTimerRef.current = setTimeout(() => {
+      setIsSpeechBubbleVisible(false);
+    }, 4200);
+  }, [currentUser.name, currentUser.divisi_id]);
+
+  const dismissSpeechBubble = useCallback(() => {
+    if (speechBubbleTimerRef.current) {
+      clearTimeout(speechBubbleTimerRef.current);
+    }
+    setIsSpeechBubbleVisible(false);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (speechBubbleTimerRef.current) {
+        clearTimeout(speechBubbleTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const syncMuteState = () => {
@@ -61,6 +287,15 @@ const AppContent: React.FC = () => {
     }
   }, [aiAppState]);
 
+  const contextInfo = getDivisionContextInfo(currentUser.divisi_id, currentSubTab);
+
+  const handleTriggerShortcut = (suggestedPrompt: string) => {
+    playPleasantClickSound();
+    setAiInitialPrompt(suggestedPrompt);
+    setIsAiModalOpen(true);
+    setIsMascotHovered(false);
+  };
+
   const handleMascotClick = () => {
     // 1. Play subtle pleasant tactile click sound (automatically muted in noise-sensitive environments)
     playPleasantClickSound();
@@ -69,7 +304,8 @@ const AppContent: React.FC = () => {
     setShowMascotFeedbackRing(true);
     setTimeout(() => setShowMascotFeedbackRing(false), 550);
 
-    // 3. Open AI modal
+    // 3. Open AI modal without pre-filled shortcut
+    setAiInitialPrompt('');
     setIsAiModalOpen(true);
   };
 
@@ -161,6 +397,7 @@ const AppContent: React.FC = () => {
       <AIAssistantModal
         isOpen={isAiModalOpen}
         onClose={() => setIsAiModalOpen(false)}
+        initialPrompt={aiInitialPrompt}
       />
 
       {/* Floating AI Assistant Mascot Trigger with Audio-Visual Feedback & Environment Mute */}
@@ -232,6 +469,80 @@ const AppContent: React.FC = () => {
           )}
         </AnimatePresence>
 
+        {/* Small Auto-Fading Division-Aware Speech Bubble on Hover */}
+        <AnimatePresence>
+          {isSpeechBubbleVisible && aiAppState === 'idle' && !soundNotice && (
+            <motion.div
+              initial={{ opacity: 0, y: 12, scale: 0.9, rotate: -1 }}
+              animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
+              exit={{ opacity: 0, y: 8, scale: 0.92, transition: { duration: 0.22 } }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              onMouseEnter={() => {
+                setIsMascotHovered(true);
+              }}
+              onMouseLeave={() => {
+                setIsMascotHovered(false);
+                dismissSpeechBubble();
+              }}
+              className="absolute right-0 bottom-full mb-3.5 w-78 p-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl rounded-br-xs shadow-2xl border border-teal-500/35 dark:border-teal-400/25 text-left z-50 pointer-events-auto"
+            >
+              {/* Downward Speech Bubble Tail pointing directly toward Mascot */}
+              <div className="absolute -bottom-2 right-6 w-3.5 h-3.5 bg-white/95 dark:bg-slate-900/95 border-r border-b border-teal-500/35 dark:border-teal-400/25 rotate-45 pointer-events-none" />
+
+              {/* Context Header with Division Badge */}
+              <div className="flex items-center justify-between gap-1.5 mb-2">
+                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold border ${contextInfo.badgeColor}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${contextInfo.dotColor} animate-pulse`} />
+                  {contextInfo.divisionName}
+                </span>
+                <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 truncate max-w-[125px]" title={contextInfo.activeComponentLabel}>
+                  {contextInfo.activeComponentLabel}
+                </span>
+              </div>
+
+              {/* Speech Bubble Personalized Greeting & Fast Action */}
+              <div
+                onClick={() => handleTriggerShortcut(contextInfo.suggestedPrompt)}
+                className="group/speech cursor-pointer relative mb-2 p-2.5 rounded-xl bg-slate-50/90 dark:bg-slate-800/80 hover:bg-teal-50/80 dark:hover:bg-teal-950/40 border border-slate-200/80 dark:border-slate-700/70 transition-all duration-150"
+                title="Klik untuk langsung menanyakan ke Asisten AI"
+              >
+                <p className="text-[11.5px] leading-relaxed font-medium text-slate-800 dark:text-slate-100 flex items-start gap-1.5">
+                  <span className="text-sm select-none shrink-0 mt-0.5">💬</span>
+                  <span>"{speechBubbleMessage}"</span>
+                </p>
+                <div className="mt-1.5 flex items-center justify-between text-[10px] text-teal-700 dark:text-teal-300 font-semibold group-hover/speech:underline">
+                  <span className="flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-teal-500" />
+                    <span>{contextInfo.primaryShortcut}</span>
+                  </span>
+                  <span className="px-1.5 py-0.2 rounded bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-200 text-[9.5px]">Tanya AI ↵</span>
+                </div>
+              </div>
+
+              {/* Secondary Quick Action if available */}
+              {contextInfo.secondaryShortcut && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleTriggerShortcut(contextInfo.secondaryPrompt!);
+                  }}
+                  className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-[10.5px] font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  <span className="truncate">⚡ {contextInfo.secondaryShortcut}</span>
+                  <span className="text-[10px] text-slate-400">→</span>
+                </button>
+              )}
+
+              {/* Speech Bubble Footer with Auto-fade indicator */}
+              <div className="mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800 text-[9px] text-slate-400 dark:text-slate-500 flex items-center justify-between">
+                <span>Klik balon untuk chat langsung</span>
+                <span className="italic text-[8.5px] text-teal-600/80 dark:text-teal-400/80">Auto-fading</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <motion.button
           id="btn-floating-ai-mascot"
           type="button"
@@ -239,6 +550,15 @@ const AppContent: React.FC = () => {
           onContextMenu={(e) => {
             e.preventDefault();
             handleToggleSound();
+          }}
+          onMouseEnter={() => {
+            setIsMascotHovered(true);
+            setMascotBurstKey(prev => prev + 1);
+            triggerSpeechBubble();
+          }}
+          onMouseLeave={() => {
+            setIsMascotHovered(false);
+            dismissSpeechBubble();
           }}
           whileHover={{ scale: 1.12, y: -3 }}
           whileTap={{ scale: 0.92 }}
@@ -268,14 +588,14 @@ const AppContent: React.FC = () => {
               ? 'AI sedang berpikir / memproses respon... Klik untuk membuka Asisten AI'
               : aiAppState === 'success'
               ? `Tugas Selesai: ${lastCompletedTaskMessage || 'Sukses'}! Klik untuk membuka Asisten AI`
-              : `Buka Asisten AI MIS Lamrimnesia ${isSoundMuted ? '(Mode Senyap Aktif)' : '(Audio-Visual Aktif)'} - Klik Kanan untuk Toggle Mute`
+              : `${contextInfo.primaryShortcut} (${contextInfo.divisionName} - ${contextInfo.activeComponentLabel}) - Klik Kanan untuk Toggle Mute`
           }
           aria-label={
             aiAppState === 'thinking'
               ? 'Asisten AI sedang berpikir'
               : aiAppState === 'success'
               ? 'Tugas selesai'
-              : 'Buka Asisten AI MIS Lamrimnesia'
+              : `${contextInfo.primaryShortcut} - Buka Asisten AI MIS Lamrimnesia`
           }
         >
           {/* Thinking State Rotating Radiant Aura */}
@@ -313,6 +633,41 @@ const AppContent: React.FC = () => {
             />
           )}
 
+          {/* Magical Hover Particle Burst */}
+          <AnimatePresence>
+            {isMascotHovered && (
+              <div
+                key={`mascot-burst-container-${mascotBurstKey}`}
+                className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-visible"
+              >
+                {MASCOT_HOVER_PARTICLES.map((particle) => (
+                  <motion.div
+                    key={`p-${mascotBurstKey}-${particle.id}`}
+                    initial={{ x: 0, y: 0, scale: 0, opacity: 0 }}
+                    animate={{
+                      x: particle.x,
+                      y: particle.y,
+                      scale: particle.isSparkle ? [0, 1.4, 0.9, 0] : [0, 1.25, 0.6, 0],
+                      opacity: [0, 1, 0.85, 0],
+                      rotate: particle.isSparkle ? [0, 90, 180] : 0,
+                    }}
+                    exit={{ opacity: 0, scale: 0 }}
+                    transition={{
+                      duration: 0.68,
+                      delay: particle.delay,
+                      ease: [0.16, 1, 0.3, 1],
+                    }}
+                    className={`absolute rounded-full pointer-events-none ${particle.color}`}
+                    style={{
+                      width: particle.size,
+                      height: particle.size,
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </AnimatePresence>
+
           <div className="relative">
             <MascotAvatar size="md" variant="badge" interactive={false} className="shadow-xs" />
 
@@ -337,6 +692,14 @@ const AppContent: React.FC = () => {
                 <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-teal-500 border-2 border-white dark:border-slate-900" />
               </span>
             )}
+
+            {/* Contextual Division Code Mini Indicator */}
+            <span
+              className="absolute -bottom-1 -left-1 px-1 py-0.2 rounded-full text-[7.5px] font-extrabold bg-slate-900/95 text-teal-300 border border-teal-500/40 shadow-xs tracking-wider select-none"
+              title={`Divisi Aktif: ${contextInfo.divisionName}`}
+            >
+              {contextInfo.divisionCode}
+            </span>
           </div>
         </motion.button>
       </div>

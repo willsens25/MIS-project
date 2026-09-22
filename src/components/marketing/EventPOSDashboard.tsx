@@ -59,11 +59,19 @@ export const EventPOSDashboard: React.FC = () => {
     currentUser,
     createOrder,
     orders,
+    bazaarEvents,
     recordActivity
   } = useApp();
 
   // Event & Cashier Configurations
-  const [selectedEvent, setSelectedEvent] = useState<string>('Bazar Waisak Jakarta');
+  const [selectedEvent, setSelectedEvent] = useState<string>(() => {
+    if (bazaarEvents && bazaarEvents.length > 0) {
+      const ongoing = bazaarEvents.find(e => e.status === 'Sedang Berlangsung');
+      if (ongoing) return ongoing.nama_event;
+      return bazaarEvents[0].nama_event;
+    }
+    return 'Bazar Waisak Jakarta';
+  });
   const [customEventName, setCustomEventName] = useState<string>('');
   const [selectedAccountId, setSelectedAccountId] = useState<number>(() => {
     const cashAcc = accounts.find(a => a.nama_akun.toLowerCase().includes('kas')) || accounts[0];
@@ -412,16 +420,27 @@ _Semoga kebajikan ini membawa kebahagiaan bagi semua makhluk. Sadhu, sadhu, sadh
 
         {/* Quick event configuration */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          {/* Preset event picker */}
-          <div className="relative flex-1 sm:w-60">
+          {/* Preset & Registered event picker */}
+          <div className="relative flex-1 sm:w-64">
             <select
               value={selectedEvent}
               onChange={(e) => setSelectedEvent(e.target.value)}
               className="w-full px-3 py-2 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
             >
-              {PRESET_EVENTS.map(ev => (
-                <option key={ev} value={ev}>{ev}</option>
-              ))}
+              {bazaarEvents && bazaarEvents.length > 0 && (
+                <optgroup label="🎪 Agenda Bazaar Terdaftar">
+                  {bazaarEvents.map(ev => (
+                    <option key={ev.id} value={ev.nama_event}>
+                      🎪 {ev.nama_event} ({ev.status})
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              <optgroup label="📋 Preset Acara Standar">
+                {PRESET_EVENTS.map(ev => (
+                  <option key={ev} value={ev}>{ev}</option>
+                ))}
+              </optgroup>
             </select>
           </div>
 

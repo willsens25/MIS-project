@@ -8,6 +8,7 @@ import { useWebSpeech } from '../hooks/useWebSpeech';
 interface AIAssistantModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialPrompt?: string;
 }
 
 // Clean helper to render message without raw markdown artifacts like ###, ##, ---
@@ -123,7 +124,7 @@ const getDivisionQuickPrompts = (divisiId: number) => {
   }
 };
 
-export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({ isOpen, onClose }) => {
+export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({ isOpen, onClose, initialPrompt }) => {
   const {
     books,
     orders,
@@ -137,7 +138,13 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({ isOpen, onCl
     setAiAppState,
     triggerTaskSuccess
   } = useApp();
-  const [prompt, setPrompt] = useState('');
+  const [prompt, setPrompt] = useState(initialPrompt || '');
+
+  useEffect(() => {
+    if (isOpen && initialPrompt) {
+      setPrompt(initialPrompt);
+    }
+  }, [isOpen, initialPrompt]);
 
   const currentDivisi = divisiList.find(d => d.id === currentUser.divisi_id);
   const currentDivisiName = currentDivisi?.nama_divisi || 'Direktorat';

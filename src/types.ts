@@ -223,6 +223,43 @@ export interface ActivityLog {
   created_at: string;
 }
 
+export interface BazaarAllocationItem {
+  buku_id: number;
+  judul_buku?: string;
+  qty_dibawa: number;
+  qty_terjual: number;
+  qty_kembali: number;
+  qty_rusak_hilang?: number;
+  harga_satuan?: number;
+  catatan?: string;
+}
+
+export type BazaarEventStatus =
+  | 'Direncanakan'
+  | 'Buku Dialokasikan'
+  | 'Sedang Berlangsung'
+  | 'Selesai Rekonsiliasi'
+  | 'Dibatalkan';
+
+export interface BazaarEvent {
+  id: number;
+  nama_event: string;
+  lokasi: string;
+  tanggal_mulai: string;
+  tanggal_selesai: string;
+  penanggung_jawab: string;
+  kontak_pic?: string;
+  status: BazaarEventStatus;
+  items: BazaarAllocationItem[];
+  catatan?: string;
+  total_buku_dibawa: number;
+  total_buku_terjual: number;
+  total_buku_kembali: number;
+  total_omzet: number;
+  stok_gudang_dipotong: boolean;
+  created_at: string;
+}
+
 export type ColorPresetId =
   | 'corporate-blue'
   | 'deep-forest'

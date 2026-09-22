@@ -44,6 +44,7 @@ import { ChannelsAndExpeditionsTab } from './ChannelsAndExpeditionsTab';
 import { WhatsAppModal } from './WhatsAppModal';
 import { WhatsAppAutomationTab } from './WhatsAppAutomationTab';
 import { EventPOSDashboard } from './EventPOSDashboard';
+import { BazaarEventsTab } from './BazaarEventsTab';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
@@ -73,14 +74,15 @@ export const MarketingDashboard: React.FC = () => {
     deleteExpedition,
     identitasList,
     accounts,
+    bazaarEvents,
     currentSubTab,
     setCurrentSubTab
   } = useApp();
 
-  const activeSubTab = (['pos', 'event_pos', 'grafik', 'invoices', 'promos', 'saluran', 'agen', 'whatsapp'].includes(currentSubTab)
+  const activeSubTab = (['pos', 'event_pos', 'bazaar', 'grafik', 'invoices', 'promos', 'saluran', 'agen', 'whatsapp'].includes(currentSubTab)
     ? currentSubTab
-    : 'pos') as 'pos' | 'event_pos' | 'grafik' | 'invoices' | 'promos' | 'saluran' | 'agen' | 'whatsapp';
-  const setActiveSubTab = (tab: 'pos' | 'event_pos' | 'grafik' | 'invoices' | 'promos' | 'saluran' | 'agen' | 'whatsapp') => setCurrentSubTab(tab);
+    : 'pos') as 'pos' | 'event_pos' | 'bazaar' | 'grafik' | 'invoices' | 'promos' | 'saluran' | 'agen' | 'whatsapp';
+  const setActiveSubTab = (tab: 'pos' | 'event_pos' | 'bazaar' | 'grafik' | 'invoices' | 'promos' | 'saluran' | 'agen' | 'whatsapp') => setCurrentSubTab(tab);
   const [invoiceSearch, setInvoiceSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [channelFilter, setChannelFilter] = useState<string>('all');
@@ -524,6 +526,27 @@ export const MarketingDashboard: React.FC = () => {
           </button>
 
           <button
+            onClick={() => setActiveSubTab('bazaar')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              activeSubTab === 'bazaar'
+                ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-sm'
+                : 'text-indigo-700 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-white hover:bg-indigo-50/50'
+            }`}
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>🎪 Agenda Bazaar & Konsinyasi</span>
+            {bazaarEvents.length > 0 && (
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                activeSubTab === 'bazaar'
+                  ? 'bg-white text-indigo-700'
+                  : 'bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300'
+              }`}>
+                {bazaarEvents.length}
+              </span>
+            )}
+          </button>
+
+          <button
             onClick={() => setActiveSubTab('grafik')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               activeSubTab === 'grafik'
@@ -656,6 +679,11 @@ export const MarketingDashboard: React.FC = () => {
       {/* KASIR CEPAT EVENT & BAZAR SUB TAB */}
       {activeSubTab === 'event_pos' && (
         <EventPOSDashboard />
+      )}
+
+      {/* AGENDA BAZAAR & KONSINYASI SUB TAB */}
+      {activeSubTab === 'bazaar' && (
+        <BazaarEventsTab onOpenEventPOS={() => setActiveSubTab('event_pos')} />
       )}
 
       {/* GRAFIK & ANALISIS SUB TAB */}
