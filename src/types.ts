@@ -229,6 +229,7 @@ export interface BazaarAllocationItem {
   qty_dibawa: number;
   qty_terjual: number;
   qty_kembali: number;
+  qty_rusak?: number;
   qty_rusak_hilang?: number;
   harga_satuan?: number;
   catatan?: string;
@@ -248,7 +249,10 @@ export interface BazaarEvent {
   tanggal_mulai: string;
   tanggal_selesai: string;
   penanggung_jawab: string;
+  pic_nama?: string;
   kontak_pic?: string;
+  pic_kontak?: string;
+  target_omzet?: number;
   status: BazaarEventStatus;
   items: BazaarAllocationItem[];
   catatan?: string;
@@ -267,3 +271,10 @@ export type ColorPresetId =
   | 'crimson-dharma'
   | 'ocean-teal'
   | 'sunset-amber';
+
+export interface UserSettings {
+  mascotSpeechBubbleEnabled: boolean; // Toggle mascot speech bubbles on/off globally
+  mascotSoundEffectsEnabled: boolean; // Audio tactile feedback on interaction
+  mascotParticleBurstEnabled: boolean; // Sparkle particle burst effect on hover
+  mascotShortcutHintsEnabled: boolean; // Division contextual shortcuts in tooltip
+}

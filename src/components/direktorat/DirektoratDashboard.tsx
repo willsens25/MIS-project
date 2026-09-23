@@ -28,6 +28,7 @@ import { ConfirmModal } from '../modals/ConfirmModal';
 import { DirektoratCharts } from '../charts/DirektoratCharts';
 import { AnnualReportModal } from '../modals/AnnualReportModal';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
+import { formatLogDateTime } from '../../utils/greetingUtils';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
 import { ConfigurableDashboardGrid } from '../dashboard-layout/ConfigurableDashboardGrid';
@@ -908,7 +909,7 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
                 ) : (
                   filteredActivityLogs.map((log) => (
                     <tr key={log.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
-                      <td className="p-3 whitespace-nowrap text-slate-500 font-mono text-[11px]">{log.created_at}</td>
+                      <td className="p-3 whitespace-nowrap text-slate-500 font-mono text-[11px]">{formatLogDateTime(log.created_at)}</td>
                       <td className="p-3">
                         <div className="font-bold text-slate-900 dark:text-white">{log.user_name}</div>
                         <div className="text-[10px] text-slate-400">{log.divisi_name}</div>

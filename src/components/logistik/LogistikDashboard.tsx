@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
 import { Penyaluran, LogisticLog, Book, Order } from '../../types';
+import { formatLogDateTime, getActiveTimezone, IndonesianTimezoneKey } from '../../utils/greetingUtils';
 import {
   Truck,
   Package,
@@ -88,6 +89,20 @@ export const LogistikDashboard: React.FC = () => {
   // View mode and search filter states
   const [antreanViewMode, setAntreanViewMode] = useState<'table' | 'cards'>('table');
   const [logSearch, setLogSearch] = useState('');
+  const [activeTz, setActiveTz] = useState<IndonesianTimezoneKey>(() => getActiveTimezone());
+
+  useEffect(() => {
+    const handleTz = (e: Event) => {
+      const customEvent = e as CustomEvent<{ timezone: IndonesianTimezoneKey }>;
+      if (customEvent.detail?.timezone) {
+        setActiveTz(customEvent.detail.timezone);
+      } else {
+        setActiveTz(getActiveTimezone());
+      }
+    };
+    window.addEventListener('mis-timezone-changed', handleTz);
+    return () => window.removeEventListener('mis-timezone-changed', handleTz);
+  }, []);
 
   // Group pending packing items by invoice number
   const pendingPacking = penyalurans.filter(
@@ -320,7 +335,7 @@ export const LogistikDashboard: React.FC = () => {
         columns: [
           { header: 'No.', accessor: (_, idx) => idx + 1 },
           { header: 'ID Log', key: 'id' },
-          { header: 'Waktu Keluar', key: 'created_at' },
+          { header: `Waktu Keluar (${activeTz})`, accessor: l => formatLogDateTime(l.created_at, { tzKey: activeTz, showTz: true }) },
           { header: 'Judul Buku', accessor: l => (books.find(b => b.id === l.buku_id) || l.book)?.judul || `Buku #${l.buku_id}` },
           { header: 'Jumlah Keluar (Eks)', key: 'qty_keluar' },
           { header: 'Tujuan / Penerima', key: 'tujuan' },
@@ -927,7 +942,7 @@ export const LogistikDashboard: React.FC = () => {
                       title="Pilih Semua"
                     />
                   </th>
-                  <th className="p-3.5 whitespace-nowrap">Waktu Keluar</th>
+                  <th className="p-3.5 whitespace-nowrap">Waktu Keluar ({activeTz})</th>
                   <th className="p-3.5">ID Log</th>
                   <th className="p-3.5">Judul Buku</th>
                   <th className="p-3.5 text-center">Jumlah Fisik</th>
@@ -941,11 +956,13 @@ export const LogistikDashboard: React.FC = () => {
                     if (!logSearch.trim()) return true;
                     const q = logSearch.toLowerCase();
                     const book = books.find(b => b.id === log.buku_id) || log.book;
+                    const formattedTime = formatLogDateTime(log.created_at, { tzKey: activeTz }).toLowerCase();
                     return (
                       (book?.judul || '').toLowerCase().includes(q) ||
                       (log.tujuan || '').toLowerCase().includes(q) ||
                       (log.keterangan || '').toLowerCase().includes(q) ||
-                      (log.created_at || '').toLowerCase().includes(q)
+                      (log.created_at || '').toLowerCase().includes(q) ||
+                      formattedTime.includes(q)
                     );
                   });
 
@@ -982,7 +999,14 @@ export const LogistikDashboard: React.FC = () => {
                             className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                           />
                         </td>
-                        <td className="p-3.5 font-mono text-slate-500 whitespace-nowrap">{log.created_at}</td>
+                        <td className="p-3.5 font-mono whitespace-nowrap">
+                          <div className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-300">
+                            <span className="font-semibold">{formatLogDateTime(log.created_at, { tzKey: activeTz })}</span>
+                            <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/60 dark:border-indigo-800/60 px-1 py-0.5 rounded leading-none">
+                              {activeTz}
+                            </span>
+                          </div>
+                        </td>
                         <td className="p-3.5 font-mono text-[11px] text-slate-400">#{log.id}</td>
                         <td className="p-3.5 font-bold text-slate-900 dark:text-white">{book?.judul || `Buku ID #${log.buku_id}`}</td>
                         <td className="p-3.5 text-center whitespace-nowrap">

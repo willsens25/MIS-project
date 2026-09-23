@@ -32,8 +32,8 @@ export const BazaarEventModal: React.FC<BazaarEventModalProps> = ({
       setLokasi(initialEvent.lokasi);
       setTanggalMulai(initialEvent.tanggal_mulai);
       setTanggalSelesai(initialEvent.tanggal_selesai);
-      setPicNama(initialEvent.pic_nama);
-      setPicKontak(initialEvent.pic_kontak || '');
+      setPicNama(initialEvent.pic_nama || initialEvent.penanggung_jawab || '');
+      setPicKontak(initialEvent.pic_kontak || initialEvent.kontak_pic || '');
       setTargetOmzet(initialEvent.target_omzet || 0);
       setCatatan(initialEvent.catatan || '');
       setStatus(initialEvent.status);
@@ -61,7 +61,9 @@ export const BazaarEventModal: React.FC<BazaarEventModalProps> = ({
       lokasi: lokasi.trim(),
       tanggal_mulai: tanggalMulai,
       tanggal_selesai: tanggalSelesai,
+      penanggung_jawab: picNama.trim(),
       pic_nama: picNama.trim(),
+      kontak_pic: picKontak.trim() || undefined,
       pic_kontak: picKontak.trim() || undefined,
       target_omzet: Number(targetOmzet) || 0,
       catatan: catatan.trim() || undefined,

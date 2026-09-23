@@ -140,7 +140,7 @@ export const BazaarReconciliationModal: React.FC<BazaarReconciliationModalProps>
                 Rekonsiliasi Selesai Bazaar & Pengembalian Stok
               </h3>
               <p className="text-xs text-slate-500">
-                Acara: <strong className="text-slate-800 dark:text-slate-200">{event.nama_event}</strong> - PIC: {event.pic_nama}
+                Acara: <strong className="text-slate-800 dark:text-slate-200">{event.nama_event}</strong> - PIC: {event.pic_nama || event.penanggung_jawab}
               </p>
             </div>
           </div>

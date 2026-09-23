@@ -20,7 +20,8 @@ import {
   Expedition,
   ColorPresetId,
   BazaarEvent,
-  BazaarAllocationItem
+  BazaarAllocationItem,
+  UserSettings
 } from '../types';
 import { DEFAULT_COLOR_PRESET } from '../lib/themePresets';
 import {
@@ -75,6 +76,9 @@ interface AppContextType {
   toggleTheme: () => void;
   colorPreset: ColorPresetId;
   setColorPreset: (preset: ColorPresetId) => void;
+  userSettings: UserSettings;
+  updateUserSettings: (settings: Partial<UserSettings>) => void;
+  toggleMascotSpeechBubble: () => void;
   
   // Auth state & methods
   isAuthenticated: boolean;
@@ -269,6 +273,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     return DEFAULT_COLOR_PRESET;
   });
+
+  const DEFAULT_USER_SETTINGS: UserSettings = {
+    mascotSpeechBubbleEnabled: true,
+    mascotSoundEffectsEnabled: true,
+    mascotParticleBurstEnabled: true,
+    mascotShortcutHintsEnabled: true,
+  };
+
+  const [userSettings, setUserSettings] = useState<UserSettings>(() => {
+    try {
+      const stored = localStorage.getItem('mis_user_settings');
+      if (stored) {
+        return { ...DEFAULT_USER_SETTINGS, ...JSON.parse(stored) };
+      }
+    } catch (e) {
+      console.warn('Error reading user settings from storage:', e);
+    }
+    return DEFAULT_USER_SETTINGS;
+  });
+
+  const updateUserSettings = (newSettings: Partial<UserSettings>) => {
+    setUserSettings(prev => {
+      const updated = { ...prev, ...newSettings };
+      try {
+        localStorage.setItem('mis_user_settings', JSON.stringify(updated));
+      } catch (e) {
+        console.warn('Error saving user settings to storage:', e);
+      }
+      return updated;
+    });
+  };
+
+  const toggleMascotSpeechBubble = () => {
+    updateUserSettings({ mascotSpeechBubbleEnabled: !userSettings.mascotSpeechBubbleEnabled });
+  };
 
   const [divisiList] = useState<Divisi[]>(INITIAL_DIVISI);
   const [usersList, setUsersList] = useState<User[]>(() => getStoredItem('mis_users', INITIAL_USERS));
@@ -1720,6 +1759,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleTheme,
         colorPreset,
         setColorPreset: handleSetColorPreset,
+        userSettings,
+        updateUserSettings,
+        toggleMascotSpeechBubble,
         isAuthenticated,
         setIsAuthenticated,
         login,

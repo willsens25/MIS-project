@@ -71,10 +71,11 @@ export const BazaarEventsTab: React.FC<BazaarEventsTabProps> = ({ onOpenEventPOS
   // Filtered Events
   const filteredEvents = useMemo(() => {
     return bazaarEvents.filter(ev => {
+      const pic = ev.pic_nama || ev.penanggung_jawab || '';
       const matchSearch =
         ev.nama_event.toLowerCase().includes(searchQuery.toLowerCase()) ||
         ev.lokasi.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ev.pic_nama.toLowerCase().includes(searchQuery.toLowerCase());
+        pic.toLowerCase().includes(searchQuery.toLowerCase());
       const matchStatus = statusFilter === 'all' || ev.status === statusFilter;
       return matchSearch && matchStatus;
     });
@@ -369,15 +370,15 @@ export const BazaarEventsTab: React.FC<BazaarEventsTabProps> = ({ onOpenEventPOS
                       </span>
                       <span className="flex items-center space-x-1">
                         <User className="w-3.5 h-3.5 text-slate-400" />
-                        <span>PIC: <strong className="text-slate-700 dark:text-slate-300">{event.pic_nama}</strong></span>
-                        {event.pic_kontak && (
+                        <span>PIC: <strong className="text-slate-700 dark:text-slate-300">{event.pic_nama || event.penanggung_jawab}</strong></span>
+                        {(event.pic_kontak || event.kontak_pic) && (
                           <a
-                            href={`https://wa.me/${event.pic_kontak.replace(/[^0-9]/g, '')}`}
+                            href={`https://wa.me/${(event.pic_kontak || event.kontak_pic || '').replace(/[^0-9]/g, '')}`}
                             target="_blank"
                             rel="noreferrer"
                             className="text-emerald-600 hover:text-emerald-700 ml-1 font-mono font-bold"
                           >
-                            ({event.pic_kontak})
+                            ({event.pic_kontak || event.kontak_pic})
                           </a>
                         )}
                       </span>

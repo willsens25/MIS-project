@@ -28,6 +28,7 @@ import { BarcodeScannerModal } from '../modals/BarcodeScannerModal';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
+import { formatLogDateTime } from '../../utils/greetingUtils';
 import { cleanIsbn, lookupIsbnOnline } from '../../utils/isbnLookup';
 
 export const PenerbitanDashboard: React.FC = () => {
@@ -586,7 +587,7 @@ export const PenerbitanDashboard: React.FC = () => {
                         className="rounded text-indigo-600 focus:ring-indigo-500"
                       />
                     </td>
-                    <td className="p-3 text-slate-500 font-mono">{p.created_at}</td>
+                    <td className="p-3 text-slate-500 font-mono">{formatLogDateTime(p.created_at)}</td>
                     <td className="p-3 font-bold text-slate-900 dark:text-white">{book?.judul || `Buku #${p.buku_id}`}</td>
                     <td className="p-3 text-center font-bold">{p.jumlah_pengajuan} Eks</td>
                     <td className="p-3">

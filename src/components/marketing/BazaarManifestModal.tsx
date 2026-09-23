@@ -123,11 +123,11 @@ export const BazaarManifestModal: React.FC<BazaarManifestModalProps> = ({
             <div className="space-y-1.5 border-l border-slate-200 pl-4">
               <div>
                 <span className="text-slate-500 text-[10px] block">PENANGGUNG JAWAB (PIC):</span>
-                <strong className="font-bold text-slate-900">{event.pic_nama}</strong>
+                <strong className="font-bold text-slate-900">{event.pic_nama || event.penanggung_jawab}</strong>
               </div>
               <div>
                 <span className="text-slate-500 text-[10px] block">KONTAK WHATSAPP PIC:</span>
-                <span className="font-mono text-slate-800">{event.pic_kontak || '-'}</span>
+                <span className="font-mono text-slate-800">{event.pic_kontak || event.kontak_pic || '-'}</span>
               </div>
               <div>
                 <span className="text-slate-500 text-[10px] block">STATUS ALOKASI:</span>
@@ -214,7 +214,7 @@ export const BazaarManifestModal: React.FC<BazaarManifestModalProps> = ({
             <div>
               <p className="text-slate-500 mb-14">Koordinator PIC Stan,</p>
               <p className="font-bold border-t border-slate-400 pt-1 text-slate-800">
-                ( {event.pic_nama} )
+                ( {event.pic_nama || event.penanggung_jawab} )
               </p>
             </div>
             <div>

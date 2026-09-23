@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DivisionId } from '../../types';
+import { getTimeBasedSalutation, getFriendlyUserFirstName } from '../../utils/greetingUtils';
+import { LiveClockBadge } from './LiveClockBadge';
 import {
   Home,
   ChevronRight,
@@ -356,6 +358,20 @@ export const BreadcrumbNav: React.FC = () => {
     year: 'numeric'
   }).format(new Date());
 
+  const [timeSalutation, setTimeSalutation] = useState(() => getTimeBasedSalutation());
+
+  useEffect(() => {
+    const updateSalutation = () => setTimeSalutation(getTimeBasedSalutation());
+    window.addEventListener('mis-timezone-changed', updateSalutation);
+    const interval = setInterval(updateSalutation, 30000);
+    return () => {
+      window.removeEventListener('mis-timezone-changed', updateSalutation);
+      clearInterval(interval);
+    };
+  }, []);
+
+  const friendlyFirstName = getFriendlyUserFirstName(currentUser.name);
+
   const handleNavigateHome = () => {
     switchDivision(1, 'overview');
     setIsDivisionDropdownOpen(false);
@@ -379,10 +395,10 @@ export const BreadcrumbNav: React.FC = () => {
       id="breadcrumb-navigation-bar"
       className="print:hidden sticky top-16 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors shadow-2xs"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between gap-3 text-xs">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between gap-4 text-xs">
         
         {/* Left Side: Interactive Breadcrumbs Path */}
-        <div className="flex items-center space-x-1.5 sm:space-x-2 overflow-x-auto scrollbar-none py-0.5">
+        <div className="flex items-center space-x-1.5 sm:space-x-2 overflow-x-auto scrollbar-none py-0.5 min-w-0 flex-1">
           
           {/* Node 1: Home Link */}
           <button
@@ -598,21 +614,26 @@ export const BreadcrumbNav: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Side: Contextual Metadata */}
-        <div className="hidden md:flex items-center space-x-3 text-slate-500 dark:text-slate-400 shrink-0 text-[11px]">
-          <div className="flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
-            <Calendar className="w-3.5 h-3.5 text-indigo-500" />
-            <span className="font-medium text-slate-700 dark:text-slate-300">{formattedToday}</span>
+        {/* Right Side: Contextual Time Salutation, Live Clock & Date (Spacious & Clean) */}
+        <div className="hidden md:flex items-center space-x-2 text-slate-500 dark:text-slate-400 shrink-0 text-[11px] ml-auto">
+          {/* Time Salutation Pill */}
+          <div
+            className="flex items-center space-x-1.5 bg-indigo-50/90 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-lg border border-indigo-200/70 dark:border-indigo-800/70 shadow-2xs"
+            title={`${timeSalutation.salutation} Kak ${friendlyFirstName}!`}
+          >
+            <span className="text-xs select-none">{timeSalutation.icon}</span>
+            <span className="font-medium text-[11px]">
+              {timeSalutation.salutation}, <strong className="font-semibold text-indigo-950 dark:text-indigo-100">Kak {friendlyFirstName}</strong>
+            </span>
           </div>
 
-          <div className="flex items-center space-x-1.5 pl-1 border-l border-slate-200 dark:border-slate-800">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" title="Sistem Aktif" />
-            <span className="text-slate-600 dark:text-slate-300 font-medium">
-              {currentUser.name}
-            </span>
-            <span className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-semibold text-[10px] text-slate-600 dark:text-slate-400">
-              {currentUser.role || 'Staff'}
-            </span>
+          {/* Compact Clock in Breadcrumb bar */}
+          <LiveClockBadge variant="compact" showSeconds={false} showTimezone={false} className="hidden lg:inline-flex" />
+
+          {/* Date is shown on xl screens to guarantee plenty of breathing room */}
+          <div className="hidden xl:flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
+            <Calendar className="w-3.5 h-3.5 text-indigo-500" />
+            <span className="font-medium text-slate-700 dark:text-slate-300">{formattedToday}</span>
           </div>
         </div>
 

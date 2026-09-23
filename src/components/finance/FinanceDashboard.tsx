@@ -30,6 +30,7 @@ import { PrintReportHeader } from '../common/PrintReportHeader';
 import { ExportCsvButton } from '../common/ExportCsvButton';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
 import { exportDataToCsv, getCsvDateStamp } from '../../utils/exportCsv';
+import { formatLogDateTime } from '../../utils/greetingUtils';
 
 interface FinanceDashboardProps {
   initialSubTab?: 'grafik' | 'mutasi' | 'persetujuan' | 'penjualan' | 'akun';
@@ -298,7 +299,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
         columns: [
           { header: 'No.', accessor: (_, idx) => idx + 1 },
           { header: 'ID Pengajuan', key: 'id' },
-          { header: 'Waktu Diajukan', key: 'created_at' },
+          { header: 'Waktu Diajukan', accessor: p => formatLogDateTime(p.created_at) },
           { header: 'Judul Buku', accessor: p => (books.find(b => b.id === p.buku_id) || p.buku)?.judul || `Buku #${p.buku_id}` },
           { header: 'Oplah Cetak (Eks)', key: 'jumlah_pengajuan' },
           { header: 'Estimasi Biaya (Rp)', accessor: p => p.jumlah_pengajuan * 20000 },
@@ -873,7 +874,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
                             className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                           />
                         </td>
-                        <td className="p-3 text-slate-500 font-mono whitespace-nowrap">{p.created_at}</td>
+                        <td className="p-3 text-slate-500 font-mono whitespace-nowrap">{formatLogDateTime(p.created_at)}</td>
                         <td className="p-3 font-bold text-slate-900 dark:text-white">{book?.judul || `Buku #${p.buku_id}`}</td>
                         <td className="p-3 text-center font-bold font-mono">{p.jumlah_pengajuan.toLocaleString('id-ID')} Eks</td>
                         <td className="p-3 text-right font-bold font-mono text-indigo-600 dark:text-indigo-400 whitespace-nowrap">

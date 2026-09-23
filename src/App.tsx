@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Volume2, VolumeX, Check, Sparkles, Loader2 } from 'lucide-react';
+import { Volume2, VolumeX, Check, Sparkles, Loader2, Settings, Sliders } from 'lucide-react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/Header';
 import { BreadcrumbNav } from './components/navigation/BreadcrumbNav';
+import { TopGreetingBanner } from './components/navigation/TopGreetingBanner';
 import { DirektoratDashboard } from './components/direktorat/DirektoratDashboard';
 import { FinanceDashboard } from './components/finance/FinanceDashboard';
 import { PenerbitanDashboard } from './components/penerbitan/PenerbitanDashboard';
@@ -16,10 +17,12 @@ import { AuthModal } from './components/auth/AuthModal';
 import { SessionTimeoutModal } from './components/modals/SessionTimeoutModal';
 import { DivisionReportModal } from './components/modals/DivisionReportModal';
 import { AnnualReportModal } from './components/modals/AnnualReportModal';
+import { UserSettingsModal } from './components/profile/UserSettingsModal';
 import { QuickActionsFloatingMenu } from './components/navigation/QuickActionsFloatingMenu';
 import { useAutoLogout } from './hooks/useAutoLogout';
 import { DivisionId } from './types';
 import { playPleasantClickSound, playPleasantSuccessChime, isEnvironmentMuted, toggleSoundMuted } from './utils/soundEffects';
+import { getWelcomeSalutation, getDivisionGreetingOptions, getTimeBasedSalutation } from './utils/greetingUtils';
 
 interface MascotParticle {
   id: number;
@@ -160,55 +163,6 @@ const getDivisionContextInfo = (divisiId: number, subTab: string): DivisionConte
   }
 };
 
-const getDivisionGreetingOptions = (userName: string, divisiId: number): string[] => {
-  const firstName = userName ? userName.split(' ')[0] : 'Rekan';
-  switch (divisiId) {
-    case 2: // Finance
-      return [
-        `Halo ${firstName}! Butuh cek saldo kas, rekening bank, atau verifikasi invoice pending?`,
-        `Siap bantu hitung arus kas & rekonsiliasi mutasi keuangan Lamrimnesia!`,
-        `Halo ${firstName}! Ada invoice bazaar atau pengajuan dana cetak yang mau divalidasi?`,
-        `Keuangan aman, operasional lancar! Butuh saya rangkumkan kas aktif hari ini?`
-      ];
-    case 3: // Penerbitan
-      return [
-        `Halo ${firstName}! Mau cek kalkulator HPP, status ISBN, atau katalog buku Dharma?`,
-        `Siap bantu draf pengajuan cetak dan kurasi naskah penerbitan Lamrimnesia!`,
-        `Halo ${firstName}! Ada judul buku yang stoknya menipis dan perlu dicetak ulang?`,
-        `Semangat berkarya ${firstName}! Butuh saya carikan informasi naskah atau pengarang?`
-      ];
-    case 4: // Marketing
-      return [
-        `Halo ${firstName}! Mau cek pesanan terbaru, kupon diskon, atau buat draf promo WhatsApp?`,
-        `Siap bantu strategi penawaran & analisis omzet penjualan buku Dharma hari ini!`,
-        `Halo ${firstName}! Penjualan lancar? Saya siap bantu periksa transaksi kasir POS & bazaar.`,
-        `Butuh ide bundling paket buku Dharma untuk pembaca setia? Tanyakan saja!`
-      ];
-    case 5: // Produksi
-      return [
-        `Halo ${firstName}! Siap pantau antrean SPK fisik & estimasi jadwal selesai percetakan!`,
-        `Ada jadwal cetak atau log pabrikasi percetakan yang perlu diperiksa hari ini?`,
-        `Halo ${firstName}! Butuh hitung estimasi kebutuhan eksemplar cetak ulang buku?`,
-        `Kualitas cetak terjaga, manfaat meluas! Ada SPK yang mau kita verifikasi bersama?`
-      ];
-    case 6: // Logistik
-      return [
-        `Halo ${firstName}! Butuh cek antrean packing gudang atau buat draf surat jalan ekspedisi?`,
-        `Siap pantau stok fisik riil di gudang & jadwal pengiriman hari ini!`,
-        `Halo ${firstName}! Ada kiriman buku yang siap di-pickup kurir? Mari kita periksa!`,
-        `Stok akurat, kiriman tepat waktu! Mau cek pesanan yang siap dikirim hari ini?`
-      ];
-    case 1: // Direktorat
-    default:
-      return [
-        `Halo ${firstName}! Siap bantu pantau performa seluruh divisi & rekap KPI yayasan!`,
-        `Ada rekap evaluasi, data keanggotaan staf, atau draf pengumuman yang ingin disiapkan?`,
-        `Halo ${firstName}! Semua data operasional lintas 6 divisi siap saya rangkumkan.`,
-        `Manajemen terpadu Lamrimnesia! Ada ringkasan eksekutif yang ingin ditinjau hari ini?`
-      ];
-  }
-};
-
 const AppContent: React.FC = () => {
   const {
     currentUser,
@@ -223,8 +177,11 @@ const AppContent: React.FC = () => {
     recordActivity,
     aiAppState,
     lastCompletedTaskMessage,
+    userSettings,
+    toggleMascotSpeechBubble,
   } = useApp();
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [isUserSettingsOpen, setIsUserSettingsOpen] = useState(false);
   const [aiInitialPrompt, setAiInitialPrompt] = useState<string>('');
   const [showDivisionReportModal, setShowDivisionReportModal] = useState(false);
   const [showAnnualReportModal, setShowAnnualReportModal] = useState(false);
@@ -237,33 +194,119 @@ const AppContent: React.FC = () => {
   const [speechBubbleMessage, setSpeechBubbleMessage] = useState<string>('');
   const [isSpeechBubbleVisible, setIsSpeechBubbleVisible] = useState<boolean>(false);
   const speechBubbleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelDismissTimer = useCallback(() => {
+    if (dismissTimerRef.current) {
+      clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = null;
+    }
+  }, []);
 
   const triggerSpeechBubble = useCallback(() => {
+    // If user has disabled mascot speech bubbles globally in settings, do not show
+    if (!userSettings?.mascotSpeechBubbleEnabled) {
+      return;
+    }
+
+    cancelDismissTimer();
+
     if (speechBubbleTimerRef.current) {
       clearTimeout(speechBubbleTimerRef.current);
     }
-    const greetings = getDivisionGreetingOptions(currentUser.name, currentUser.divisi_id);
+    const currentDivisi = divisiList.find(d => d.id === currentUser.divisi_id);
+    const greetings = getDivisionGreetingOptions(
+      currentUser.name,
+      currentUser.divisi_id,
+      currentDivisi?.nama_divisi
+    );
     const randomIndex = Math.floor(Math.random() * greetings.length);
     setSpeechBubbleMessage(greetings[randomIndex]);
     setIsSpeechBubbleVisible(true);
 
-    // Auto-fades after 4.2 seconds
+    // Auto-fades after 5 seconds of complete inactivity
     speechBubbleTimerRef.current = setTimeout(() => {
       setIsSpeechBubbleVisible(false);
-    }, 4200);
-  }, [currentUser.name, currentUser.divisi_id]);
+      setIsMascotHovered(false);
+    }, 5000);
+  }, [currentUser.name, currentUser.divisi_id, divisiList, userSettings?.mascotSpeechBubbleEnabled, cancelDismissTimer]);
 
-  const dismissSpeechBubble = useCallback(() => {
+  // Auto-welcome greeting upon entering the app or switching division/account
+  const lastWelcomedUserKeyRef = useRef<string>('');
+
+  useEffect(() => {
+    const currentKey = `${currentUser.id}-${currentUser.divisi_id}`;
+    if (lastWelcomedUserKeyRef.current === currentKey) {
+      return;
+    }
+    lastWelcomedUserKeyRef.current = currentKey;
+
+    // Respect user's mascot speech bubble preference
+    if (userSettings?.mascotSpeechBubbleEnabled === false) {
+      return;
+    }
+
+    const currentDivisi = divisiList.find(d => d.id === currentUser.divisi_id);
+    const welcomeText = getWelcomeSalutation(
+      currentUser.name,
+      currentUser.divisi_id,
+      currentDivisi?.nama_divisi
+    );
+
+    // Friendly 850ms entrance delay so the dashboard renders smoothly first
+    const entryTimer = setTimeout(() => {
+      cancelDismissTimer();
+      setSpeechBubbleMessage(welcomeText);
+      setIsSpeechBubbleVisible(true);
+
+      // Auto-fades after 6 seconds of complete inactivity unless hovered
+      if (speechBubbleTimerRef.current) {
+        clearTimeout(speechBubbleTimerRef.current);
+      }
+      speechBubbleTimerRef.current = setTimeout(() => {
+        setIsSpeechBubbleVisible(false);
+        setIsMascotHovered(false);
+      }, 6000);
+    }, 850);
+
+    return () => {
+      clearTimeout(entryTimer);
+    };
+  }, [
+    currentUser.id,
+    currentUser.divisi_id,
+    currentUser.name,
+    divisiList,
+    userSettings?.mascotSpeechBubbleEnabled,
+    cancelDismissTimer
+  ]);
+
+  // Grace period dismiss: gives user 750ms of leeway to move cursor to the bubble or buttons without disappearing
+  const scheduleDismissSpeechBubble = useCallback((delayMs = 750) => {
+    cancelDismissTimer();
+    dismissTimerRef.current = setTimeout(() => {
+      setIsSpeechBubbleVisible(false);
+      setIsMascotHovered(false);
+    }, delayMs);
+  }, [cancelDismissTimer]);
+
+  const dismissSpeechBubbleImmediate = useCallback(() => {
+    cancelDismissTimer();
     if (speechBubbleTimerRef.current) {
       clearTimeout(speechBubbleTimerRef.current);
+      speechBubbleTimerRef.current = null;
     }
     setIsSpeechBubbleVisible(false);
-  }, []);
+    setIsMascotHovered(false);
+  }, [cancelDismissTimer]);
 
   useEffect(() => {
     return () => {
       if (speechBubbleTimerRef.current) {
         clearTimeout(speechBubbleTimerRef.current);
+      }
+      if (dismissTimerRef.current) {
+        clearTimeout(dismissTimerRef.current);
       }
     };
   }, []);
@@ -290,15 +333,20 @@ const AppContent: React.FC = () => {
   const contextInfo = getDivisionContextInfo(currentUser.divisi_id, currentSubTab);
 
   const handleTriggerShortcut = (suggestedPrompt: string) => {
-    playPleasantClickSound();
+    dismissSpeechBubbleImmediate();
+    if (userSettings?.mascotSoundEffectsEnabled !== false) {
+      playPleasantClickSound();
+    }
     setAiInitialPrompt(suggestedPrompt);
     setIsAiModalOpen(true);
-    setIsMascotHovered(false);
   };
 
   const handleMascotClick = () => {
-    // 1. Play subtle pleasant tactile click sound (automatically muted in noise-sensitive environments)
-    playPleasantClickSound();
+    dismissSpeechBubbleImmediate();
+    // 1. Play subtle pleasant tactile click sound if enabled
+    if (userSettings?.mascotSoundEffectsEnabled !== false) {
+      playPleasantClickSound();
+    }
 
     // 2. Audio-visual feedback ripple ring
     setShowMascotFeedbackRing(true);
@@ -368,6 +416,9 @@ const AppContent: React.FC = () => {
 
       {/* Main Content Area with Division Switch Transition */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+        {/* Top Division Welcome Greeting Banner (Time-aware, spacious & clear) */}
+        <TopGreetingBanner onOpenAI={() => setIsAiModalOpen(true)} />
+
         <AnimatePresence mode="wait">
           <motion.div
             key={currentUser.divisi_id}
@@ -401,12 +452,26 @@ const AppContent: React.FC = () => {
       />
 
       {/* Floating AI Assistant Mascot Trigger with Audio-Visual Feedback & Environment Mute */}
-      <div className="fixed bottom-6 right-6 z-40 flex items-center print:hidden">
+      <div
+        className="fixed bottom-6 right-6 z-40 flex items-center print:hidden"
+        onMouseEnter={() => {
+          cancelDismissTimer();
+        }}
+        onMouseLeave={() => {
+          scheduleDismissSpeechBubble(800);
+        }}
+      >
         {/* Environment Mute / Sound Toggle Mini Pill */}
         <button
           id="btn-toggle-sound-environment"
           type="button"
           onClick={handleToggleSound}
+          onMouseEnter={() => {
+            cancelDismissTimer();
+          }}
+          onMouseLeave={() => {
+            scheduleDismissSpeechBubble(800);
+          }}
           className={`absolute -top-2 -left-2 z-50 p-1.5 rounded-full text-xs shadow-md border backdrop-blur-xs transition-all duration-150 cursor-pointer ${
             isSoundMuted
               ? 'bg-amber-100 dark:bg-amber-950/90 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700/80 hover:bg-amber-200'
@@ -469,35 +534,58 @@ const AppContent: React.FC = () => {
           )}
         </AnimatePresence>
 
-        {/* Small Auto-Fading Division-Aware Speech Bubble on Hover */}
+        {/* Small Auto-Fading Division-Aware Speech Bubble on Hover with 800ms Grace Period & Pause-on-Hover */}
         <AnimatePresence>
-          {isSpeechBubbleVisible && aiAppState === 'idle' && !soundNotice && (
+          {isSpeechBubbleVisible && userSettings?.mascotSpeechBubbleEnabled && aiAppState === 'idle' && !soundNotice && (
             <motion.div
               initial={{ opacity: 0, y: 12, scale: 0.9, rotate: -1 }}
               animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
               exit={{ opacity: 0, y: 8, scale: 0.92, transition: { duration: 0.22 } }}
               transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
               onMouseEnter={() => {
+                cancelDismissTimer();
                 setIsMascotHovered(true);
+                // Freeze the auto-fade timer so user can read comfortably and click without rushing
+                if (speechBubbleTimerRef.current) {
+                  clearTimeout(speechBubbleTimerRef.current);
+                  speechBubbleTimerRef.current = null;
+                }
               }}
               onMouseLeave={() => {
-                setIsMascotHovered(false);
-                dismissSpeechBubble();
+                // Tolerant 800ms grace period so moving away doesn't close abruptly
+                scheduleDismissSpeechBubble(800);
               }}
               className="absolute right-0 bottom-full mb-3.5 w-78 p-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl rounded-br-xs shadow-2xl border border-teal-500/35 dark:border-teal-400/25 text-left z-50 pointer-events-auto"
             >
+              {/* Invisible Hover Bridge spanning gap between Bubble and Mascot */}
+              <div className="absolute -bottom-5 left-0 right-0 h-5 pointer-events-auto" />
+
               {/* Downward Speech Bubble Tail pointing directly toward Mascot */}
               <div className="absolute -bottom-2 right-6 w-3.5 h-3.5 bg-white/95 dark:bg-slate-900/95 border-r border-b border-teal-500/35 dark:border-teal-400/25 rotate-45 pointer-events-none" />
 
-              {/* Context Header with Division Badge */}
+              {/* Context Header with Division Badge and Settings Shortcut */}
               <div className="flex items-center justify-between gap-1.5 mb-2">
                 <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold border ${contextInfo.badgeColor}`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${contextInfo.dotColor} animate-pulse`} />
                   {contextInfo.divisionName}
                 </span>
-                <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 truncate max-w-[125px]" title={contextInfo.activeComponentLabel}>
-                  {contextInfo.activeComponentLabel}
-                </span>
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 truncate max-w-[100px]" title={contextInfo.activeComponentLabel}>
+                    {contextInfo.activeComponentLabel}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsUserSettingsOpen(true);
+                    }}
+                    className="p-1 rounded-md text-slate-400 hover:text-teal-600 dark:hover:text-teal-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    title="Buka Pengaturan Balon Kata & Maskot AI"
+                    aria-label="Pengaturan Maskot"
+                  >
+                    <Settings className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
 
               {/* Speech Bubble Personalized Greeting & Fast Action */}
@@ -510,17 +598,19 @@ const AppContent: React.FC = () => {
                   <span className="text-sm select-none shrink-0 mt-0.5">💬</span>
                   <span>"{speechBubbleMessage}"</span>
                 </p>
-                <div className="mt-1.5 flex items-center justify-between text-[10px] text-teal-700 dark:text-teal-300 font-semibold group-hover/speech:underline">
-                  <span className="flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-teal-500" />
-                    <span>{contextInfo.primaryShortcut}</span>
-                  </span>
-                  <span className="px-1.5 py-0.2 rounded bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-200 text-[9.5px]">Tanya AI ↵</span>
-                </div>
+                {userSettings?.mascotShortcutHintsEnabled !== false && (
+                  <div className="mt-1.5 flex items-center justify-between text-[10px] text-teal-700 dark:text-teal-300 font-semibold group-hover/speech:underline">
+                    <span className="flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-teal-500" />
+                      <span>{contextInfo.primaryShortcut}</span>
+                    </span>
+                    <span className="px-1.5 py-0.2 rounded bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-200 text-[9.5px]">Tanya AI ↵</span>
+                  </div>
+                )}
               </div>
 
-              {/* Secondary Quick Action if available */}
-              {contextInfo.secondaryShortcut && (
+              {/* Secondary Quick Action if available and enabled */}
+              {userSettings?.mascotShortcutHintsEnabled !== false && contextInfo.secondaryShortcut && (
                 <button
                   type="button"
                   onClick={(e) => {
@@ -534,14 +624,50 @@ const AppContent: React.FC = () => {
                 </button>
               )}
 
-              {/* Speech Bubble Footer with Auto-fade indicator */}
+              {/* Speech Bubble Footer with Auto-fade indicator and Settings Quicklink */}
               <div className="mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800 text-[9px] text-slate-400 dark:text-slate-500 flex items-center justify-between">
                 <span>Klik balon untuk chat langsung</span>
-                <span className="italic text-[8.5px] text-teal-600/80 dark:text-teal-400/80">Auto-fading</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="italic text-[8.5px] text-teal-600/80 dark:text-teal-400/80">Auto-fading</span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsUserSettingsOpen(true);
+                    }}
+                    className="hover:text-teal-600 dark:hover:text-teal-400 hover:underline flex items-center gap-0.5 cursor-pointer font-medium"
+                    title="Atur preferensi balon kata"
+                  >
+                    <Sliders className="w-2.5 h-2.5" />
+                    <span>Atur</span>
+                  </button>
+                </div>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Floating Settings Quick-Trigger Button (Bottom-left to prevent overlap with sound mute) */}
+        <motion.button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsUserSettingsOpen(true);
+          }}
+          onMouseEnter={() => {
+            cancelDismissTimer();
+          }}
+          onMouseLeave={() => {
+            scheduleDismissSpeechBubble(800);
+          }}
+          whileHover={{ scale: 1.15, rotate: 45 }}
+          whileTap={{ scale: 0.9 }}
+          className="absolute -bottom-1 -left-2 z-30 w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md flex items-center justify-center text-slate-400 hover:text-teal-600 dark:hover:text-teal-300 transition-all opacity-85 hover:opacity-100 cursor-pointer"
+          title="Pengaturan Balon Kata & Maskot AI"
+          aria-label="Pengaturan Maskot AI"
+        >
+          <Settings className="w-3 h-3" />
+        </motion.button>
 
         <motion.button
           id="btn-floating-ai-mascot"
@@ -552,13 +678,13 @@ const AppContent: React.FC = () => {
             handleToggleSound();
           }}
           onMouseEnter={() => {
+            cancelDismissTimer();
             setIsMascotHovered(true);
             setMascotBurstKey(prev => prev + 1);
             triggerSpeechBubble();
           }}
           onMouseLeave={() => {
-            setIsMascotHovered(false);
-            dismissSpeechBubble();
+            scheduleDismissSpeechBubble(800);
           }}
           whileHover={{ scale: 1.12, y: -3 }}
           whileTap={{ scale: 0.92 }}
@@ -635,7 +761,7 @@ const AppContent: React.FC = () => {
 
           {/* Magical Hover Particle Burst */}
           <AnimatePresence>
-            {isMascotHovered && (
+            {isMascotHovered && userSettings?.mascotParticleBurstEnabled !== false && (
               <div
                 key={`mascot-burst-container-${mascotBurstKey}`}
                 className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-visible"
@@ -741,6 +867,12 @@ const AppContent: React.FC = () => {
         remainingSeconds={remainingSeconds}
         onStayLoggedIn={refreshActivity}
         onLogoutNow={logout}
+      />
+
+      {/* Global User Settings & Mascot Bubble Preferences Modal */}
+      <UserSettingsModal
+        isOpen={isUserSettingsOpen}
+        onClose={() => setIsUserSettingsOpen(false)}
       />
 
     </div>
