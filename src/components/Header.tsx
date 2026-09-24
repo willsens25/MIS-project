@@ -11,6 +11,7 @@ import { UserSettingsModal } from './profile/UserSettingsModal';
 import { DivisionReportModal } from './modals/DivisionReportModal';
 import { AnnualReportModal } from './modals/AnnualReportModal';
 import { ThemePresetModal } from './theme/ThemePresetModal';
+import { BackupRestoreModal } from './common/BackupRestoreModal';
 import { getColorPreset, COLOR_PRESETS } from '../lib/themePresets';
 import {
   Building2,
@@ -92,6 +93,8 @@ export const Header: React.FC<HeaderProps> = ({
   const [showReportModal, setShowReportModal] = useState(false);
   const [showAnnualReportModal, setShowAnnualReportModal] = useState(false);
   const [showThemePresetModal, setShowThemePresetModal] = useState(false);
+  const [showBackupRestoreModal, setShowBackupRestoreModal] = useState(false);
+  const [backupRestoreInitialTab, setBackupRestoreInitialTab] = useState<'backup' | 'restore' | 'seeder'>('backup');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const activeColorPreset = getColorPreset(colorPreset);
@@ -221,7 +224,13 @@ export const Header: React.FC<HeaderProps> = ({
               className="flex items-center space-x-1.5 px-2.5 py-1.5 bg-teal-50 dark:bg-teal-950/50 hover:bg-teal-100 dark:hover:bg-teal-900/60 text-teal-800 dark:text-teal-200 border border-teal-300 dark:border-teal-700/70 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer group"
               title="Tanya Asisten AI MIS Lamrimnesia"
             >
-              <MascotAvatar size="xs" variant="badge" interactive={false} className="w-5 h-5 group-hover:scale-110 transition-transform shadow-xs" />
+              <MascotAvatar
+                size="xs"
+                variant="badge"
+                interactive={false}
+                enableIdleAnimation={userSettings?.mascotIdleAnimationEnabled !== false}
+                className="w-5 h-5 group-hover:scale-110 transition-transform shadow-xs"
+              />
               <span className="hidden sm:inline font-bold">AI MIS</span>
             </motion.button>
 
@@ -556,6 +565,40 @@ export const Header: React.FC<HeaderProps> = ({
                         <ShieldCheck className="w-4 h-4 text-amber-500 dark:text-amber-400 mr-2.5" />
                         <span>Audit System Log</span>
                       </button>
+
+                      <button
+                        id="menu-backup-restore"
+                        onClick={() => {
+                          setShowProfileMenu(false);
+                          setBackupRestoreInitialTab('backup');
+                          setShowBackupRestoreModal(true);
+                        }}
+                        className="w-full flex items-center px-4 py-2 text-xs text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors font-medium cursor-pointer"
+                        title="Ekspor cadangan database lengkap JSON atau pulihkan data"
+                      >
+                        <Database className="w-4 h-4 text-indigo-600 dark:text-indigo-400 mr-2.5" />
+                        <span>Cadangan & Pulihkan Database</span>
+                        <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700/50">
+                          JSON
+                        </span>
+                      </button>
+
+                      <button
+                        id="menu-database-seeder"
+                        onClick={() => {
+                          setShowProfileMenu(false);
+                          setBackupRestoreInitialTab('seeder');
+                          setShowBackupRestoreModal(true);
+                        }}
+                        className="w-full flex items-center px-4 py-2 text-xs text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/50 transition-colors font-medium cursor-pointer"
+                        title="Buat data dummy otomatis dengan counter jumlah data"
+                      >
+                        <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400 mr-2.5" />
+                        <span>Database Seeder (Data Dummy)</span>
+                        <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-700/50">
+                          Generator
+                        </span>
+                      </button>
                     </div>
 
                     {/* Session Security Status */}
@@ -834,6 +877,21 @@ export const Header: React.FC<HeaderProps> = ({
       <UserSettingsModal
         isOpen={showUserSettingsModal}
         onClose={() => setShowUserSettingsModal(false)}
+        onOpenBackupRestore={() => {
+          setBackupRestoreInitialTab('backup');
+          setShowBackupRestoreModal(true);
+        }}
+        onOpenSeeder={() => {
+          setBackupRestoreInitialTab('seeder');
+          setShowBackupRestoreModal(true);
+        }}
+      />
+
+      {/* Database Backup & Restore Modal */}
+      <BackupRestoreModal
+        isOpen={showBackupRestoreModal}
+        onClose={() => setShowBackupRestoreModal(false)}
+        initialTab={backupRestoreInitialTab}
       />
 
       {/* Mobile Navigation Drawer Portal (Small Screens < lg) */}
@@ -1106,6 +1164,34 @@ export const Header: React.FC<HeaderProps> = ({
                   >
                     <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
                     <span className="truncate">Log Audit</span>
+                  </button>
+
+                  {/* Backup & Restore Database */}
+                  <button
+                    id="btn-mobile-backup-restore"
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      setBackupRestoreInitialTab('backup');
+                      setShowBackupRestoreModal(true);
+                    }}
+                    className="flex items-center space-x-2 p-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-medium hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-colors text-left cursor-pointer"
+                  >
+                    <Database className="w-4 h-4 text-indigo-500 shrink-0" />
+                    <span className="truncate">Cadangan (JSON)</span>
+                  </button>
+
+                  {/* Dummy Database Seeder */}
+                  <button
+                    id="btn-mobile-database-seeder"
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      setBackupRestoreInitialTab('seeder');
+                      setShowBackupRestoreModal(true);
+                    }}
+                    className="flex items-center space-x-2 p-2.5 rounded-xl bg-purple-50/70 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 text-xs font-medium hover:bg-purple-100 dark:hover:bg-purple-900/60 transition-colors text-left cursor-pointer"
+                  >
+                    <Sparkles className="w-4 h-4 text-purple-500 shrink-0" />
+                    <span className="truncate">Data Dummy (Seeder)</span>
                   </button>
                 </div>
               </div>

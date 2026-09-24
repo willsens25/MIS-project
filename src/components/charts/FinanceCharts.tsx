@@ -10,11 +10,10 @@ import {
   CartesianGrid,
   PieChart,
   Pie,
-  Cell,
-  ComposedChart,
-  Line
+  Cell
 } from 'recharts';
 import { Mutasi, Account, Category, PengajuanCetak } from '../../types';
+import { SixMonthCashFlowBarChart } from './SixMonthCashFlowBarChart';
 
 interface FinanceChartsProps {
   mutasis: Mutasi[];
@@ -47,21 +46,7 @@ export const FinanceCharts: React.FC<FinanceChartsProps> = ({
 
   const pieData = spendingByCategoryData;
 
-  // 2. Monthly Spending vs Income from real mutasis
-  const totalMasukReal = mutasis.filter(m => m.tipe === 'Masuk').reduce((s, m) => s + m.nominal, 0);
-  const totalKeluarReal = mutasis.filter(m => m.tipe === 'Keluar').reduce((s, m) => s + m.nominal, 0);
-  const netReal = totalMasukReal - totalKeluarReal;
-
-  const monthlyFlowData = mutasis.length > 0 ? [
-    {
-      month: 'Bulan Berjalan',
-      pemasukan: totalMasukReal,
-      pengeluaran: totalKeluarReal,
-      net: netReal
-    }
-  ] : [];
-
-  // 3. Saldo per Rekening Bank & Kas
+  // 2. Saldo per Rekening Bank & Kas
   const accountBalancesData = accounts.map(a => {
     const mutasiAkunMasuk = mutasis.filter(m => m.account_id === a.id && m.tipe === 'Masuk').reduce((s, m) => s + m.nominal, 0);
     const mutasiAkunKeluar = mutasis.filter(m => m.account_id === a.id && m.tipe === 'Keluar').reduce((s, m) => s + m.nominal, 0);
@@ -73,7 +58,7 @@ export const FinanceCharts: React.FC<FinanceChartsProps> = ({
     };
   });
 
-  // 4. SPK & Proposal Completion Rates
+  // 3. SPK & Proposal Completion Rates
   const totalPengajuan = pengajuans.length || 1;
   const approvedCount = pengajuans.filter(p => p.status === 'approved').length;
   const pendingCount = pengajuans.filter(p => p.status === 'pending').length;
@@ -81,50 +66,10 @@ export const FinanceCharts: React.FC<FinanceChartsProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Monthly Spending & Cashflow Comparison */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                Grafik Arus Kas & Pengeluaran Bulanan
-              </h3>
-              <p className="text-[11px] text-slate-500">Perbandingan Pemasukan, Pengeluaran, dan Surplus Bersih</p>
-            </div>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800">
-              Cashflow Positif
-            </span>
-          </div>
-          <div className="h-64 w-full">
-            {monthlyFlowData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={monthlyFlowData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#888' }} />
-                  <YAxis
-                    tick={{ fontSize: 10, fill: '#888' }}
-                    tickFormatter={val => `${(val / 1000000).toFixed(0)}jt`}
-                  />
-                  <Tooltip
-                    formatter={(value: any) => [`Rp ${Number(value).toLocaleString('id-ID')}`, '']}
-                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '10px', color: '#fff', fontSize: '11px' }}
-                  />
-                  <Legend iconSize={10} wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                  <Bar dataKey="pemasukan" name="Pemasukan" fill="#10b981" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="pengeluaran" name="Pengeluaran (Spending)" fill="#f43f5e" radius={[4, 4, 0, 0]} />
-                  <Line type="monotone" dataKey="net" name="Surplus / Arus Bersih" stroke="#6366f1" strokeWidth={3} dot={{ r: 4 }} />
-                </ComposedChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
-                <p className="text-xs font-medium">Belum ada riwayat mutasi kas.</p>
-                <span className="text-[11px] text-slate-400 mt-1">Grafik arus kas otomatis terbentuk setelah ada transaksi.</span>
-              </div>
-            )}
-          </div>
-        </div>
+      {/* 1. Flagship 6-Month Cash Flow Bar Chart Component using Recharts */}
+      <SixMonthCashFlowBarChart mutasis={mutasis} />
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Expense Category Breakdown */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">

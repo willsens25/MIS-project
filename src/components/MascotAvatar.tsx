@@ -7,6 +7,7 @@ interface MascotAvatarProps {
   className?: string;
   showBorder?: boolean;
   interactive?: boolean;
+  enableIdleAnimation?: boolean;
 }
 
 export const MascotAvatar: React.FC<MascotAvatarProps> = ({
@@ -14,7 +15,8 @@ export const MascotAvatar: React.FC<MascotAvatarProps> = ({
   variant = 'yellow',
   className = '',
   showBorder = false,
-  interactive = true
+  interactive = true,
+  enableIdleAnimation = false
 }) => {
   const [imageError, setImageError] = useState(false);
 
@@ -28,6 +30,7 @@ export const MascotAvatar: React.FC<MascotAvatarProps> = ({
 
   const px = sizeDimensions[size];
 
+  // Motion variants for interactive state and floating idle bob
   const motionProps = interactive
     ? {
         whileHover: { scale: 1.08, rotate: 3 },
@@ -36,11 +39,27 @@ export const MascotAvatar: React.FC<MascotAvatarProps> = ({
       }
     : {};
 
+  // Idle floating bob animation properties
+  const idleBobProps = enableIdleAnimation
+    ? {
+        animate: {
+          y: [0, -4, 0, 3, 0],
+          rotate: [0, -1.2, 0, 1.2, 0],
+        },
+        transition: {
+          duration: 4.2,
+          repeat: Infinity,
+          ease: 'easeInOut' as const,
+        }
+      }
+    : {};
+
   // Try displaying the high-res generated asset first if available
   if (!imageError && variant === 'badge') {
     return (
       <motion.div
         {...motionProps}
+        {...idleBobProps}
         className={`relative inline-flex items-center justify-center rounded-full overflow-hidden shrink-0 shadow-sm ${className}`}
         style={{ width: px, height: px }}
       >
@@ -51,6 +70,23 @@ export const MascotAvatar: React.FC<MascotAvatarProps> = ({
           onError={() => setImageError(true)}
           referrerPolicy="no-referrer"
         />
+        {/* Subtle dynamic blink overlay for raster image if idle animation is active */}
+        {enableIdleAnimation && (
+          <motion.div
+            aria-hidden="true"
+            className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent via-amber-900/20 to-transparent mix-blend-multiply rounded-full"
+            animate={{
+              opacity: [0, 0, 0, 0, 0.7, 0, 0, 0],
+              scaleY: [1, 1, 1, 1, 0.2, 1, 1, 1],
+            }}
+            transition={{
+              duration: 4.8,
+              repeat: Infinity,
+              times: [0, 0.65, 0.88, 0.9, 0.92, 0.94, 0.96, 1],
+              ease: 'easeInOut',
+            }}
+          />
+        )}
       </motion.div>
     );
   }
@@ -59,6 +95,7 @@ export const MascotAvatar: React.FC<MascotAvatarProps> = ({
   return (
     <motion.div
       {...motionProps}
+      {...idleBobProps}
       className={`relative inline-flex items-center justify-center rounded-full overflow-hidden shrink-0 select-none ${
         showBorder ? 'ring-2 ring-emerald-500/40' : ''
       } ${className}`}
@@ -170,30 +207,89 @@ export const MascotAvatar: React.FC<MascotAvatarProps> = ({
 
           {/* Determined Bold Eyebrows */}
           {/* Left Eyebrow */}
-          <path
+          <motion.path
             d="M 45 53 C 49 53 53 56 56 59"
             stroke="#1b120c"
             strokeWidth="3.2"
             strokeLinecap="round"
             fill="none"
+            animate={
+              enableIdleAnimation
+                ? {
+                    y: [0, -1, 0, 0.5, 0],
+                  }
+                : {}
+            }
+            transition={{
+              duration: 3.6,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            }}
           />
           {/* Right Eyebrow */}
-          <path
+          <motion.path
             d="M 68 53 C 67 50 66 47 64 45"
             stroke="#1b120c"
             strokeWidth="3.5"
             strokeLinecap="round"
             fill="none"
+            animate={
+              enableIdleAnimation
+                ? {
+                    y: [0, -1.2, 0, 0.5, 0],
+                  }
+                : {}
+            }
+            transition={{
+              duration: 3.6,
+              repeat: Infinity,
+              ease: 'easeInOut',
+              delay: 0.15,
+            }}
           />
 
-          {/* Big Determined Cartoon Eyes */}
-          {/* Left Eye */}
-          <ellipse cx="51" cy="60" rx="3" ry="3.5" fill="#1b120c" />
-          <circle cx="52" cy="59" r="1.1" fill="#ffffff" />
+          {/* Big Determined Cartoon Eyes with Natural Blinking */}
+          {/* Left Eye Group */}
+          <motion.g
+            animate={
+              enableIdleAnimation
+                ? {
+                    scaleY: [1, 1, 1, 1, 0.08, 1, 1, 1],
+                  }
+                : {}
+            }
+            style={{ transformOrigin: '51px 60px' }}
+            transition={{
+              duration: 4.8,
+              repeat: Infinity,
+              times: [0, 0.65, 0.88, 0.9, 0.92, 0.94, 0.96, 1],
+              ease: 'easeInOut',
+            }}
+          >
+            <ellipse cx="51" cy="60" rx="3" ry="3.5" fill="#1b120c" />
+            <circle cx="52" cy="59" r="1.1" fill="#ffffff" />
+          </motion.g>
 
-          {/* Right Eye */}
-          <ellipse cx="68" cy="56" rx="3.2" ry="3.8" fill="#1b120c" />
-          <circle cx="69" cy="55" r="1.2" fill="#ffffff" />
+          {/* Right Eye Group */}
+          <motion.g
+            animate={
+              enableIdleAnimation
+                ? {
+                    scaleY: [1, 1, 1, 1, 0.08, 1, 1, 1],
+                  }
+                : {}
+            }
+            style={{ transformOrigin: '68px 56px' }}
+            transition={{
+              duration: 4.8,
+              repeat: Infinity,
+              times: [0, 0.65, 0.88, 0.9, 0.92, 0.94, 0.96, 1],
+              ease: 'easeInOut',
+            }}
+          >
+            <ellipse cx="68" cy="56" rx="3.2" ry="3.8" fill="#1b120c" />
+            <circle cx="69" cy="55" r="1.2" fill="#ffffff" />
+          </motion.g>
 
           {/* Brown Messy Hair Spikes on Top & Front */}
           <g id="hair-spikes">

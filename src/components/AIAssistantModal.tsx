@@ -136,7 +136,8 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({ isOpen, onCl
     divisiList,
     currentSubTab,
     setAiAppState,
-    triggerTaskSuccess
+    triggerTaskSuccess,
+    userSettings
   } = useApp();
   const [prompt, setPrompt] = useState(initialPrompt || '');
 
@@ -433,7 +434,12 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
               <div className="flex items-center space-x-3">
                 {/* Mascot Logo from Image 2: Green Ring & Pink Background */}
                 <div className="relative">
-                  <MascotAvatar size="md" variant="badge" className="ring-2 ring-white/30 shadow-md" />
+                  <MascotAvatar
+                    size="md"
+                    variant="badge"
+                    enableIdleAnimation={userSettings?.mascotIdleAnimationEnabled !== false}
+                    className="ring-2 ring-white/30 shadow-md"
+                  />
                   <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 border-2 border-slate-900 rounded-full" />
                 </div>
                 <div>
@@ -507,7 +513,13 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
                         transition={{ type: 'spring', stiffness: 350, damping: 18 }}
                         className="shrink-0 mt-0.5"
                       >
-                        <MascotAvatar size="md" variant="yellow" interactive={false} className="shadow-md ring-1 ring-amber-300/40" />
+                        <MascotAvatar
+                          size="md"
+                          variant="yellow"
+                          interactive={false}
+                          enableIdleAnimation={userSettings?.mascotIdleAnimationEnabled !== false}
+                          className="shadow-md ring-1 ring-amber-300/40"
+                        />
                       </motion.div>
                     )}
 
@@ -587,7 +599,12 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
                   className="flex items-start gap-3 justify-start"
                 >
                   <div className="shrink-0 mt-0.5">
-                    <MascotAvatar size="md" variant="yellow" className="shadow-md" />
+                    <MascotAvatar
+                      size="md"
+                      variant="yellow"
+                      enableIdleAnimation={userSettings?.mascotIdleAnimationEnabled !== false}
+                      className="shadow-md"
+                    />
                   </div>
                   <div className="relative max-w-[85%]">
                     <div

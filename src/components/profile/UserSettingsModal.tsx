@@ -16,15 +16,25 @@ import {
   Bell,
   Eye,
   EyeOff,
-  Bot
+  Bot,
+  Activity,
+  Database
 } from 'lucide-react';
+import { MascotAvatar } from '../MascotAvatar';
 
 interface UserSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenBackupRestore?: () => void;
+  onOpenSeeder?: () => void;
 }
 
-export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ isOpen, onClose }) => {
+export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
+  isOpen,
+  onClose,
+  onOpenBackupRestore,
+  onOpenSeeder
+}) => {
   const { userSettings, updateUserSettings, currentUser } = useApp();
   const [toastNotice, setToastNotice] = useState<string | null>(null);
 
@@ -63,12 +73,23 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ isOpen, on
     showToast(nextVal ? '⚡ Pintasan divisi aktif' : '🚫 Pintasan divisi disembunyikan');
   };
 
+  const handleToggleIdleAnimation = () => {
+    const nextVal = userSettings.mascotIdleAnimationEnabled === false;
+    updateUserSettings({ mascotIdleAnimationEnabled: nextVal });
+    showToast(
+      nextVal
+        ? '🪷 Animasi gerak diam maskot (kedip & melayang) aktif'
+        : '⏸️ Animasi gerak diam maskot dijeda / nonaktif'
+    );
+  };
+
   const handleResetDefaults = () => {
     updateUserSettings({
       mascotSpeechBubbleEnabled: true,
       mascotSoundEffectsEnabled: true,
       mascotParticleBurstEnabled: true,
       mascotShortcutHintsEnabled: true,
+      mascotIdleAnimationEnabled: true,
     });
     showToast('🔄 Preferensi Maskot AI dikembalikan ke setelan default');
   };
@@ -141,9 +162,15 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ isOpen, on
           </div>
 
           <div className="flex items-end gap-3.5 pt-2 pb-1">
-            {/* Mini Mascot Simulation */}
-            <div className="w-12 h-12 rounded-full border-2 border-teal-500 bg-white dark:bg-slate-900 shadow-md flex items-center justify-center shrink-0 relative group">
-              <span className="text-xl select-none">🪷</span>
+            {/* Mini Mascot Simulation with real MascotAvatar and idle animation preview */}
+            <div className="relative group shrink-0">
+              <MascotAvatar
+                size="md"
+                variant="badge"
+                interactive={false}
+                enableIdleAnimation={userSettings.mascotIdleAnimationEnabled !== false}
+                className="shadow-md ring-2 ring-teal-500/80"
+              />
               {userSettings.mascotParticleBurstEnabled && (
                 <span className="absolute -top-1 -right-1 flex h-3 w-3">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
@@ -391,6 +418,121 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({ isOpen, on
               />
             </button>
           </div>
+
+          {/* 5. Mascot Idle Animations Toggle (Blinking, Floating Bob) */}
+          <div
+            onClick={handleToggleIdleAnimation}
+            className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all cursor-pointer flex items-center justify-between gap-4 group"
+          >
+            <div className="flex items-center space-x-3">
+              <div
+                className={`p-2 rounded-xl transition-colors shrink-0 ${
+                  userSettings.mascotIdleAnimationEnabled !== false
+                    ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                }`}
+              >
+                <Activity className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                    Animasi Diam Interaktif (*Idle Animations*)
+                  </h4>
+                  <span
+                    className={`text-[9px] font-extrabold px-1.5 py-0.2 rounded ${
+                      userSettings.mascotIdleAnimationEnabled !== false
+                        ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                    }`}
+                  >
+                    {userSettings.mascotIdleAnimationEnabled !== false ? 'AKTIF' : 'NONAKTIF'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Gerakan bernapas melayang santai (*floating bob*) dan kedipan mata berkala maskot menggunakan Motion
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              role="switch"
+              aria-checked={userSettings.mascotIdleAnimationEnabled !== false}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggleIdleAnimation();
+              }}
+              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                userSettings.mascotIdleAnimationEnabled !== false
+                  ? 'bg-emerald-500'
+                  : 'bg-slate-300 dark:bg-slate-700'
+              }`}
+            >
+              <span
+                aria-hidden="true"
+                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                  userSettings.mascotIdleAnimationEnabled !== false ? 'translate-x-4' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* 6. Quick Access to Database Backup & Restore */}
+          {onOpenBackupRestore && (
+            <div
+              onClick={() => {
+                onClose();
+                onOpenBackupRestore();
+              }}
+              className="p-3.5 rounded-2xl border border-indigo-200 dark:border-indigo-800/80 bg-gradient-to-r from-indigo-50/70 to-cyan-50/50 dark:from-indigo-950/40 dark:to-cyan-950/20 hover:from-indigo-100/80 dark:hover:from-indigo-900/60 transition-all cursor-pointer flex items-center justify-between gap-4 group"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-xl bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 shrink-0">
+                  <Database className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-indigo-950 dark:text-indigo-200">
+                    Cadangkan & Pulihkan Seluruh Database
+                  </h4>
+                  <p className="text-[11px] text-indigo-700/80 dark:text-indigo-300/80">
+                    Ekspor seluruh data 6 divisi ke berkas JSON atau impor cadangan saat ganti perangkat.
+                  </p>
+                </div>
+              </div>
+              <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 group-hover:translate-x-0.5 transition-transform shrink-0">
+                Buka &rarr;
+              </span>
+            </div>
+          )}
+
+          {/* 7. Quick Access to Database Seeder */}
+          {onOpenSeeder && (
+            <div
+              onClick={() => {
+                onClose();
+                onOpenSeeder();
+              }}
+              className="p-3.5 rounded-2xl border border-purple-200 dark:border-purple-800/80 bg-gradient-to-r from-purple-50/70 to-pink-50/50 dark:from-purple-950/40 dark:to-pink-950/20 hover:from-purple-100/80 dark:hover:from-purple-900/60 transition-all cursor-pointer flex items-center justify-between gap-4 group"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-xl bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-400 shrink-0">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-purple-950 dark:text-purple-200">
+                    Database Seeder (Data Dummy Otomatis)
+                  </h4>
+                  <p className="text-[11px] text-purple-700/80 dark:text-purple-300/80">
+                    Tambahkan sampel buku, anggota, pesanan & mutasi kas dengan tombol counter kustom.
+                  </p>
+                </div>
+              </div>
+              <span className="text-[11px] font-bold text-purple-600 dark:text-purple-400 group-hover:translate-x-0.5 transition-transform shrink-0">
+                Buka &rarr;
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

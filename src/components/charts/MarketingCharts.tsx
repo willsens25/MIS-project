@@ -10,11 +10,10 @@ import {
   CartesianGrid,
   PieChart,
   Pie,
-  Cell,
-  AreaChart,
-  Area
+  Cell
 } from 'recharts';
 import { Order, Book } from '../../types';
+import { SixMonthOrderVolumeBarChart } from './SixMonthOrderVolumeBarChart';
 
 interface MarketingChartsProps {
   orders: Order[];
@@ -92,55 +91,11 @@ export const MarketingCharts: React.FC<MarketingChartsProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Monthly Revenue & Orders Trend */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                Trend Omset & Volume Pesanan Bulanan
-              </h3>
-              <p className="text-[11px] text-slate-500">Performa penjualan buku yayasan</p>
-            </div>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800">
-              Pertumbuhan +23%
-            </span>
-          </div>
-          <div className="h-64 w-full">
-            {monthlyRevenueData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={monthlyRevenueData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorOmset" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#888' }} />
-                  <YAxis
-                    tick={{ fontSize: 10, fill: '#888' }}
-                    tickFormatter={val => `Rp ${(val / 1000000).toFixed(0)}jt`}
-                  />
-                  <Tooltip
-                    formatter={(value: any) => [`Rp ${Number(value).toLocaleString('id-ID')}`, 'Total Omset']}
-                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '10px', color: '#fff', fontSize: '11px' }}
-                  />
-                  <Area type="monotone" dataKey="omset" name="Omset Penjualan" stroke="#3b82f6" strokeWidth={2.5} fillOpacity={1} fill="url(#colorOmset)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
-                <p className="text-xs font-medium">Belum ada data transaksi penjualan.</p>
-                <span className="text-[11px] text-slate-400 mt-1">Grafik omset akan terisi saat ada pesanan masuk.</span>
-              </div>
-            )}
-          </div>
-        </div>
+      {/* 1. Flagship 6-Month Order Volume & Revenue Bar Chart using Recharts */}
+      <SixMonthOrderVolumeBarChart orders={orders} />
 
-        {/* Status Pesanan & Penjualan per Channel */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Status Pesanan & Penjualan per Channel */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           
           {/* Status Pesanan Donut */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
@@ -230,8 +185,6 @@ export const MarketingCharts: React.FC<MarketingChartsProps> = ({
           </div>
 
         </div>
-
-      </div>
 
       {/* Top Best Selling Titles */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm">

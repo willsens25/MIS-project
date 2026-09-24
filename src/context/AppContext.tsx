@@ -21,8 +21,12 @@ import {
   ColorPresetId,
   BazaarEvent,
   BazaarAllocationItem,
-  UserSettings
+  UserSettings,
+  BackupData,
+  RestoreSummary,
+  SeederSummary
 } from '../types';
+import { SeedOptions, generateSeedData } from '../lib/dummySeeder';
 import { DEFAULT_COLOR_PRESET } from '../lib/themePresets';
 import {
   INITIAL_DIVISI,
@@ -192,10 +196,16 @@ interface AppContextType {
   deleteUser: (id: number) => void;
   bulkDeleteUsers: (ids: number[]) => void;
 
-  // Reset and demo state operations
+  // Reset, demo, and backup & restore operations
   resetToDefault: () => void;
   clearAllData: () => void;
   loadDemoData: () => void;
+  exportBackupData: (systemNote?: string) => BackupData;
+  importBackupData: (
+    backup: BackupData,
+    mode?: 'replace' | 'merge'
+  ) => { success: boolean; message: string; summary?: RestoreSummary };
+  seedDummyData: (options: SeedOptions) => SeederSummary;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -279,6 +289,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     mascotSoundEffectsEnabled: true,
     mascotParticleBurstEnabled: true,
     mascotShortcutHintsEnabled: true,
+    mascotIdleAnimationEnabled: true,
   };
 
   const [userSettings, setUserSettings] = useState<UserSettings>(() => {
@@ -1746,6 +1757,291 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     clearAllData();
   };
 
+  const exportBackupData = (systemNote?: string): BackupData => {
+    const backup: BackupData = {
+      version: '1.0.0',
+      metadata: {
+        app_version: 'v4.2.0-enterprise',
+        app_name: 'MIS Yayasan Lamrimnesia',
+        exported_at: new Date().toISOString(),
+        exported_by: {
+          id: currentUser?.id,
+          name: currentUser?.name,
+          email: currentUser?.email,
+          role: currentUser?.role
+        },
+        item_counts: {
+          books: books.length,
+          orders: orders.length,
+          mutasis: mutasis.length,
+          accounts: accounts.length,
+          identitas: identitasList.length,
+          pengajuans: pengajuans.length,
+          productionLogs: productionLogs.length,
+          logisticLogs: logisticLogs.length,
+          promos: promos.length,
+          salesChannels: salesChannels.length,
+          expeditions: expeditions.length,
+          bazaarEvents: bazaarEvents.length,
+          activityLogs: activityLogs.length,
+          users: usersList.length
+        },
+        system_note: systemNote || 'Pencadangan data lengkap operasional seluruh divisi MIS Yayasan Lamrimnesia.'
+      },
+      data: {
+        books,
+        orders,
+        mutasis,
+        accounts,
+        identitasList,
+        pengajuans,
+        penjualans,
+        penyalurans,
+        productionLogs,
+        logisticLogs,
+        promos,
+        salesChannels,
+        expeditions,
+        bazaarEvents,
+        activityLogs,
+        usersList,
+        categories,
+        userSettings,
+        colorPreset,
+        theme
+      }
+    };
+
+    recordActivity(
+      'Backup Data',
+      'System',
+      `Mengekspor cadangan database lengkap (Total item: ${
+        books.length + orders.length + mutasis.length + identitasList.length
+      } entri data)`
+    );
+
+    return backup;
+  };
+
+  const importBackupData = (
+    backup: BackupData,
+    mode: 'replace' | 'merge' = 'replace'
+  ): { success: boolean; message: string; summary?: RestoreSummary } => {
+    if (!backup || !backup.data) {
+      return {
+        success: false,
+        message: 'Format berkas cadangan (backup) tidak valid atau korup.'
+      };
+    }
+
+    try {
+      const d = backup.data;
+
+      let newBooks = books;
+      let newOrders = orders;
+      let newMutasis = mutasis;
+      let newAccounts = accounts;
+      let newIdentitas = identitasList;
+      let newPengajuans = pengajuans;
+      let newProductionLogs = productionLogs;
+      let newLogisticLogs = logisticLogs;
+      let newBazaarEvents = bazaarEvents;
+      let newPromos = promos;
+      let newSalesChannels = salesChannels;
+      let newExpeditions = expeditions;
+      let newActivityLogs = activityLogs;
+      let newPenjualans = penjualans;
+      let newPenyalurans = penyalurans;
+
+      if (mode === 'replace') {
+        newBooks = Array.isArray(d.books) ? d.books : [];
+        newOrders = Array.isArray(d.orders) ? d.orders : [];
+        newMutasis = Array.isArray(d.mutasis) ? d.mutasis : [];
+        newAccounts = Array.isArray(d.accounts) && d.accounts.length > 0 ? d.accounts : INITIAL_ACCOUNTS;
+        newIdentitas = Array.isArray(d.identitasList) ? d.identitasList : [];
+        newPengajuans = Array.isArray(d.pengajuans) ? d.pengajuans : [];
+        newProductionLogs = Array.isArray(d.productionLogs) ? d.productionLogs : [];
+        newLogisticLogs = Array.isArray(d.logisticLogs) ? d.logisticLogs : [];
+        newBazaarEvents = Array.isArray(d.bazaarEvents) ? d.bazaarEvents : [];
+        newPromos = Array.isArray(d.promos) ? d.promos : [];
+        newSalesChannels = Array.isArray(d.salesChannels) ? d.salesChannels : INITIAL_SALES_CHANNELS;
+        newExpeditions = Array.isArray(d.expeditions) ? d.expeditions : INITIAL_EXPEDITIONS;
+        newActivityLogs = Array.isArray(d.activityLogs) ? d.activityLogs : [];
+        newPenjualans = Array.isArray(d.penjualans) ? d.penjualans : [];
+        newPenyalurans = Array.isArray(d.penyalurans) ? d.penyalurans : [];
+      } else {
+        // Merge mode: deduplicate based on id
+        const mergeById = <T extends { id: number }>(existing: T[], incoming: T[] = []): T[] => {
+          const map = new Map<number, T>();
+          existing.forEach(item => map.set(item.id, item));
+          incoming.forEach(item => map.set(item.id, item));
+          return Array.from(map.values());
+        };
+
+        newBooks = mergeById(books, d.books);
+        newOrders = mergeById(orders, d.orders);
+        newMutasis = mergeById(mutasis, d.mutasis);
+        newAccounts = mergeById(accounts, d.accounts);
+        newIdentitas = mergeById(identitasList, d.identitasList);
+        newPengajuans = mergeById(pengajuans, d.pengajuans);
+        newProductionLogs = mergeById(productionLogs, d.productionLogs);
+        newLogisticLogs = mergeById(logisticLogs, d.logisticLogs);
+        newBazaarEvents = mergeById(bazaarEvents, d.bazaarEvents);
+        newPromos = mergeById(promos, d.promos);
+        newSalesChannels = mergeById(salesChannels, d.salesChannels);
+        newExpeditions = mergeById(expeditions, d.expeditions);
+        newActivityLogs = mergeById(activityLogs, d.activityLogs);
+        newPenjualans = mergeById(penjualans, d.penjualans);
+        newPenyalurans = mergeById(penyalurans, d.penyalurans);
+      }
+
+      // Apply React states
+      setBooks(newBooks);
+      setOrders(newOrders);
+      setMutasis(newMutasis);
+      setAccounts(newAccounts);
+      setIdentitasList(newIdentitas);
+      setPengajuans(newPengajuans);
+      setProductionLogs(newProductionLogs);
+      setLogisticLogs(newLogisticLogs);
+      setBazaarEvents(newBazaarEvents);
+      setPromos(newPromos);
+      setSalesChannels(newSalesChannels);
+      setExpeditions(newExpeditions);
+      setActivityLogs(newActivityLogs);
+      setPenjualans(newPenjualans);
+      setPenyalurans(newPenyalurans);
+
+      // Restore user settings if present
+      if (d.userSettings) {
+        setUserSettings(prev => ({ ...prev, ...d.userSettings }));
+        setStoredItem('mis_user_settings', { ...userSettings, ...d.userSettings });
+      }
+
+      // Sync to localStorage
+      setStoredItem('mis_books', newBooks);
+      setStoredItem('mis_orders', newOrders);
+      setStoredItem('mis_mutasis', newMutasis);
+      setStoredItem('mis_accounts', newAccounts);
+      setStoredItem('mis_identitas', newIdentitas);
+      setStoredItem('mis_pengajuans', newPengajuans);
+      setStoredItem('mis_production_logs', newProductionLogs);
+      setStoredItem('mis_logistic_logs', newLogisticLogs);
+      setStoredItem('mis_bazaar_events', newBazaarEvents);
+      setStoredItem('mis_promos', newPromos);
+      setStoredItem('mis_sales_channels', newSalesChannels);
+      setStoredItem('mis_expeditions', newExpeditions);
+      setStoredItem('mis_activity_logs', newActivityLogs);
+      setStoredItem('mis_penjualans', newPenjualans);
+      setStoredItem('mis_penyalurans', newPenyalurans);
+
+      const summary: RestoreSummary = {
+        booksRestored: newBooks.length,
+        ordersRestored: newOrders.length,
+        mutasisRestored: newMutasis.length,
+        accountsRestored: newAccounts.length,
+        identitasRestored: newIdentitas.length,
+        pengajuansRestored: newPengajuans.length,
+        productionLogsRestored: newProductionLogs.length,
+        logisticLogsRestored: newLogisticLogs.length,
+        bazaarEventsRestored: newBazaarEvents.length,
+        promosRestored: newPromos.length,
+        timestamp: new Date().toISOString()
+      };
+
+      recordActivity(
+        'Restore Data',
+        'System',
+        `Memulihkan database (${mode === 'replace' ? 'Timpa Penuh' : 'Gabung/Merge'}). Total buku: ${newBooks.length}, order: ${newOrders.length}, mutasi: ${newMutasis.length}.`
+      );
+
+      return {
+        success: true,
+        message: `Database berhasil dipulihkan dengan mode ${mode === 'replace' ? 'Timpa Penuh' : 'Penggabungan Data'}.`,
+        summary
+      };
+    } catch (err: unknown) {
+      console.error('Failed to import backup data:', err);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      return {
+        success: false,
+        message: `Gagal memulihkan database: ${errMsg}`
+      };
+    }
+  };
+
+  const seedDummyData = (options: SeedOptions): SeederSummary => {
+    // Determine maximum current IDs
+    const maxBookId = books.reduce((max, b) => Math.max(max, b.id), 0);
+    const maxIdentitasId = identitasList.reduce((max, i) => Math.max(max, i.id), 0);
+    const maxOrderId = orders.reduce((max, o) => Math.max(max, o.id), 0);
+    const maxMutasiId = mutasis.reduce((max, m) => Math.max(max, m.id), 0);
+    const maxPengajuanId = pengajuans.reduce((max, p) => Math.max(max, p.id), 0);
+    const maxProductionId = productionLogs.reduce((max, pr) => Math.max(max, pr.id), 0);
+    const maxLogisticId = logisticLogs.reduce((max, l) => Math.max(max, l.id), 0);
+
+    const generated = generateSeedData(
+      options,
+      {
+        bookId: maxBookId,
+        identitasId: maxIdentitasId,
+        orderId: maxOrderId,
+        mutasiId: maxMutasiId,
+        pengajuanId: maxPengajuanId,
+        productionId: maxProductionId,
+        logisticId: maxLogisticId
+      },
+      books,
+      identitasList
+    );
+
+    // Merge generated dummy data into current state
+    const updatedBooks = [...books, ...generated.books];
+    const updatedIdentitas = [...identitasList, ...generated.identitas];
+    const updatedOrders = [...orders, ...generated.orders];
+    const updatedMutasis = [...mutasis, ...generated.mutasis];
+    const updatedPengajuans = [...pengajuans, ...generated.pengajuans];
+    const updatedProductionLogs = [...productionLogs, ...generated.productionLogs];
+    const updatedLogisticLogs = [...logisticLogs, ...generated.logisticLogs];
+
+    // Update React state
+    if (generated.books.length > 0) setBooks(updatedBooks);
+    if (generated.identitas.length > 0) setIdentitasList(updatedIdentitas);
+    if (generated.orders.length > 0) setOrders(updatedOrders);
+    if (generated.mutasis.length > 0) setMutasis(updatedMutasis);
+    if (generated.pengajuans.length > 0) setPengajuans(updatedPengajuans);
+    if (generated.productionLogs.length > 0) setProductionLogs(updatedProductionLogs);
+    if (generated.logisticLogs.length > 0) setLogisticLogs(updatedLogisticLogs);
+
+    // Update localStorage
+    if (generated.books.length > 0) setStoredItem('mis_books', updatedBooks);
+    if (generated.identitas.length > 0) setStoredItem('mis_identitas', updatedIdentitas);
+    if (generated.orders.length > 0) setStoredItem('mis_orders', updatedOrders);
+    if (generated.mutasis.length > 0) setStoredItem('mis_mutasis', updatedMutasis);
+    if (generated.pengajuans.length > 0) setStoredItem('mis_pengajuans', updatedPengajuans);
+    if (generated.productionLogs.length > 0) setStoredItem('mis_production_logs', updatedProductionLogs);
+    if (generated.logisticLogs.length > 0) setStoredItem('mis_logistic_logs', updatedLogisticLogs);
+
+    const summary: SeederSummary = {
+      booksAdded: generated.books.length,
+      identitasAdded: generated.identitas.length,
+      ordersAdded: generated.orders.length,
+      mutasisAdded: generated.mutasis.length,
+      pengajuansAdded: generated.pengajuans.length,
+      productionLogsAdded: generated.productionLogs.length,
+      logisticLogsAdded: generated.logisticLogs.length,
+      timestamp: new Date().toISOString()
+    };
+
+    recordActivity(
+      'Database Seeder',
+      'System',
+      `Menjalankan generator data dummy: +${summary.booksAdded} buku, +${summary.identitasAdded} anggota, +${summary.ordersAdded} pesanan, +${summary.mutasisAdded} mutasi kas.`
+    );
+
+    return summary;
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -1852,7 +2148,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         bulkDeleteUsers,
         resetToDefault,
         clearAllData,
-        loadDemoData
+        loadDemoData,
+        exportBackupData,
+        importBackupData,
+        seedDummyData
       }}
     >
       {children}

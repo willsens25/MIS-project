@@ -277,4 +277,86 @@ export interface UserSettings {
   mascotSoundEffectsEnabled: boolean; // Audio tactile feedback on interaction
   mascotParticleBurstEnabled: boolean; // Sparkle particle burst effect on hover
   mascotShortcutHintsEnabled: boolean; // Division contextual shortcuts in tooltip
+  mascotIdleAnimationEnabled: boolean; // Toggle interactive idle animations (blinking, slight floating bob)
+}
+
+export interface BackupMetadata {
+  app_version: string;
+  app_name: string;
+  exported_at: string;
+  exported_by: {
+    id?: number;
+    name?: string;
+    email?: string;
+    role?: string;
+  };
+  item_counts: {
+    books: number;
+    orders: number;
+    mutasis: number;
+    accounts: number;
+    identitas: number;
+    pengajuans: number;
+    productionLogs: number;
+    logisticLogs: number;
+    promos: number;
+    salesChannels: number;
+    expeditions: number;
+    bazaarEvents: number;
+    activityLogs: number;
+    users: number;
+  };
+  system_note?: string;
+}
+
+export interface BackupData {
+  version: string;
+  metadata: BackupMetadata;
+  data: {
+    books: Book[];
+    orders: Order[];
+    mutasis: Mutasi[];
+    accounts: Account[];
+    identitasList: Identitas[];
+    pengajuans: PengajuanCetak[];
+    penjualans?: Penjualan[];
+    penyalurans?: Penyaluran[];
+    productionLogs: ProductionLog[];
+    logisticLogs: LogisticLog[];
+    promos: Promo[];
+    salesChannels: SalesChannel[];
+    expeditions: Expedition[];
+    bazaarEvents: BazaarEvent[];
+    activityLogs: ActivityLog[];
+    usersList?: User[];
+    categories?: Category[];
+    userSettings?: UserSettings;
+    colorPreset?: ColorPresetId;
+    theme?: 'light' | 'dark';
+  };
+}
+
+export interface RestoreSummary {
+  booksRestored: number;
+  ordersRestored: number;
+  mutasisRestored: number;
+  accountsRestored: number;
+  identitasRestored: number;
+  pengajuansRestored: number;
+  productionLogsRestored: number;
+  logisticLogsRestored: number;
+  bazaarEventsRestored: number;
+  promosRestored: number;
+  timestamp: string;
+}
+
+export interface SeederSummary {
+  booksAdded: number;
+  identitasAdded: number;
+  ordersAdded: number;
+  mutasisAdded: number;
+  pengajuansAdded: number;
+  productionLogsAdded: number;
+  logisticLogsAdded: number;
+  timestamp: string;
 }

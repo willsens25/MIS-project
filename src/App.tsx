@@ -692,12 +692,19 @@ const AppContent: React.FC = () => {
           animate={
             aiAppState === 'thinking'
               ? { y: [0, -6, 0], scale: 1, opacity: 1 }
+              : userSettings?.mascotIdleAnimationEnabled !== false
+              ? { y: [0, -4, 0, 3, 0], scale: 1, opacity: 1 }
               : { y: 0, scale: 1, opacity: 1 }
           }
           transition={
             aiAppState === 'thinking'
               ? {
                   y: { repeat: Infinity, duration: 1.15, ease: 'easeInOut' },
+                  scale: { type: 'spring', stiffness: 350, damping: 20 }
+                }
+              : userSettings?.mascotIdleAnimationEnabled !== false
+              ? {
+                  y: { repeat: Infinity, duration: 4.2, ease: 'easeInOut' },
                   scale: { type: 'spring', stiffness: 350, damping: 20 }
                 }
               : { type: 'spring', stiffness: 350, damping: 20 }
@@ -795,7 +802,13 @@ const AppContent: React.FC = () => {
           </AnimatePresence>
 
           <div className="relative">
-            <MascotAvatar size="md" variant="badge" interactive={false} className="shadow-xs" />
+            <MascotAvatar
+              size="md"
+              variant="badge"
+              interactive={false}
+              enableIdleAnimation={userSettings?.mascotIdleAnimationEnabled !== false}
+              className="shadow-xs"
+            />
 
             {/* Reactive State Badge */}
             {aiAppState === 'thinking' ? (

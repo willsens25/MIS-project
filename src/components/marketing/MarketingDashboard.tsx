@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { InvoicePrintModal } from '../modals/InvoicePrintModal';
 import { MarketingCharts } from '../charts/MarketingCharts';
+import { SixMonthOrderVolumeBarChart } from '../charts/SixMonthOrderVolumeBarChart';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { SalesChannelModal } from './SalesChannelModal';
 import { ExpeditionModal } from './ExpeditionModal';
@@ -86,6 +87,7 @@ export const MarketingDashboard: React.FC = () => {
   const [invoiceSearch, setInvoiceSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [channelFilter, setChannelFilter] = useState<string>('all');
+  const [showInvoiceChart, setShowInvoiceChart] = useState(false);
 
   // WhatsApp quick modal state
   const [whatsAppModalOrder, setWhatsAppModalOrder] = useState<Order | null>(null);
@@ -556,6 +558,9 @@ export const MarketingDashboard: React.FC = () => {
           >
             <TrendingUp className="w-3.5 h-3.5" />
             <span>Grafik & Analisis Penjualan</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300">
+              6 Bln
+            </span>
           </button>
 
           <button
@@ -1437,9 +1442,30 @@ export const MarketingDashboard: React.FC = () => {
                     </option>
                   ))}
                 </select>
+
+                <button
+                  type="button"
+                  onClick={() => setShowInvoiceChart(prev => !prev)}
+                  className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                    showInvoiceChart
+                      ? 'bg-blue-50 dark:bg-blue-950/60 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300'
+                      : 'bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  }`}
+                  title="Tampilkan grafik batang ringkasan volume pesanan 6 bulan terakhir"
+                >
+                  <TrendingUp className="w-3.5 h-3.5 text-blue-500" />
+                  <span>{showInvoiceChart ? 'Sembunyikan Grafik 6 Bln' : 'Lihat Grafik 6 Bln'}</span>
+                </button>
               </div>
             </div>
           </div>
+
+          {/* Collapsible 6-Month Order Volume Bar Chart */}
+          {showInvoiceChart && (
+            <div className="animate-fadeIn">
+              <SixMonthOrderVolumeBarChart orders={orders} />
+            </div>
+          )}
 
           {/* Invoices Table */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">

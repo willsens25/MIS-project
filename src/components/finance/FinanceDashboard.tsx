@@ -24,6 +24,7 @@ import {
   Check
 } from 'lucide-react';
 import { FinanceCharts } from '../charts/FinanceCharts';
+import { SixMonthCashFlowBarChart } from '../charts/SixMonthCashFlowBarChart';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
@@ -73,6 +74,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
   const [filterType, setFilterType] = useState<string>('all');
   const [filterAccount, setFilterAccount] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showMutasiChart, setShowMutasiChart] = useState(false);
 
   // Selection states for bulk actions
   const [selectedMutasiIds, setSelectedMutasiIds] = useState<number[]>([]);
@@ -460,6 +462,9 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
           >
             <TrendingUp className="w-3.5 h-3.5" />
             <span>Grafik & Analisis Finansial</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+              6 Bln
+            </span>
           </button>
 
           <button
@@ -635,9 +640,30 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
                     <option key={a.id} value={a.id}>{a.nama_akun}</option>
                   ))}
                 </select>
+
+                <button
+                  type="button"
+                  onClick={() => setShowMutasiChart(prev => !prev)}
+                  className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                    showMutasiChart
+                      ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
+                      : 'bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  }`}
+                  title="Tampilkan grafik batang ringkasan mutasi kas 6 bulan terakhir"
+                >
+                  <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>{showMutasiChart ? 'Sembunyikan Grafik 6 Bln' : 'Lihat Grafik 6 Bln'}</span>
+                </button>
               </div>
             </div>
           </div>
+
+          {/* Collapsible 6-Month Cash Flow Bar Chart */}
+          {showMutasiChart && (
+            <div className="animate-fadeIn">
+              <SixMonthCashFlowBarChart mutasis={mutasis} />
+            </div>
+          )}
 
           {/* Mutasi Table */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">

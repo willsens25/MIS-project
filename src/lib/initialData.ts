@@ -369,6 +369,116 @@ export const DEMO_ORDERS: Order[] = [
       { buku_id: 2, jumlah: 5, harga_satuan: 95000, subtotal: 475000, kode_promo_terpakai: null, potongan_diskon: 0 },
       { buku_id: 4, jumlah: 3, harga_satuan: 80000, subtotal: 220000, kode_promo_terpakai: 'HEMAT20K', potongan_diskon: 20000 }
     ]
+  },
+  {
+    id: 3,
+    no_invoice: 'INV-20260915-0003',
+    tanggal_pesan: '2026-09-15',
+    via: 'Shopee',
+    nama_pembeli: 'SURYA DHARMA PUTRA',
+    kontak_pembeli: '081234567890',
+    email_pembeli: 'surya.dharma@gmail.com',
+    nama_penerima: 'Surya Dharma Putra',
+    kontak_penerima: '081234567890',
+    alamat_penerima: 'Jl. Diponegoro No. 88, Menteng, Jakarta Pusat',
+    ekspedisi: 'JNE Reguler',
+    ongkir: 18000,
+    donasi: 50000,
+    keterangan_donasi: 'Donasi Program Pelestarian Naskah',
+    status: 'Lunas',
+    total_tagihan: 388000,
+    user_id: 4,
+    tercatat_finance: 1,
+    created_at: '2026-09-15 14:20:00',
+    items: [
+      { buku_id: 1, jumlah: 2, harga_satuan: 145000, subtotal: 290000, kode_promo_terpakai: null, potongan_diskon: 0 }
+    ]
+  },
+  {
+    id: 4,
+    no_invoice: 'INV-20260718-0004',
+    tanggal_pesan: '2026-07-18',
+    via: 'Tokopedia',
+    nama_pembeli: 'CITRA DEWI LESTARI',
+    kontak_pembeli: '08176543210',
+    email_pembeli: 'citra.lestari@gmail.com',
+    nama_penerima: 'Citra Dewi Lestari',
+    kontak_penerima: '08176543210',
+    alamat_penerima: 'Jl. Riau No. 12, Bandung, Jawa Barat',
+    ekspedisi: 'SiCepat Reguler',
+    ongkir: 20000,
+    donasi: 30000,
+    status: 'Lunas',
+    total_tagihan: 310000,
+    user_id: 4,
+    tercatat_finance: 1,
+    created_at: '2026-07-18 11:10:00',
+    items: [
+      { buku_id: 3, jumlah: 2, harga_satuan: 120000, subtotal: 240000, kode_promo_terpakai: null, potongan_diskon: 0 }
+    ]
+  },
+  {
+    id: 5,
+    no_invoice: 'INV-20260622-0005',
+    tanggal_pesan: '2026-06-22',
+    via: 'Bazar / Event Vihara',
+    nama_pembeli: 'HENDRA WIJAYA',
+    kontak_pembeli: '081900112233',
+    nama_penerima: 'Hendra Wijaya',
+    alamat_penerima: 'Stand Bazar Vihara Pluit Dharma, Jakarta Utara',
+    status: 'Lunas',
+    total_tagihan: 620000,
+    ekspedisi: 'Ambil Sendiri di Gudang',
+    ongkir: 0,
+    donasi: 50000,
+    user_id: 4,
+    tercatat_finance: 1,
+    created_at: '2026-06-22 16:00:00',
+    items: [
+      { buku_id: 2, jumlah: 6, harga_satuan: 95000, subtotal: 570000 }
+    ]
+  },
+  {
+    id: 6,
+    no_invoice: 'INV-20260510-0006',
+    tanggal_pesan: '2026-05-10',
+    via: 'WhatsApp Marketing',
+    nama_pembeli: 'KARTIKA SARI',
+    kontak_pembeli: '081822334455',
+    nama_penerima: 'Kartika Sari',
+    alamat_penerima: 'Jl. Malioboro No. 45, Danurejan, Kota Yogyakarta',
+    status: 'Lunas',
+    total_tagihan: 285000,
+    ekspedisi: 'JNE Reguler',
+    ongkir: 15000,
+    donasi: 0,
+    user_id: 4,
+    tercatat_finance: 1,
+    created_at: '2026-05-10 09:30:00',
+    items: [
+      { buku_id: 4, jumlah: 3, harga_satuan: 80000, subtotal: 240000 }
+    ]
+  },
+  {
+    id: 7,
+    no_invoice: 'INV-20260425-0007',
+    tanggal_pesan: '2026-04-25',
+    via: 'Tokopedia',
+    nama_pembeli: 'BENNY PRASETYO',
+    kontak_pembeli: '081377889900',
+    nama_penerima: 'Benny Prasetyo',
+    alamat_penerima: 'Perumahan Graha Candi Blok B-4, Candisari, Semarang',
+    status: 'Lunas',
+    total_tagihan: 455000,
+    ekspedisi: 'J&T Express (EZ)',
+    ongkir: 20000,
+    donasi: 0,
+    user_id: 4,
+    tercatat_finance: 1,
+    created_at: '2026-04-25 15:45:00',
+    items: [
+      { buku_id: 1, jumlah: 3, harga_satuan: 145000, subtotal: 435000 }
+    ]
   }
 ];
 
@@ -378,6 +488,16 @@ export const DEMO_MUTASI: Mutasi[] = [
   { id: 3, account_id: 1, category_id: 5, user_id: 2, tipe: 'Keluar', nominal: 1450000, keterangan: 'Biaya langganan internet, listrik, dan ATK kantor', tanggal: '2026-08-29', jenis: 'MANUAL' },
   { id: 4, account_id: 3, category_id: 6, user_id: 2, tipe: 'Keluar', nominal: 4000000, keterangan: 'Biaya Cetak Ulang: Pembebasan di Tangan Kita (200 Eks)', tanggal: '2026-08-25', jenis: 'MANUAL' },
   { id: 5, account_id: 2, category_id: 1, user_id: 2, tipe: 'Masuk', nominal: 1850000, keterangan: 'Penjualan Bazar Buku Dharma Vihara Pluit', tanggal: '2026-08-27', jenis: 'MANUAL' },
+  { id: 6, account_id: 2, category_id: 1, user_id: 2, tipe: 'Masuk', nominal: 4200000, keterangan: 'Penerimaan Penjualan Buku Marketplace Bulan September', tanggal: '2026-09-18', jenis: 'MANUAL' },
+  { id: 7, account_id: 1, category_id: 5, user_id: 2, tipe: 'Keluar', nominal: 1850000, keterangan: 'Operasional & logistik kantor sekretariat', tanggal: '2026-09-12', jenis: 'MANUAL' },
+  { id: 8, account_id: 2, category_id: 2, user_id: 2, tipe: 'Masuk', nominal: 6500000, keterangan: 'Donasi Dana Cetak Lamrim Bulan Juli', tanggal: '2026-07-20', jenis: 'MANUAL' },
+  { id: 9, account_id: 3, category_id: 6, user_id: 2, tipe: 'Keluar', nominal: 3200000, keterangan: 'Pembayaran Uang Muka Percetakan Naskah', tanggal: '2026-07-15', jenis: 'MANUAL' },
+  { id: 10, account_id: 2, category_id: 1, user_id: 2, tipe: 'Masuk', nominal: 5800000, keterangan: 'Hasil Bazar & Distribusi Buku Dharma Bulan Juni', tanggal: '2026-06-25', jenis: 'MANUAL' },
+  { id: 11, account_id: 1, category_id: 5, user_id: 2, tipe: 'Keluar', nominal: 2100000, keterangan: 'Biaya ekspedisi pengiriman logistik nusantara', tanggal: '2026-06-18', jenis: 'MANUAL' },
+  { id: 12, account_id: 2, category_id: 2, user_id: 2, tipe: 'Masuk', nominal: 7200000, keterangan: 'Donasi Berkah Waisak Cetak Kitab Suci Bulan Mei', tanggal: '2026-05-15', jenis: 'MANUAL' },
+  { id: 13, account_id: 3, category_id: 6, user_id: 2, tipe: 'Keluar', nominal: 4800000, keterangan: 'Pelunasan Cetak Bodhicaryavatara Batch 2', tanggal: '2026-05-10', jenis: 'MANUAL' },
+  { id: 14, account_id: 2, category_id: 1, user_id: 2, tipe: 'Masuk', nominal: 4100000, keterangan: 'Penjualan Buku Penerbitan Bulan April', tanggal: '2026-04-28', jenis: 'MANUAL' },
+  { id: 15, account_id: 1, category_id: 5, user_id: 2, tipe: 'Keluar', nominal: 1750000, keterangan: 'Pengeluaran ATK dan utilitas bulanan April', tanggal: '2026-04-20', jenis: 'MANUAL' },
 ];
 
 export const DEMO_PENGAJUAN: PengajuanCetak[] = [
