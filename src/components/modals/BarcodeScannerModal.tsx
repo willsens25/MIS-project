@@ -24,6 +24,7 @@ import confetti from 'canvas-confetti';
 import { useApp } from '../../context/AppContext';
 import { Book } from '../../types';
 import { cleanIsbn, isValidIsbn, lookupIsbnOnline, IsbnLookupResult } from '../../utils/isbnLookup';
+import { RupiahInput } from '../common/RupiahInput';
 
 interface BarcodeScannerModalProps {
   isOpen: boolean;
@@ -960,33 +961,23 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
                         </span>
                       </div>
 
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                          Rp
-                        </span>
-                        <input
-                          ref={priceInputRef}
-                          type="number"
-                          min="0"
-                          step="1000"
-                          value={hargaJual || ''}
-                          onChange={(e) => {
-                            const val = Number(e.target.value);
-                            setHargaJual(val);
-                            if (!existingBook) {
-                              setBiayaPokok(Math.round(val * 0.4));
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleSaveBookAndStock();
-                            }
-                          }}
-                          className="w-full pl-9 pr-3 py-2 rounded-xl border-2 border-emerald-500 bg-emerald-50/30 dark:bg-slate-800 text-slate-900 dark:text-white text-lg font-black focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                          placeholder="85000"
-                        />
-                      </div>
+                      <RupiahInput
+                        value={hargaJual}
+                        onChange={(val) => {
+                          setHargaJual(val);
+                          if (!existingBook) {
+                            setBiayaPokok(Math.round(val * 0.4));
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSaveBookAndStock();
+                          }
+                        }}
+                        placeholder="Contoh: 85.000"
+                        className="text-lg font-black text-slate-900 dark:text-white"
+                      />
 
                       {/* Quick price chips */}
                       <div className="flex flex-wrap items-center gap-1">
@@ -1004,18 +995,18 @@ export const BarcodeScannerModal: React.FC<BarcodeScannerModalProps> = ({
                                 : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60'
                             }`}
                           >
-                            {prc / 1000}k
+                            Rp {prc.toLocaleString('id-ID')}
                           </button>
                         ))}
                       </div>
 
                       <div className="flex items-center gap-2 text-[10px] text-slate-400">
                         <span>Biaya Pokok (HPP 40%):</span>
-                        <input
-                          type="number"
-                          value={biayaPokok || ''}
-                          onChange={(e) => setBiayaPokok(Number(e.target.value))}
-                          className="w-20 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-transparent text-[10px] font-mono"
+                        <RupiahInput
+                          value={biayaPokok}
+                          onChange={(val) => setBiayaPokok(val)}
+                          placeholder="34.000"
+                          className="w-28 text-[10px] font-mono"
                         />
                       </div>
                     </div>

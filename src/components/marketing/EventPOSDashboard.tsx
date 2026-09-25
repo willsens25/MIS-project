@@ -33,6 +33,7 @@ import { useApp } from '../../context/AppContext';
 import { Book, Order, OrderItem } from '../../types';
 import { cleanIsbn } from '../../utils/isbnLookup';
 import { BarcodeScannerModal } from '../modals/BarcodeScannerModal';
+import { RupiahInput } from '../common/RupiahInput';
 
 interface CartItem {
   book: Book;
@@ -887,13 +888,11 @@ _Semoga kebajikan ini membawa kebahagiaan bagi semua makhluk. Sadhu, sadhu, sadh
               {globalDiscountType === 'custom' && (
                 <div className="flex items-center gap-2 pt-1">
                   <span className="text-[11px] text-slate-500">Potongan Rp:</span>
-                  <input
-                    type="number"
-                    step="1000"
-                    value={customDiscountNominal || ''}
-                    onChange={(e) => setCustomDiscountNominal(Number(e.target.value))}
-                    placeholder="Contoh: 15000"
-                    className="flex-1 px-2.5 py-1 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                  <RupiahInput
+                    value={customDiscountNominal}
+                    onChange={(val) => setCustomDiscountNominal(val)}
+                    placeholder="Contoh: 15.000"
+                    className="flex-1 text-xs font-bold"
                   />
                 </div>
               )}
@@ -1051,18 +1050,12 @@ _Semoga kebajikan ini membawa kebahagiaan bagi semua makhluk. Sadhu, sadhu, sadh
                     </button>
                   </div>
 
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                      Rp
-                    </span>
-                    <input
-                      type="number"
-                      step="1000"
-                      value={cashTendered || ''}
-                      onChange={(e) => setCashTendered(Number(e.target.value))}
-                      className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-lg font-black focus:ring-2 focus:ring-amber-500 focus:outline-none"
-                    />
-                  </div>
+                  <RupiahInput
+                    value={cashTendered}
+                    onChange={(val) => setCashTendered(val)}
+                    placeholder="Contoh: 100.000"
+                    className="w-full text-lg font-black"
+                  />
 
                   {/* Cash Quick Buttons */}
                   <div className="flex flex-wrap items-center gap-1 text-[11px] font-bold">
@@ -1077,7 +1070,7 @@ _Semoga kebajikan ini membawa kebahagiaan bagi semua makhluk. Sadhu, sadhu, sadh
                             : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-amber-100'
                         }`}
                       >
-                        {val / 1000}k
+                        Rp {val.toLocaleString('id-ID')}
                       </button>
                     ))}
                   </div>

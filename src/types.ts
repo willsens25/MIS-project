@@ -33,6 +33,57 @@ export interface Book {
   updated_at?: string;
 }
 
+export interface PreOrderCampaign {
+  id: number;
+  judul_campaign: string;
+  kode_campaign: string;
+  buku_id: number;
+  buku_ids?: number[];
+  target_kuota: number;
+  tercapai_kuota: number;
+  harga_normal: number;
+  harga_po: number;
+  minimal_dp: number;
+  tanggal_mulai: string;
+  tanggal_selesai: string;
+  estimasi_pengiriman: string;
+  status: 'Draft' | 'Aktif' | 'Tercapai' | 'Ditutup' | 'Selesai';
+  bonus_item: string;
+  deskripsi: string;
+  total_dana_terkumpul: number;
+  created_at: string;
+}
+
+export interface BookBundleItem {
+  buku_id: number;
+  jumlah: number;
+}
+
+export interface BookBundle {
+  id: number;
+  nama_bundle: string;
+  kode_bundle: string;
+  deskripsi: string;
+  items: BookBundleItem[];
+  harga_bundle: number;
+  badge?: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export type MembershipTierLevel = 'Bronze' | 'Silver' | 'Gold' | 'Platinum';
+
+export interface MembershipTierConfig {
+  level: MembershipTierLevel;
+  nama_tier: string;
+  min_akumulasi: number;
+  diskon_persen: number;
+  warna_badge: string;
+  border_badge: string;
+  bg_gradient: string;
+  keuntungan: string[];
+}
+
 export interface Promo {
   id: number;
   code: string;
@@ -272,12 +323,20 @@ export type ColorPresetId =
   | 'ocean-teal'
   | 'sunset-amber';
 
+export type ThemeMode = 'light' | 'dark' | 'system-synced';
+
 export interface UserSettings {
   mascotSpeechBubbleEnabled: boolean; // Toggle mascot speech bubbles on/off globally
   mascotSoundEffectsEnabled: boolean; // Audio tactile feedback on interaction
   mascotParticleBurstEnabled: boolean; // Sparkle particle burst effect on hover
   mascotShortcutHintsEnabled: boolean; // Division contextual shortcuts in tooltip
   mascotIdleAnimationEnabled: boolean; // Toggle interactive idle animations (blinking, slight floating bob)
+  themeMode?: ThemeMode; // 'light' | 'dark' | 'system-synced' (auto-switching based on local sunrise & sunset)
+  autoThemeCoordinates?: {
+    latitude: number;
+    longitude: number;
+    name?: string;
+  };
 }
 
 export interface BackupMetadata {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Check, Sun, Moon, Palette, Sparkles } from 'lucide-react';
+import { X, Check, Sun, Moon, Palette, Sparkles, Sunrise } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { COLOR_PRESETS, ColorPresetId, getColorPreset } from '../../lib/themePresets';
 
@@ -11,7 +11,7 @@ interface ThemePresetModalProps {
 }
 
 export const ThemePresetModal: React.FC<ThemePresetModalProps> = ({ isOpen, onClose }) => {
-  const { theme, setTheme, colorPreset, setColorPreset } = useApp();
+  const { theme, setTheme, themeMode, setThemeMode, solarSchedule, colorPreset, setColorPreset } = useApp();
 
   if (!isOpen) return null;
 
@@ -65,68 +65,107 @@ export const ThemePresetModal: React.FC<ThemePresetModalProps> = ({ isOpen, onCl
 
             {/* Scrollable Content Body */}
             <div className="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1 overscroll-contain">
-              {/* Section 1: Mode Tampilan (Light vs Dark) */}
+              {/* Section 1: Mode Tampilan (Light, Dark, & System-Synced) */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2.5">
                   1. Mode Tampilan (Appearance Mode)
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {/* Light Mode Card */}
                   <button
                     type="button"
-                    onClick={() => setTheme('light')}
-                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between ${
-                      theme === 'light'
+                    onClick={() => setThemeMode('light')}
+                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      themeMode === 'light'
                         ? 'bg-amber-50/50 border-amber-400 dark:border-amber-500 shadow-sm ring-2 ring-amber-400/20'
                         : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600'
                     }`}
                   >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-                        <Sun className="w-5 h-5" />
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                        <Sun className="w-4 h-4" />
                       </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                          Mode Terang
-                          {theme === 'light' && <span className="text-[10px] text-amber-600 font-semibold">• Aktif</span>}
+                      {themeMode === 'light' && (
+                        <div className="w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0">
+                          <Check className="w-2.5 h-2.5 stroke-[3]" />
                         </div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400">Bersih, cerah & kontras optimal</div>
-                      </div>
+                      )}
                     </div>
-                    {theme === 'light' && (
-                      <div className="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0">
-                        <Check className="w-3 h-3 stroke-[3]" />
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        Mode Terang
+                        {themeMode === 'light' && <span className="text-[10px] text-amber-600 font-semibold">• Aktif</span>}
                       </div>
-                    )}
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Bersih & kontras optimal</div>
+                    </div>
                   </button>
 
                   {/* Dark Mode Card */}
                   <button
                     type="button"
-                    onClick={() => setTheme('dark')}
-                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between ${
-                      theme === 'dark'
+                    onClick={() => setThemeMode('dark')}
+                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      themeMode === 'dark'
                         ? 'bg-slate-800 border-indigo-400 dark:border-indigo-500 shadow-sm ring-2 ring-indigo-400/20'
                         : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600'
                     }`}
                   >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-9 h-9 rounded-xl bg-slate-900 text-cyan-400 flex items-center justify-center shrink-0 border border-slate-700">
-                        <Moon className="w-5 h-5" />
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="w-8 h-8 rounded-xl bg-slate-900 text-cyan-400 flex items-center justify-center shrink-0 border border-slate-700">
+                        <Moon className="w-4 h-4" />
                       </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                          Mode Gelap
-                          {theme === 'dark' && <span className="text-[10px] text-indigo-400 font-semibold">• Aktif</span>}
+                      {themeMode === 'dark' && (
+                        <div className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0">
+                          <Check className="w-2.5 h-2.5 stroke-[3]" />
                         </div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400">Teduh, nyaman di mata redup</div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        Mode Gelap
+                        {themeMode === 'dark' && <span className="text-[10px] text-indigo-400 font-semibold">• Aktif</span>}
+                      </div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Teduh & nyaman di mata</div>
+                    </div>
+                  </button>
+
+                  {/* System-Synced Card */}
+                  <button
+                    type="button"
+                    onClick={() => setThemeMode('system-synced')}
+                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      themeMode === 'system-synced'
+                        ? 'bg-teal-50/70 dark:bg-teal-950/40 border-teal-500 dark:border-teal-400 shadow-sm ring-2 ring-teal-500/20'
+                        : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                        <Sunrise className="w-4 h-4" />
+                      </div>
+                      {themeMode === 'system-synced' ? (
+                        <div className="w-4 h-4 rounded-full bg-teal-600 text-white flex items-center justify-center shrink-0">
+                          <Check className="w-2.5 h-2.5 stroke-[3]" />
+                        </div>
+                      ) : (
+                        <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300">
+                          Auto
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        System-Synced
+                        {themeMode === 'system-synced' && (
+                          <span className="text-[10px] text-teal-600 dark:text-teal-400 font-semibold">
+                            • {theme === 'dark' ? 'Malam 🌙' : 'Siang ☀️'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-teal-700 dark:text-teal-300 mt-0.5 font-medium">
+                        {solarSchedule ? `Terbit ${solarSchedule.sunriseFormatted} / Terbenam ${solarSchedule.sunsetFormatted}` : 'Matahari terbit & terbenam'}
                       </div>
                     </div>
-                    {theme === 'dark' && (
-                      <div className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0">
-                        <Check className="w-3 h-3 stroke-[3]" />
-                      </div>
-                    )}
                   </button>
                 </div>
               </div>

@@ -72,7 +72,7 @@ const getDivisionGreeting = (userName: string, userRole: string, divisiId: numbe
       return `Halo Tim Logistik & Gudang (${userName})! Saya Asisten AI MIS Lamrimnesia. Saya siap membantu cek stok riil buku, antrean packing pesanan, pembuatan draf surat jalan, hingga koordinasi ekspedisi pengiriman. Ada yang ingin dikoordinasikan?`;
     case 1: // Direktorat
     default:
-      return `Halo ${userRole === 'Direktur' ? 'Bapak/Ibu Direktur & Manajemen' : userName}! Saya Asisten AI MIS Lamrimnesia (SAPA-ALL). Saya siap membantu monitoring performa seluruh divisi, keanggotaan, audit aktivitas, hingga draf regulasi & pengumuman. Ada yang bisa saya bantu hari ini?`;
+      return `Halo ${userRole === 'Direktur' ? 'Bapak/Ibu Direktur & Manajemen' : userName}! Saya Asisten AI MIS Lamrimnesia (SAPA-ALL). Saya siap membantu monitoring performa seluruh divisi, keanggotaan, hingga draf regulasi & pengumuman. Ada yang bisa saya bantu hari ini?`;
   }
 };
 

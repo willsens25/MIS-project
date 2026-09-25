@@ -152,13 +152,13 @@ const getDivisionContextInfo = (divisiId: number, subTab: string): DivisionConte
         badgeColor: 'bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/30',
         dotColor: 'bg-teal-500',
         activeComponentLabel:
-          subTab === 'audit' ? 'Log Audit Aktivitas' :
           subTab === 'users' ? 'Manajemen Staf' :
+          subTab === 'identitas' ? 'Database Anggota' :
           subTab === 'kpi' ? 'KPI & Evaluasi' : 'Ringkasan Eksekutif',
         primaryShortcut: 'Query Direktorat',
         suggestedPrompt: 'Rangkum performa operasional seluruh divisi dan peringatan penting',
-        secondaryShortcut: 'Audit Aktivitas',
-        secondaryPrompt: 'Tampilkan rekap aktivitas pengguna terbaru lintas divisi'
+        secondaryShortcut: 'Database Anggota',
+        secondaryPrompt: 'Tampilkan rekap database anggota dan umat terdaftar'
       };
   }
 };
@@ -383,10 +383,6 @@ const AppContent: React.FC = () => {
     switchDivision(2, 'persetujuan');
   };
 
-  const handleOpenAuditLogs = () => {
-    switchDivision(1, 'audit');
-  };
-
   // If user is not logged in, display the full-screen authentication screen
   if (!isAuthenticated) {
     return (
@@ -406,7 +402,6 @@ const AppContent: React.FC = () => {
       {/* Top Header & Division Navigation */}
       <Header
         onOpenAI={() => setIsAiModalOpen(true)}
-        onOpenAuditLogs={handleOpenAuditLogs}
         onOpenPersetujuan={handleOpenPersetujuan}
         onSimulateAutoLogout={simulateTimeoutWarning}
       />

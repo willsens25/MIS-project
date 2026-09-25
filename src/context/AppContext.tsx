@@ -21,13 +21,22 @@ import {
   ColorPresetId,
   BazaarEvent,
   BazaarAllocationItem,
+  PreOrderCampaign,
+  BookBundle,
   UserSettings,
+  ThemeMode,
   BackupData,
   RestoreSummary,
   SeederSummary
 } from '../types';
 import { SeedOptions, generateSeedData } from '../lib/dummySeeder';
 import { DEFAULT_COLOR_PRESET } from '../lib/themePresets';
+import {
+  LocationCoordinates,
+  SolarScheduleInfo,
+  getDefaultLocation,
+  getSolarSchedule
+} from '../lib/solarCalculator';
 import {
   INITIAL_DIVISI,
   INITIAL_USERS,
@@ -47,6 +56,8 @@ import {
   INITIAL_SALES_CHANNELS,
   INITIAL_EXPEDITIONS,
   INITIAL_BAZAAR_EVENTS,
+  INITIAL_PRE_ORDERS,
+  INITIAL_BOOK_BUNDLES,
   DEMO_USERS,
   DEMO_ACCOUNTS,
   DEMO_BOOKS,
@@ -60,7 +71,9 @@ import {
   DEMO_LOGISTIC_LOGS,
   DEMO_PRODUCTION_LOGS,
   DEMO_ACTIVITY_LOGS,
-  DEMO_BAZAAR_EVENTS
+  DEMO_BAZAAR_EVENTS,
+  DEMO_PRE_ORDERS,
+  DEMO_BOOK_BUNDLES
 } from '../lib/initialData';
 import {
   hashPasswordServer,
@@ -76,8 +89,14 @@ interface AppContextType {
   currentSubTab: string;
   setCurrentSubTab: (subTab: string) => void;
   theme: 'light' | 'dark';
+  themeMode: ThemeMode;
   setTheme: (theme: 'light' | 'dark') => void;
+  setThemeMode: (mode: ThemeMode) => void;
   toggleTheme: () => void;
+  solarSchedule: SolarScheduleInfo | null;
+  refreshSolarSchedule: () => void;
+  autoThemeLocation: LocationCoordinates;
+  setAutoThemeLocation: (loc: LocationCoordinates) => void;
   colorPreset: ColorPresetId;
   setColorPreset: (preset: ColorPresetId) => void;
   userSettings: UserSettings;
@@ -117,6 +136,8 @@ interface AppContextType {
   productionLogs: ProductionLog[];
   activityLogs: ActivityLog[];
   bazaarEvents: BazaarEvent[];
+  preOrderCampaigns: PreOrderCampaign[];
+  bookBundles: BookBundle[];
 
   // AI & App Task Reactive State
   aiAppState: 'idle' | 'thinking' | 'success';
@@ -160,6 +181,15 @@ interface AppContextType {
   deleteBazaarEvent: (id: number) => { success: boolean; message: string };
   allocateBazaarBooks: (eventId: number, items: BazaarAllocationItem[]) => { success: boolean; message: string };
   reconcileBazaarEvent: (eventId: number, items: BazaarAllocationItem[], notes?: string) => { success: boolean; message: string };
+
+  // Pre-Order Campaign & Bundles actions
+  addPreOrderCampaign: (campaign: Omit<PreOrderCampaign, 'id' | 'created_at' | 'tercapai_kuota' | 'total_dana_terkumpul'>) => PreOrderCampaign;
+  updatePreOrderCampaign: (id: number, updates: Partial<PreOrderCampaign>) => void;
+  deletePreOrderCampaign: (id: number) => { success: boolean; message: string };
+  recordPreOrderOrder: (campaignId: number, nominalBayar: number) => void;
+  addBookBundle: (bundle: Omit<BookBundle, 'id' | 'created_at'>) => BookBundle;
+  updateBookBundle: (id: number, updates: Partial<BookBundle>) => void;
+  deleteBookBundle: (id: number) => { success: boolean; message: string };
 
   // Finance actions
   addMutasi: (account_id: number, nama_kategori: string, tipe: 'Masuk' | 'Keluar', nominal: number, keterangan: string, tanggal?: string) => void;
@@ -257,8 +287,50 @@ function setStoredItem<T>(key: string, val: T): void {
 }
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [autoThemeLocation, setAutoThemeLocationState] = useState<LocationCoordinates>(() => {
+    try {
+      const stored = localStorage.getItem('mis_auto_theme_location');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (e) {
+      console.warn('Error reading auto-theme location:', e);
+    }
+    return getDefaultLocation();
+  });
+
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(() => {
+    try {
+      const stored = localStorage.getItem('mis_theme_mode');
+      if (stored === 'light' || stored === 'dark' || stored === 'system-synced') {
+        return stored as ThemeMode;
+      }
+      const userSettingsStored = localStorage.getItem('mis_user_settings');
+      if (userSettingsStored) {
+        const parsed = JSON.parse(userSettingsStored);
+        if (parsed.themeMode) return parsed.themeMode;
+      }
+    } catch (e) {
+      console.warn('Error reading theme mode:', e);
+    }
+    return 'system-synced';
+  });
+
+  const [solarSchedule, setSolarSchedule] = useState<SolarScheduleInfo | null>(() => {
+    try {
+      return getSolarSchedule(new Date(), autoThemeLocation);
+    } catch {
+      return null;
+    }
+  });
+
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     try {
+      const storedMode = localStorage.getItem('mis_theme_mode');
+      if (storedMode === 'system-synced' || !storedMode) {
+        const schedule = getSolarSchedule(new Date(), autoThemeLocation);
+        return schedule.activeTheme;
+      }
       const stored = localStorage.getItem('mis_theme');
       if (stored === 'light' || stored === 'dark') {
         return stored;
@@ -290,6 +362,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     mascotParticleBurstEnabled: true,
     mascotShortcutHintsEnabled: true,
     mascotIdleAnimationEnabled: true,
+    themeMode: 'system-synced',
+    autoThemeCoordinates: {
+      latitude: autoThemeLocation.latitude,
+      longitude: autoThemeLocation.longitude,
+      name: autoThemeLocation.name
+    }
   };
 
   const [userSettings, setUserSettings] = useState<UserSettings>(() => {
@@ -366,6 +444,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     return stored;
   });
+  const [preOrderCampaigns, setPreOrderCampaigns] = useState<PreOrderCampaign[]>(() => {
+    const stored = getStoredItem<PreOrderCampaign[]>('mis_pre_orders', DEMO_PRE_ORDERS);
+    return stored && stored.length > 0 ? stored : DEMO_PRE_ORDERS;
+  });
+  const [bookBundles, setBookBundles] = useState<BookBundle[]>(() => {
+    const stored = getStoredItem<BookBundle[]>('mis_book_bundles', DEMO_BOOK_BUNDLES);
+    return stored && stored.length > 0 ? stored : DEMO_BOOK_BUNDLES;
+  });
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(() => {
     const stored = getStoredItem<ActivityLog[]>('mis_activity_logs', INITIAL_ACTIVITY_LOGS);
     if (!stored || stored.length === 0) {
@@ -424,6 +510,67 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => { setStoredItem('mis_production_logs', productionLogs); }, [productionLogs]);
   useEffect(() => { setStoredItem('mis_activity_logs', activityLogs); }, [activityLogs]);
   useEffect(() => { setStoredItem('mis_bazaar_events', bazaarEvents); }, [bazaarEvents]);
+  useEffect(() => { setStoredItem('mis_pre_orders', preOrderCampaigns); }, [preOrderCampaigns]);
+  useEffect(() => { setStoredItem('mis_book_bundles', bookBundles); }, [bookBundles]);
+
+  // Evaluate solar schedule and auto-switch theme when in 'system-synced' mode
+  const evaluateSolarTheme = useCallback((forcedLocation?: LocationCoordinates, forcedMode?: ThemeMode) => {
+    const loc = forcedLocation || autoThemeLocation;
+    const mode = forcedMode !== undefined ? forcedMode : themeMode;
+    const now = new Date();
+    const schedule = getSolarSchedule(now, loc);
+    setSolarSchedule(schedule);
+
+    if (mode === 'system-synced') {
+      const targetTheme = schedule.activeTheme;
+      setTheme(prev => {
+        if (prev !== targetTheme) {
+          try {
+            const root = document.documentElement;
+            root.setAttribute('data-theme', targetTheme);
+            root.style.colorScheme = targetTheme;
+            if (targetTheme === 'dark') {
+              root.classList.add('dark');
+              document.body.classList.add('dark');
+            } else {
+              root.classList.remove('dark');
+              document.body.classList.remove('dark');
+            }
+            localStorage.setItem('mis_theme', targetTheme);
+          } catch (e) {
+            console.warn('Error applying auto-theme:', e);
+          }
+          return targetTheme;
+        }
+        return prev;
+      });
+    }
+    return schedule;
+  }, [autoThemeLocation, themeMode]);
+
+  // Periodic and visibility/focus auto-theme scheduler
+  useEffect(() => {
+    evaluateSolarTheme();
+
+    const intervalId = setInterval(() => {
+      evaluateSolarTheme();
+    }, 30000); // Re-evaluate every 30 seconds
+
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        evaluateSolarTheme();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+    };
+  }, [evaluateSolarTheme]);
 
   // Synchronize theme to DOM and localStorage
   useEffect(() => {
@@ -458,6 +605,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Listen to external theme and color preset changes across tabs/windows
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'mis_theme_mode' && (e.newValue === 'light' || e.newValue === 'dark' || e.newValue === 'system-synced')) {
+        setThemeModeState(e.newValue as ThemeMode);
+        if (e.newValue === 'system-synced') {
+          evaluateSolarTheme(autoThemeLocation, 'system-synced');
+        }
+      }
       if (e.key === 'mis_theme' && (e.newValue === 'light' || e.newValue === 'dark')) {
         setTheme(e.newValue);
       }
@@ -469,7 +622,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  }, [autoThemeLocation, evaluateSolarTheme]);
 
   const handleSetColorPreset = (preset: ColorPresetId) => {
     try {
@@ -481,7 +634,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setColorPresetState(preset);
   };
 
-  const handleSetTheme = (newTheme: 'light' | 'dark') => {
+  const handleSetTheme = (newTheme: 'light' | 'dark', overrideMode: boolean = true) => {
+    if (overrideMode) {
+      setThemeModeState(newTheme);
+      try {
+        localStorage.setItem('mis_theme_mode', newTheme);
+      } catch (e) {
+        console.warn('Error persisting theme mode:', e);
+      }
+      updateUserSettings({ themeMode: newTheme });
+    }
     try {
       localStorage.setItem('mis_theme', newTheme);
       const root = document.documentElement;
@@ -500,10 +662,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTheme(newTheme);
   };
 
+  const handleSetThemeMode = (newMode: ThemeMode) => {
+    setThemeModeState(newMode);
+    try {
+      localStorage.setItem('mis_theme_mode', newMode);
+    } catch (e) {
+      console.warn('Error saving theme mode:', e);
+    }
+    updateUserSettings({ themeMode: newMode });
+
+    if (newMode === 'system-synced') {
+      const schedule = evaluateSolarTheme(autoThemeLocation, 'system-synced');
+      handleSetTheme(schedule.activeTheme, false);
+    } else {
+      handleSetTheme(newMode, false);
+    }
+  };
+
+  const handleSetAutoThemeLocation = (newLoc: LocationCoordinates) => {
+    setAutoThemeLocationState(newLoc);
+    try {
+      localStorage.setItem('mis_auto_theme_location', JSON.stringify(newLoc));
+    } catch (e) {
+      console.warn('Error saving auto theme location:', e);
+    }
+    updateUserSettings({
+      autoThemeCoordinates: {
+        latitude: newLoc.latitude,
+        longitude: newLoc.longitude,
+        name: newLoc.name
+      }
+    });
+    evaluateSolarTheme(newLoc, themeMode);
+  };
+
+  const refreshSolarSchedule = () => {
+    evaluateSolarTheme();
+  };
+
   const toggleTheme = () => {
     setTheme(prev => {
       const nextTheme = prev === 'dark' ? 'light' : 'dark';
+      setThemeModeState(nextTheme);
       try {
+        localStorage.setItem('mis_theme_mode', nextTheme);
         localStorage.setItem('mis_theme', nextTheme);
         const root = document.documentElement;
         root.setAttribute('data-theme', nextTheme);
@@ -518,6 +720,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch (e) {
         console.warn('Error persisting theme toggle:', e);
       }
+      updateUserSettings({ themeMode: nextTheme });
       return nextTheme;
     });
   };
@@ -1017,6 +1220,90 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     recordActivity('Rekonsiliasi Bazaar Selesai', 'BazaarEvent', `Rekonsiliasi "${target.nama_event}": ${totalTerjual} buku terjual (Omzet: Rp ${totalOmzet.toLocaleString('id-ID')}), ${totalKembali} buku kembali ke gudang.`, 4);
     triggerTaskSuccess(`Rekonsiliasi "${target.nama_event}" tuntas! ${totalKembali} buku telah dikembalikan ke stok gudang.`);
     return { success: true, message: 'Rekonsiliasi acara bazaar berhasil diselesaikan' };
+  };
+
+  // Pre-Order Campaign & Bundles implementation
+  const addPreOrderCampaign = (campaignData: Omit<PreOrderCampaign, 'id' | 'created_at' | 'tercapai_kuota' | 'total_dana_terkumpul'>): PreOrderCampaign => {
+    const newId = preOrderCampaigns.length > 0 ? Math.max(...preOrderCampaigns.map(p => p.id)) + 1 : 1;
+    const now = new Date();
+    const created_at = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:00`;
+
+    const newCampaign: PreOrderCampaign = {
+      ...campaignData,
+      id: newId,
+      tercapai_kuota: 0,
+      total_dana_terkumpul: 0,
+      created_at
+    };
+
+    setPreOrderCampaigns(prev => [newCampaign, ...prev]);
+    recordActivity('Tambah Pre-Order', 'PreOrderCampaign', `Membuat campaign Pre-Order baru: "${campaignData.judul_campaign}" (Target: ${campaignData.target_kuota} pemesan)`, 4);
+    triggerTaskSuccess(`Campaign Pre-Order "${campaignData.judul_campaign}" berhasil diluncurkan!`);
+    return newCampaign;
+  };
+
+  const updatePreOrderCampaign = (id: number, updates: Partial<PreOrderCampaign>) => {
+    setPreOrderCampaigns(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+    recordActivity('Update Pre-Order', 'PreOrderCampaign', `Memperbarui data campaign Pre-Order #${id}`, 4);
+    triggerTaskSuccess('Data Pre-Order berhasil diperbarui!');
+  };
+
+  const deletePreOrderCampaign = (id: number): { success: boolean; message: string } => {
+    const target = preOrderCampaigns.find(c => c.id === id);
+    if (!target) return { success: false, message: 'Campaign Pre-Order tidak ditemukan' };
+    setPreOrderCampaigns(prev => prev.filter(c => c.id !== id));
+    recordActivity('Hapus Pre-Order', 'PreOrderCampaign', `Menghapus campaign Pre-Order: "${target.judul_campaign}"`, 4);
+    triggerTaskSuccess(`Campaign Pre-Order "${target.judul_campaign}" berhasil dihapus.`);
+    return { success: true, message: 'Campaign Pre-Order berhasil dihapus' };
+  };
+
+  const recordPreOrderOrder = (campaignId: number, nominalBayar: number) => {
+    setPreOrderCampaigns(prev => prev.map(c => {
+      if (c.id === campaignId) {
+        const newCount = c.tercapai_kuota + 1;
+        const newDana = c.total_dana_terkumpul + nominalBayar;
+        const newStatus = newCount >= c.target_kuota && c.status === 'Aktif' ? 'Tercapai' : c.status;
+        return {
+          ...c,
+          tercapai_kuota: newCount,
+          total_dana_terkumpul: newDana,
+          status: newStatus
+        };
+      }
+      return c;
+    }));
+  };
+
+  const addBookBundle = (bundleData: Omit<BookBundle, 'id' | 'created_at'>): BookBundle => {
+    const newId = bookBundles.length > 0 ? Math.max(...bookBundles.map(b => b.id)) + 1 : 1;
+    const now = new Date();
+    const created_at = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:00`;
+
+    const newBundle: BookBundle = {
+      ...bundleData,
+      id: newId,
+      created_at
+    };
+
+    setBookBundles(prev => [newBundle, ...prev]);
+    recordActivity('Tambah Bundling Buku', 'BookBundle', `Membuat paket bundling baru: "${bundleData.nama_bundle}" (${bundleData.items.length} judul buku)`, 4);
+    triggerTaskSuccess(`Paket bundling "${bundleData.nama_bundle}" berhasil dibuat!`);
+    return newBundle;
+  };
+
+  const updateBookBundle = (id: number, updates: Partial<BookBundle>) => {
+    setBookBundles(prev => prev.map(b => b.id === id ? { ...b, ...updates } : b));
+    recordActivity('Update Bundling Buku', 'BookBundle', `Memperbarui paket bundling #${id}`, 4);
+    triggerTaskSuccess('Paket bundling berhasil diperbarui!');
+  };
+
+  const deleteBookBundle = (id: number): { success: boolean; message: string } => {
+    const target = bookBundles.find(b => b.id === id);
+    if (!target) return { success: false, message: 'Paket bundling tidak ditemukan' };
+    setBookBundles(prev => prev.filter(b => b.id !== id));
+    recordActivity('Hapus Bundling Buku', 'BookBundle', `Menghapus paket bundling "${target.nama_bundle}"`, 4);
+    triggerTaskSuccess(`Paket bundling "${target.nama_bundle}" berhasil dihapus.`);
+    return { success: true, message: 'Paket bundling berhasil dihapus' };
   };
 
   // Order & POS
@@ -1679,6 +1966,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLogisticLogs([]);
     setProductionLogs([]);
     setActivityLogs([]);
+    setPreOrderCampaigns(INITIAL_PRE_ORDERS);
+    setBookBundles(INITIAL_BOOK_BUNDLES);
     setAccounts(INITIAL_ACCOUNTS);
     setUsersList(INITIAL_USERS);
     setCurrentUser(INITIAL_USERS[0]);
@@ -1724,6 +2013,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAccounts(DEMO_ACCOUNTS);
     setUsersList(DEMO_USERS);
     setBazaarEvents(DEMO_BAZAAR_EVENTS);
+    setPreOrderCampaigns(DEMO_PRE_ORDERS);
+    setBookBundles(DEMO_BOOK_BUNDLES);
     setCurrentUser(DEMO_USERS[0]);
     setIsAuthenticated(true);
     setAuthModalMode('login');
@@ -2051,8 +2342,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         currentSubTab,
         setCurrentSubTab,
         theme,
+        themeMode,
         setTheme: handleSetTheme,
+        setThemeMode: handleSetThemeMode,
         toggleTheme,
+        solarSchedule,
+        refreshSolarSchedule,
+        autoThemeLocation,
+        setAutoThemeLocation: handleSetAutoThemeLocation,
         colorPreset,
         setColorPreset: handleSetColorPreset,
         userSettings,
@@ -2121,6 +2418,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteBazaarEvent,
         allocateBazaarBooks,
         reconcileBazaarEvent,
+        preOrderCampaigns,
+        addPreOrderCampaign,
+        updatePreOrderCampaign,
+        deletePreOrderCampaign,
+        recordPreOrderOrder,
+        bookBundles,
+        addBookBundle,
+        updateBookBundle,
+        deleteBookBundle,
         addMutasi,
         updateMutasi,
         deleteMutasi,

@@ -755,10 +755,10 @@ export const AnnualReportModal: React.FC<AnnualReportModalProps> = ({
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
                   <div className="flex items-center space-x-1.5 font-bold text-slate-900 pb-1 border-b border-slate-200">
                     <Building2 className="w-3.5 h-3.5 text-purple-600" />
-                    <span>Tata Kelola & Audit</span>
+                    <span>Tata Kelola Organisasi</span>
                   </div>
                   <p className="text-[11px] text-slate-600 pt-1">
-                    • Log Audit Tercatat: <strong>{activityLogs.length} Entri</strong><br />
+                    • Log Transaksi: <strong>{activityLogs.length} Entri</strong><br />
                     • Operator Sistem: <strong>{usersList.length} Pengguna Aktif</strong><br />
                     • Kepatuhan SOP: <strong>100% Tervalidasi Sistem</strong>
                   </p>
@@ -774,7 +774,7 @@ export const AnnualReportModal: React.FC<AnnualReportModalProps> = ({
               </h4>
               <p className="text-slate-800 leading-relaxed">
                 1. <strong>Pelestarian Pustaka Dharma:</strong> Seluruh program penerbitan kitab dan buku renungan berjalan tepat sasaran dengan tingkat penyerapan distribusi ke vihara daerah mencapai lebih dari 90%.<br />
-                2. <strong>Akuntabilitas Keuangan:</strong> Penerapan sistem MIS berimbang berhasil menekan selisih kas operasional ke tingkat nol (0%), dengan seluruh bukti transaksi tercatat pada Audit System Log.<br />
+                2. <strong>Akuntabilitas Keuangan:</strong> Penerapan sistem MIS berimbang berhasil menekan selisih kas operasional ke tingkat nol (0%), dengan seluruh bukti transaksi tercatat secara otomatis dan transparan.<br />
                 3. <strong>Target Tahun Depan:</strong> Memperluas program cetak ulang 5 judul buku favorit, digitalisasi e-book dharma bebas biaya, dan pembukaan 3 titik agen perwakilan vihara di luar pulau Jawa.
               </p>
             </div>

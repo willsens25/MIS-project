@@ -28,13 +28,12 @@ import { ConfirmModal } from '../modals/ConfirmModal';
 import { DirektoratCharts } from '../charts/DirektoratCharts';
 import { AnnualReportModal } from '../modals/AnnualReportModal';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
-import { formatLogDateTime } from '../../utils/greetingUtils';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
 import { ConfigurableDashboardGrid } from '../dashboard-layout/ConfigurableDashboardGrid';
 
 interface DirektoratDashboardProps {
-  initialSubTab?: 'overview' | 'identitas' | 'users' | 'audit';
+  initialSubTab?: 'overview' | 'identitas' | 'users';
 }
 
 export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initialSubTab }) => {
@@ -53,15 +52,14 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
     orders,
     books,
     pengajuans,
-    activityLogs,
     currentSubTab,
     setCurrentSubTab
   } = useApp();
 
-  const activeSubTab = (['overview', 'identitas', 'users', 'audit'].includes(currentSubTab)
+  const activeSubTab = (['overview', 'identitas', 'users'].includes(currentSubTab)
     ? currentSubTab
-    : 'overview') as 'overview' | 'identitas' | 'users' | 'audit';
-  const setActiveSubTab = (tab: 'overview' | 'identitas' | 'users' | 'audit') => setCurrentSubTab(tab);
+    : 'overview') as 'overview' | 'identitas' | 'users';
+  const setActiveSubTab = (tab: 'overview' | 'identitas' | 'users') => setCurrentSubTab(tab);
 
   useEffect(() => {
     if (initialSubTab) {
@@ -74,26 +72,6 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
   const [filterKeamanan, setFilterKeamanan] = useState<string>('all');
   const [selectedIdentitasIds, setSelectedIdentitasIds] = useState<number[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
-  
-  // Audit log search & division filter
-  const [auditSearch, setAuditSearch] = useState('');
-  const [auditFilterDivisi, setAuditFilterDivisi] = useState<string>('all');
-
-  const filteredActivityLogs = activityLogs.filter(log => {
-    const matchesSearch =
-      auditSearch.trim() === '' ||
-      (log.user_name || '').toLowerCase().includes(auditSearch.toLowerCase()) ||
-      (log.aksi || '').toLowerCase().includes(auditSearch.toLowerCase()) ||
-      (log.model || '').toLowerCase().includes(auditSearch.toLowerCase()) ||
-      (log.keterangan || '').toLowerCase().includes(auditSearch.toLowerCase()) ||
-      (log.divisi_name || '').toLowerCase().includes(auditSearch.toLowerCase());
-
-    const matchesDivisi =
-      auditFilterDivisi === 'all' ||
-      String(log.divisi_id) === auditFilterDivisi;
-
-    return matchesSearch && matchesDivisi;
-  });
   
   const [modalIdentitasOpen, setModalIdentitasOpen] = useState(false);
   const [editingIdentitas, setEditingIdentitas] = useState<Identitas | null>(null);
@@ -285,9 +263,7 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
             ? 'Executive Summary & Analisis'
             : activeSubTab === 'identitas'
             ? 'Database Master Anggota & Identitas'
-            : activeSubTab === 'users'
-            ? 'Daftar Pengguna & Tim Operasional'
-            : 'Audit Trail & Log Aktivitas Sistem'
+            : 'Daftar Pengguna & Tim Operasional'
         }
       />
 
@@ -328,18 +304,6 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
           >
             <UserPlus className="w-3.5 h-3.5" />
             <span>Manajemen Tim ({usersList.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('audit')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeSubTab === 'audit'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Audit System Log</span>
           </button>
         </div>
 
@@ -830,102 +794,6 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
                 </div>
               );
             })}
-          </div>
-        </div>
-      )}
-
-      {/* AUDIT LOG SUB TAB */}
-      {activeSubTab === 'audit' && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-indigo-600" />
-                Audit Trail & Log Aktivitas Sistem MIS
-              </h3>
-              <p className="text-xs text-slate-500">Mencatat seluruh aksi transaksi, perubahan status, pelunasan kas, dan persetujuan secara real-time.</p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className="text-xs font-mono font-medium px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg">
-                {filteredActivityLogs.length} dari {activityLogs.length} Log
-              </span>
-            </div>
-          </div>
-
-          {/* Search & Filter Bar */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-            <div className="sm:col-span-2 relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={auditSearch}
-                onChange={e => setAuditSearch(e.target.value)}
-                placeholder="Cari user, aksi, modul, keterangan..."
-                className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <select
-                value={auditFilterDivisi}
-                onChange={e => setAuditFilterDivisi(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
-              >
-                <option value="all">Semua Divisi</option>
-                {divisiList.map(d => (
-                  <option key={d.id} value={String(d.id)}>{d.nama_divisi}</option>
-                ))}
-              </select>
-              {(auditSearch || auditFilterDivisi !== 'all') && (
-                <button
-                  onClick={() => {
-                    setAuditSearch('');
-                    setAuditFilterDivisi('all');
-                  }}
-                  className="px-2.5 py-2 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl whitespace-nowrap font-medium transition-colors cursor-pointer"
-                >
-                  Reset
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
-                <tr>
-                  <th className="p-3">Waktu</th>
-                  <th className="p-3">User & Divisi</th>
-                  <th className="p-3">Aksi & Modul</th>
-                  <th className="p-3">Keterangan Aktivitas</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {filteredActivityLogs.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="p-8 text-center text-slate-400">
-                      Tidak ada catatan aktivitas sistem yang cocok dengan pencarian.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredActivityLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
-                      <td className="p-3 whitespace-nowrap text-slate-500 font-mono text-[11px]">{formatLogDateTime(log.created_at)}</td>
-                      <td className="p-3">
-                        <div className="font-bold text-slate-900 dark:text-white">{log.user_name}</div>
-                        <div className="text-[10px] text-slate-400">{log.divisi_name}</div>
-                      </td>
-                      <td className="p-3 whitespace-nowrap">
-                        <span className="px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 font-semibold text-[10px]">
-                          {log.aksi}
-                        </span>
-                        <span className="ml-1 text-[10px] text-slate-400 font-mono">[{log.model}]</span>
-                      </td>
-                      <td className="p-3 text-slate-700 dark:text-slate-300">{log.keterangan}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
           </div>
         </div>
       )}

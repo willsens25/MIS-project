@@ -50,7 +50,6 @@ import {
 
 interface HeaderProps {
   onOpenAI: () => void;
-  onOpenAuditLogs: () => void;
   onOpenPersetujuan: () => void;
   onSimulateAutoLogout?: () => void;
   activeTab?: string;
@@ -59,7 +58,6 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   onOpenAI,
-  onOpenAuditLogs,
   onOpenPersetujuan,
   onSimulateAutoLogout,
 }) => {
@@ -69,6 +67,7 @@ export const Header: React.FC<HeaderProps> = ({
     divisiList,
     usersList,
     theme,
+    themeMode,
     toggleTheme,
     colorPreset,
     setColorPreset,
@@ -237,7 +236,6 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Division-Specific Notification Bell */}
             <NotificationBell
               onOpenPersetujuan={onOpenPersetujuan}
-              onOpenAuditLogs={onOpenAuditLogs}
             />
 
             {/* Persistent UI Theme Toggle Switch Button */}
@@ -249,8 +247,20 @@ export const Header: React.FC<HeaderProps> = ({
               whileTap={{ scale: 0.92 }}
               aria-checked={theme === 'dark'}
               onClick={toggleTheme}
-              aria-label={theme === 'dark' ? 'Mode Gelap Aktif — Klik untuk beralih ke Mode Terang' : 'Mode Terang Aktif — Klik untuk beralih ke Mode Gelap'}
-              title={theme === 'dark' ? 'Mode Gelap Aktif — Klik untuk beralih ke Mode Terang (Light Mode)' : 'Mode Terang Aktif — Klik untuk beralih ke Mode Gelap (Dark Mode)'}
+              aria-label={
+                themeMode === 'system-synced'
+                  ? `Tema Otomatis System-Synced (${theme === 'dark' ? 'Malam' : 'Siang'}) — Klik untuk alih manual`
+                  : theme === 'dark'
+                  ? 'Mode Gelap Aktif — Klik untuk beralih ke Mode Terang'
+                  : 'Mode Terang Aktif — Klik untuk beralih ke Mode Gelap'
+              }
+              title={
+                themeMode === 'system-synced'
+                  ? `Tema Otomatis Berdasarkan Posisi Matahari (System-Synced: Mode ${theme === 'dark' ? 'Gelap' : 'Terang'}) — Klik untuk alih manual`
+                  : theme === 'dark'
+                  ? 'Mode Gelap Aktif — Klik untuk beralih ke Mode Terang (Light Mode)'
+                  : 'Mode Terang Aktif — Klik untuk beralih ke Mode Gelap (Dark Mode)'
+              }
               className={`relative inline-flex items-center h-8 rounded-full p-1 transition-colors cursor-pointer select-none border shadow-xs focus:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-500 group ${
                 theme === 'dark'
                   ? 'bg-slate-800/95 border-slate-700 hover:border-slate-600 text-slate-200'
@@ -278,6 +288,14 @@ export const Header: React.FC<HeaderProps> = ({
                   <Sun className="w-3.5 h-3.5 text-amber-500 group-hover:rotate-45 transition-transform duration-200" />
                 )}
               </motion.span>
+
+              {/* System-Synced active indicator pill */}
+              {themeMode === 'system-synced' && (
+                <span
+                  className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900"
+                  title="System-Synced Aktif (Matahari)"
+                />
+              )}
             </motion.button>
 
             {/* Color Theme Preset Selector Trigger */}
@@ -555,18 +573,6 @@ export const Header: React.FC<HeaderProps> = ({
                       </button>
 
                       <button
-                        id="menu-audit-log"
-                        onClick={() => {
-                          setShowProfileMenu(false);
-                          onOpenAuditLogs();
-                        }}
-                        className="w-full flex items-center px-4 py-2 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors"
-                      >
-                        <ShieldCheck className="w-4 h-4 text-amber-500 dark:text-amber-400 mr-2.5" />
-                        <span>Audit System Log</span>
-                      </button>
-
-                      <button
                         id="menu-backup-restore"
                         onClick={() => {
                           setShowProfileMenu(false);
@@ -645,7 +651,11 @@ export const Header: React.FC<HeaderProps> = ({
                         onClick={toggleTheme}
                         className="px-2.5 py-1 text-[11px] font-semibold rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 cursor-pointer transition-colors"
                       >
-                        {theme === 'dark' ? 'Mode Gelap 🌙' : 'Mode Terang ☀️'}
+                        {themeMode === 'system-synced'
+                          ? `Auto 🌅 (${theme === 'dark' ? 'Gelap' : 'Terang'})`
+                          : theme === 'dark'
+                          ? 'Mode Gelap 🌙'
+                          : 'Mode Terang ☀️'}
                       </button>
                     </div>
 
@@ -731,7 +741,6 @@ export const Header: React.FC<HeaderProps> = ({
               {/* Mobile Notification Bell */}
               <NotificationBell
                 onOpenPersetujuan={onOpenPersetujuan}
-                onOpenAuditLogs={onOpenAuditLogs}
               />
 
               {/* Mobile Hamburger Menu Toggle Button */}
@@ -1140,7 +1149,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <span className="truncate">Laporan PDF</span>
                   </button>
 
-                  {/* Laporan Tahunan / Audit PDF */}
+                  {/* Laporan Tahunan PDF */}
                   <button
                     id="btn-mobile-annual-report"
                     onClick={() => {
@@ -1150,20 +1159,7 @@ export const Header: React.FC<HeaderProps> = ({
                     className="flex items-center space-x-2 p-2.5 rounded-xl bg-slate-100/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-left cursor-pointer"
                   >
                     <Award className="w-4 h-4 text-amber-500 shrink-0" />
-                    <span className="truncate">Audit Tahunan</span>
-                  </button>
-
-                  {/* Log Audit Aktivitas */}
-                  <button
-                    id="btn-mobile-audit-logs"
-                    onClick={() => {
-                      setShowMobileMenu(false);
-                      onOpenAuditLogs();
-                    }}
-                    className="flex items-center space-x-2 p-2.5 rounded-xl bg-slate-100/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-left cursor-pointer"
-                  >
-                    <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-                    <span className="truncate">Log Audit</span>
+                    <span className="truncate">Laporan Tahunan</span>
                   </button>
 
                   {/* Backup & Restore Database */}
@@ -1212,7 +1208,11 @@ export const Header: React.FC<HeaderProps> = ({
                     onClick={toggleTheme}
                     className="px-2.5 py-1 text-[11px] font-semibold rounded-md bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 cursor-pointer transition-colors shadow-xs"
                   >
-                    {theme === 'dark' ? 'Mode Gelap 🌙' : 'Mode Terang ☀️'}
+                    {themeMode === 'system-synced'
+                      ? `Auto 🌅 (${theme === 'dark' ? 'Gelap' : 'Terang'})`
+                      : theme === 'dark'
+                      ? 'Mode Gelap 🌙'
+                      : 'Mode Terang ☀️'}
                   </button>
                 </div>
 

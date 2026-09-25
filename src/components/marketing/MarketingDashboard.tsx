@@ -49,6 +49,7 @@ import { BazaarEventsTab } from './BazaarEventsTab';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
+import { RupiahInput } from '../common/RupiahInput';
 
 export const MarketingDashboard: React.FC = () => {
   const {
@@ -1002,13 +1003,11 @@ export const MarketingDashboard: React.FC = () => {
                   <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">
                     Ongkos Kirim (Rupiah)
                   </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={ongkir || ''}
-                    onChange={e => setOngkir(parseInt(e.target.value) || 0)}
+                  <RupiahInput
+                    value={ongkir}
+                    onChange={val => setOngkir(val)}
                     placeholder="0 (Gratis Ongkir)"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white"
+                    className="font-bold text-slate-900 dark:text-white"
                   />
                   <div className="flex items-center space-x-1.5 mt-1.5 flex-wrap gap-y-1">
                     <span className="text-[10px] text-slate-400 font-medium">Preset:</span>
@@ -1023,7 +1022,7 @@ export const MarketingDashboard: React.FC = () => {
                             : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100'
                         }`}
                       >
-                        {val === 0 ? 'Gratis' : `Rp ${(val / 1000)}rb`}
+                        {val === 0 ? 'Gratis' : `Rp ${val.toLocaleString('id-ID')}`}
                       </button>
                     ))}
                   </div>
@@ -1231,13 +1230,11 @@ export const MarketingDashboard: React.FC = () => {
                   <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">
                     Nominal Donasi Tambahan (Rupiah)
                   </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={donasi || ''}
-                    onChange={e => setDonasi(parseInt(e.target.value) || 0)}
+                  <RupiahInput
+                    value={donasi}
+                    onChange={val => setDonasi(val)}
                     placeholder="0 (Tidak ada donasi)"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold"
+                    className="font-bold text-amber-700 dark:text-amber-400"
                   />
                   <div className="flex items-center space-x-1.5 mt-1.5 flex-wrap gap-y-1">
                     <span className="text-[10px] text-slate-400 font-medium">Preset:</span>
@@ -1252,7 +1249,7 @@ export const MarketingDashboard: React.FC = () => {
                             : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100'
                         }`}
                       >
-                        {val === 0 ? 'Tanpa Donasi' : `Rp ${(val / 1000)}rb`}
+                        {val === 0 ? 'Tanpa Donasi' : `Rp ${val.toLocaleString('id-ID')}`}
                       </button>
                     ))}
                   </div>
@@ -1854,15 +1851,27 @@ export const MarketingDashboard: React.FC = () => {
                   <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">
                     Nilai Diskon ({promoForm.type === 'percentage' ? '%' : 'Rupiah'})
                   </label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    value={promoForm.reward_value || ''}
-                    onChange={e => setPromoForm({ ...promoForm, reward_value: parseInt(e.target.value) || 0 })}
-                    placeholder={promoForm.type === 'percentage' ? '10' : '20000'}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold"
-                  />
+                  {promoForm.type === 'percentage' ? (
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      max="100"
+                      value={promoForm.reward_value || ''}
+                      onChange={e => setPromoForm({ ...promoForm, reward_value: parseInt(e.target.value) || 0 })}
+                      placeholder="Contoh: 10"
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold"
+                    />
+                  ) : (
+                    <RupiahInput
+                      required
+                      allowZero={false}
+                      value={promoForm.reward_value}
+                      onChange={val => setPromoForm({ ...promoForm, reward_value: val })}
+                      placeholder="Contoh: 20.000"
+                      className="font-bold"
+                    />
+                  )}
                 </div>
 
                 <div>

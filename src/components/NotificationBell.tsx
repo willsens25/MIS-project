@@ -33,12 +33,10 @@ export interface AlertItem {
 
 interface NotificationBellProps {
   onOpenPersetujuan?: () => void;
-  onOpenAuditLogs?: () => void;
 }
 
 export const NotificationBell: React.FC<NotificationBellProps> = ({
-  onOpenPersetujuan,
-  onOpenAuditLogs
+  onOpenPersetujuan
 }) => {
   const {
     currentUser,
@@ -50,7 +48,6 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
     accounts,
     productionLogs,
     logisticLogs,
-    activityLogs,
     switchDivision
   } = useApp();
 
@@ -142,24 +139,6 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
           type: 'info',
           category: 'Penjualan',
           isRead: false
-        });
-      }
-
-      if (activityLogs.length > 0) {
-        const latest = activityLogs[0];
-        items.push({
-          id: `dir-activity-${latest.id}`,
-          title: 'Aktivitas Log Sistem',
-          description: `${latest.keterangan} (dilakukan oleh sistem)`,
-          time: latest.created_at || 'Hari ini',
-          type: 'info',
-          category: 'Audit Log',
-          isRead: false,
-          actionLabel: 'Audit Log',
-          onAction: () => {
-            onOpenAuditLogs?.();
-            setIsOpen(false);
-          }
         });
       }
     }
@@ -410,10 +389,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
     accounts,
     productionLogs,
     logisticLogs,
-    activityLogs,
     readAlertIds,
-    onOpenPersetujuan,
-    onOpenAuditLogs
+    onOpenPersetujuan
   ]);
 
   const unreadAlerts = useMemo(() => {

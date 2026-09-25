@@ -32,6 +32,7 @@ import { ExportCsvButton } from '../common/ExportCsvButton';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
 import { exportDataToCsv, getCsvDateStamp } from '../../utils/exportCsv';
 import { formatLogDateTime } from '../../utils/greetingUtils';
+import { RupiahInput } from '../common/RupiahInput';
 
 interface FinanceDashboardProps {
   initialSubTab?: 'grafik' | 'mutasi' | 'persetujuan' | 'penjualan' | 'akun';
@@ -1319,14 +1320,13 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
 
                 <div>
                   <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">Nominal (Rupiah)</label>
-                  <input
-                    type="number"
+                  <RupiahInput
                     required
-                    min="1"
-                    value={mutasiForm.nominal || ''}
-                    onChange={e => setMutasiForm({ ...mutasiForm, nominal: parseInt(e.target.value) || 0 })}
-                    placeholder="Contoh: 500000"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-indigo-600 dark:text-indigo-400"
+                    allowZero={false}
+                    value={mutasiForm.nominal}
+                    onChange={val => setMutasiForm({ ...mutasiForm, nominal: val })}
+                    placeholder="Contoh: 500.000"
+                    className="font-bold text-indigo-600 dark:text-indigo-400"
                   />
                 </div>
 

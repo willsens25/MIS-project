@@ -16,6 +16,7 @@ import {
   Calculator
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { RupiahInput } from '../common/RupiahInput';
 
 export type DocumentType = 'pengajuan' | 'order' | 'mutasi' | 'buku' | 'identitas';
 
@@ -574,13 +575,10 @@ export const NewDocumentModal: React.FC<NewDocumentModalProps> = ({
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                         Biaya Ongkir (Rp)
                       </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1000"
+                      <RupiahInput
                         value={orderOngkir}
-                        onChange={(e) => setOrderOngkir(Number(e.target.value))}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        onChange={(val) => setOrderOngkir(val)}
+                        placeholder="0"
                       />
                     </div>
                   </div>
@@ -696,14 +694,12 @@ export const NewDocumentModal: React.FC<NewDocumentModalProps> = ({
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                         Nominal (Rp)
                       </label>
-                      <input
-                        type="number"
-                        min="1000"
-                        step="1000"
-                        value={mutasiNominal}
-                        onChange={(e) => setMutasiNominal(Number(e.target.value))}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                      <RupiahInput
                         required
+                        allowZero={false}
+                        value={mutasiNominal}
+                        onChange={(val) => setMutasiNominal(val)}
+                        placeholder="Contoh: 500.000"
                       />
                     </div>
                   </div>
@@ -792,13 +788,10 @@ export const NewDocumentModal: React.FC<NewDocumentModalProps> = ({
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                         Harga Jual (Rp)
                       </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1000"
+                      <RupiahInput
                         value={bukuHarga}
-                        onChange={(e) => setBukuHarga(Number(e.target.value))}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        onChange={(val) => setBukuHarga(val)}
+                        placeholder="Contoh: 145.000"
                       />
                     </div>
 
@@ -806,13 +799,10 @@ export const NewDocumentModal: React.FC<NewDocumentModalProps> = ({
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                         Biaya Pokok (HPP)
                       </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="500"
+                      <RupiahInput
                         value={bukuBiayaPokok}
-                        onChange={(e) => setBukuBiayaPokok(Number(e.target.value))}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        onChange={(val) => setBukuBiayaPokok(val)}
+                        placeholder="Contoh: 58.000"
                       />
                     </div>
                   </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { BazaarEvent } from '../../types';
 import { Calendar, MapPin, User, Phone, DollarSign, FileText, X, Sparkles } from 'lucide-react';
+import { RupiahInput } from '../common/RupiahInput';
 
 interface BazaarEventModalProps {
   isOpen: boolean;
@@ -200,14 +201,10 @@ export const BazaarEventModal: React.FC<BazaarEventModalProps> = ({
                 <DollarSign className="w-3.5 h-3.5 text-slate-400" />
                 <span>Target Omzet (Rp)</span>
               </label>
-              <input
-                type="number"
-                min="0"
-                step="50000"
+              <RupiahInput
                 value={targetOmzet}
-                onChange={e => setTargetOmzet(Number(e.target.value))}
-                placeholder="0"
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+                onChange={val => setTargetOmzet(val)}
+                placeholder="Contoh: 5.000.000"
               />
             </div>
             <div>

@@ -38,6 +38,7 @@ import {
 } from 'recharts';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
+import { RupiahInput } from '../common/RupiahInput';
 
 interface UnitEconomicRow {
   id: number;
@@ -613,17 +614,12 @@ export const UnitEconomicsAnalysis: React.FC = () => {
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Estimasi Total Biaya Cetak
               </label>
-              <div className="relative">
-                <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-medium">Rp</span>
-                <input
-                  type="number"
-                  min="100000"
-                  step="100000"
-                  value={simulatorTotalCost}
-                  onChange={(e) => setSimulatorTotalCost(Math.max(1, Number(e.target.value)))}
-                  className="w-full text-xs p-2.5 pl-8 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-400"
-                />
-              </div>
+              <RupiahInput
+                value={simulatorTotalCost}
+                onChange={(val) => setSimulatorTotalCost(val)}
+                placeholder="Contoh: 10.000.000"
+                className="text-xs"
+              />
             </div>
 
             {/* Input 4: Target Margin */}
@@ -1132,14 +1128,12 @@ export const UnitEconomicsAnalysis: React.FC = () => {
                 <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                   HPP / Biaya Cetak per Eksemplar (Rp)
                 </label>
-                <input
-                  type="number"
-                  min="1000"
-                  step="500"
+                <RupiahInput
                   value={newHppValue}
-                  onChange={(e) => setNewHppValue(Math.max(0, Number(e.target.value)))}
-                  className="w-full text-sm p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                  onChange={(val) => setNewHppValue(val)}
+                  placeholder="Contoh: 45.000"
                   required
+                  allowZero={false}
                 />
               </div>
 

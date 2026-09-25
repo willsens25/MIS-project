@@ -17,11 +17,14 @@ import {
   SalesChannel,
   Expedition,
   BazaarEvent,
-  BazaarAllocationItem
+  BazaarAllocationItem,
+  PreOrderCampaign,
+  BookBundle,
+  MembershipTierConfig
 } from '../types';
 
 export const INITIAL_DIVISI: Divisi[] = [
-  { id: 1, nama_divisi: 'Direktorat & HRD', kode: 'DIR', deskripsi: 'Pusat Manajemen, Keanggotaan, Regulasi & Audit' },
+  { id: 1, nama_divisi: 'Direktorat & HRD', kode: 'DIR', deskripsi: 'Pusat Manajemen, Keanggotaan & Regulasi Organisasi' },
   { id: 2, nama_divisi: 'Bendahara / Finance', kode: 'KEU', deskripsi: 'Kas Keuangan, Jurnal Mutasi & Verifikasi Invoice' },
   { id: 3, nama_divisi: 'Penerbitan', kode: 'PNB', deskripsi: 'Katalog Buku, ISBN, HPP & Pengajuan Cetak' },
   { id: 4, nama_divisi: 'Marketing & Distribution', kode: 'MAD', deskripsi: 'POS Pesanan, Invoice, Promo & Agen Penjualan' },
@@ -634,3 +637,182 @@ export const DEMO_BAZAAR_EVENTS: BazaarEvent[] = [
     created_at: '2026-08-15 10:00:00'
   }
 ];
+
+export const MEMBERSHIP_TIERS: MembershipTierConfig[] = [
+  {
+    level: 'Bronze',
+    nama_tier: 'Sahabat Perunggu',
+    min_akumulasi: 0,
+    diskon_persen: 5,
+    warna_badge: 'text-amber-800 bg-amber-100 dark:bg-amber-950/60 dark:text-amber-300',
+    border_badge: 'border-amber-300 dark:border-amber-800',
+    bg_gradient: 'from-amber-700 via-amber-800 to-amber-950',
+    keuntungan: [
+      'Diskon 5% untuk semua pembelian buku terbitan Lamrimnesia',
+      'Buletin digital & info bedah buku bulanan',
+      'Akses ke sesi tanya jawab Dharma online'
+    ]
+  },
+  {
+    level: 'Silver',
+    nama_tier: 'Sahabat Perak',
+    min_akumulasi: 500000,
+    diskon_persen: 10,
+    warna_badge: 'text-slate-800 bg-slate-200 dark:bg-slate-800 dark:text-slate-200',
+    border_badge: 'border-slate-300 dark:border-slate-600',
+    bg_gradient: 'from-slate-500 via-slate-700 to-slate-900',
+    keuntungan: [
+      'Diskon 10% untuk buku reguler & merchandise Dharma',
+      'Gratis ongkir reguler untuk pemesanan event tertentu',
+      'Hak pesan khusus Pre-Order gelombang pertama (Early Bird)',
+      'Semua keuntungan Sahabat Perunggu'
+    ]
+  },
+  {
+    level: 'Gold',
+    nama_tier: 'Sahabat Emas',
+    min_akumulasi: 2500000,
+    diskon_persen: 15,
+    warna_badge: 'text-yellow-900 bg-yellow-200 dark:bg-yellow-900/60 dark:text-yellow-300',
+    border_badge: 'border-yellow-400 dark:border-yellow-700',
+    bg_gradient: 'from-amber-500 via-yellow-600 to-amber-800',
+    keuntungan: [
+      'Diskon 15% untuk seluruh pesanan buku & bundling',
+      'Buku bertanda tangan penulis/penerjemah saat peluncuran',
+      'Undangan VIP Temu Penulis & Bedah Naskah Eksklusif',
+      'Prioritas alokasi cetakan pertama edisi terbatas',
+      'Semua keuntungan Sahabat Perak'
+    ]
+  },
+  {
+    level: 'Platinum',
+    nama_tier: 'Patron Mahadana',
+    min_akumulasi: 10000000,
+    diskon_persen: 20,
+    warna_badge: 'text-purple-900 bg-purple-200 dark:bg-purple-900/60 dark:text-purple-200',
+    border_badge: 'border-purple-400 dark:border-purple-700',
+    bg_gradient: 'from-purple-800 via-indigo-900 to-slate-950',
+    keuntungan: [
+      'Diskon maksimal 20% tanpa batas minimum pembelanjaan',
+      'Pencantuman nama dedikasi pada halaman Donatur Cetak Abadi',
+      'Kartu Fisik Logam Sahabat Lamrimnesia edisi kehormatan',
+      'Konsultasi rekomendasi kurikulum bacaan Dharma pribadi',
+      'Semua keuntungan Sahabat Emas'
+    ]
+  }
+];
+
+export const INITIAL_PRE_ORDERS: PreOrderCampaign[] = [];
+
+export const DEMO_PRE_ORDERS: PreOrderCampaign[] = [
+  {
+    id: 1,
+    judul_campaign: 'PO Eksklusif: Lamrim Chenmo Edisi Anotasi Lengkap (Jilid 4 & 5)',
+    kode_campaign: 'PO-LRM-2026-01',
+    buku_id: 1,
+    buku_ids: [1, 2],
+    target_kuota: 300,
+    tercapai_kuota: 218,
+    harga_normal: 290000,
+    harga_po: 235000,
+    minimal_dp: 100000,
+    tanggal_mulai: '2026-09-01',
+    tanggal_selesai: '2026-10-31',
+    estimasi_pengiriman: '15 November 2026',
+    status: 'Aktif',
+    bonus_item: 'Hardcover Slipcase Kolektor + Pembatas Buku Logam Kuningan Berukir Simbol Auspicious',
+    deskripsi: 'Peluncuran terjemahan naskah agung Je Tsongkhapa dengan catatan kaki para guru silsilah Nusantara.',
+    total_dana_terkumpul: 51230000,
+    created_at: '2026-09-01 08:00:00'
+  },
+  {
+    id: 2,
+    judul_campaign: 'PO Khusus: Riwayat Hidup Guru-Guru Silsilah Lamrim Nusantara',
+    kode_campaign: 'PO-SILSILAH-02',
+    buku_id: 3,
+    target_kuota: 150,
+    tercapai_kuota: 150,
+    harga_normal: 180000,
+    harga_po: 145000,
+    minimal_dp: 50000,
+    tanggal_mulai: '2026-08-15',
+    tanggal_selesai: '2026-09-25',
+    estimasi_pengiriman: '10 Oktober 2026',
+    status: 'Tercapai',
+    bonus_item: 'Art Print Poster Silsilah Guru Dharma Ukuran A3 Full Color Berbingkai',
+    deskripsi: 'Naskah biografi inspiratif para mahaguru dari Biara Suvarnadvipa (Sriwijaya) hingga Tibet.',
+    total_dana_terkumpul: 21750000,
+    created_at: '2026-08-15 09:30:00'
+  },
+  {
+    id: 3,
+    judul_campaign: 'PO Buku Anak: Kisah Jataka Teladan Welas Asih Bergambar',
+    kode_campaign: 'PO-JATAKA-03',
+    buku_id: 7,
+    target_kuota: 250,
+    tercapai_kuota: 94,
+    harga_normal: 150000,
+    harga_po: 120000,
+    minimal_dp: 50000,
+    tanggal_mulai: '2026-09-10',
+    tanggal_selesai: '2026-11-10',
+    estimasi_pengiriman: '25 November 2026',
+    status: 'Aktif',
+    bonus_item: 'Sticker Pack Tokoh Bodhisattva Anak + Lembar Mewarnai Edukatif',
+    deskripsi: 'Seri cerita bergambar penuh warna untuk menanamkan budi pekerti luhur bagi generasi muda Buddhis.',
+    total_dana_terkumpul: 11280000,
+    created_at: '2026-09-10 10:00:00'
+  }
+];
+
+export const INITIAL_BOOK_BUNDLES: BookBundle[] = [];
+
+export const DEMO_BOOK_BUNDLES: BookBundle[] = [
+  {
+    id: 1,
+    nama_bundle: 'Paket Trilogi Lamrim Pemula',
+    kode_bundle: 'BNDL-LRM-TRI',
+    deskripsi: 'Paket pondasi lengkap pengenalan tahapan jalan pencerahan untuk praktisi pemula.',
+    items: [
+      { buku_id: 1, jumlah: 1 },
+      { buku_id: 2, jumlah: 1 },
+      { buku_id: 4, jumlah: 1 }
+    ],
+    harga_bundle: 265000,
+    badge: 'Paling Laris',
+    is_active: true,
+    created_at: '2026-08-01 10:00:00'
+  },
+  {
+    id: 2,
+    nama_bundle: 'Paket Meditasi & Ketenangan Jiwa',
+    kode_bundle: 'BNDL-MEDITASI',
+    deskripsi: 'Kombinasi buku panduan meditasi harian, samatha vipassana, dan refleksi welas asih.',
+    items: [
+      { buku_id: 4, jumlah: 1 },
+      { buku_id: 8, jumlah: 1 }
+    ],
+    harga_bundle: 140000,
+    badge: 'Diskon 18%',
+    is_active: true,
+    created_at: '2026-08-10 11:30:00'
+  },
+  {
+    id: 3,
+    nama_bundle: 'Boxset Lengkap Pembebasan Abadi (Koleksi Perpustakaan)',
+    kode_bundle: 'BNDL-BOXSET-VIP',
+    deskripsi: 'Koleksi 5 judul utama Dharma Nusantara bersampul eksklusif untuk koleksi pribadi atau vihara.',
+    items: [
+      { buku_id: 1, jumlah: 1 },
+      { buku_id: 2, jumlah: 1 },
+      { buku_id: 3, jumlah: 1 },
+      { buku_id: 7, jumlah: 1 },
+      { buku_id: 10, jumlah: 1 }
+    ],
+    harga_bundle: 550000,
+    badge: 'Edisi Terbatas',
+    is_active: true,
+    created_at: '2026-08-20 14:00:00'
+  }
+];
+

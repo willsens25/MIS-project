@@ -28,6 +28,7 @@ import { BarcodeScannerModal } from '../modals/BarcodeScannerModal';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
+import { RupiahInput } from '../common/RupiahInput';
 import { formatLogDateTime } from '../../utils/greetingUtils';
 import { cleanIsbn, lookupIsbnOnline } from '../../utils/isbnLookup';
 
@@ -730,33 +731,30 @@ export const PenerbitanDashboard: React.FC = () => {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">Harga Jual Resmi (Rp) *</label>
-                    <input
-                      type="number"
+                    <RupiahInput
                       required
-                      min="1000"
-                      value={bookForm.harga_jual || ''}
-                      onChange={e => {
-                        const val = parseInt(e.target.value) || 0;
+                      allowZero={false}
+                      value={bookForm.harga_jual}
+                      onChange={val => {
                         setBookForm(prev => ({
                           ...prev,
                           harga_jual: val,
                           biaya_pokok: prev.biaya_pokok > 0 ? prev.biaya_pokok : Math.round(val * 0.4)
                         }));
                       }}
-                      placeholder="145000"
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-indigo-600 dark:text-indigo-400"
+                      placeholder="Contoh: 145.000"
+                      className="font-bold text-indigo-600 dark:text-indigo-400"
                     />
                   </div>
                   <div>
                     <label className="block text-slate-600 dark:text-slate-400 font-semibold mb-1">HPP / Biaya Cetak (Rp) *</label>
-                    <input
-                      type="number"
+                    <RupiahInput
                       required
-                      min="1000"
-                      value={bookForm.biaya_pokok || ''}
-                      onChange={e => setBookForm({ ...bookForm, biaya_pokok: parseInt(e.target.value) || 0 })}
-                      placeholder="58000"
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-amber-600 dark:text-amber-400"
+                      allowZero={false}
+                      value={bookForm.biaya_pokok}
+                      onChange={val => setBookForm({ ...bookForm, biaya_pokok: val })}
+                      placeholder="Contoh: 58.000"
+                      className="font-bold text-amber-600 dark:text-amber-400"
                     />
                   </div>
                 </div>

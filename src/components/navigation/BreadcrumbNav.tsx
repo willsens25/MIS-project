@@ -16,7 +16,6 @@ import {
   TrendingUp,
   Users,
   UserCog,
-  ShieldCheck,
   CheckCircle2,
   CreditCard,
   Building,
@@ -31,7 +30,9 @@ import {
   Calendar,
   Layers,
   Check,
-  Zap
+  Zap,
+  Rocket,
+  Crown
 } from 'lucide-react';
 
 export interface BreadcrumbTabConfig {
@@ -58,7 +59,7 @@ export const NAVIGATION_CONFIG: Record<DivisionId, DivisionNavConfig> = {
     name: 'Direktorat',
     code: 'DIR',
     icon: Building2,
-    description: 'Tata Kelola, Kepegawaian & Audit',
+    description: 'Tata Kelola & Kepegawaian',
     defaultTab: 'overview',
     tabs: [
       {
@@ -80,14 +81,7 @@ export const NAVIGATION_CONFIG: Record<DivisionId, DivisionNavConfig> = {
         name: 'Manajemen Pengguna',
         shortName: 'Pengguna Sistem',
         icon: UserCog,
-        description: 'Akun tim, hak akses & audit keamanan'
-      },
-      {
-        id: 'audit',
-        name: 'Audit Trail & Log',
-        shortName: 'Audit Log',
-        icon: ShieldCheck,
-        description: 'Catatan jejak aktivitas & histori transaksi'
+        description: 'Akun tim & hak akses pengguna'
       }
     ]
   },
