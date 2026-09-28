@@ -12,6 +12,7 @@ import { DivisionReportModal } from './modals/DivisionReportModal';
 import { AnnualReportModal } from './modals/AnnualReportModal';
 import { ThemePresetModal } from './theme/ThemePresetModal';
 import { BackupRestoreModal } from './common/BackupRestoreModal';
+import { DataImportExportModal } from './modals/DataImportExportModal';
 import { getColorPreset, COLOR_PRESETS } from '../lib/themePresets';
 import {
   Building2,
@@ -45,7 +46,8 @@ import {
   Database,
   Menu,
   X,
-  SlidersHorizontal
+  SlidersHorizontal,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -94,6 +96,9 @@ export const Header: React.FC<HeaderProps> = ({
   const [showThemePresetModal, setShowThemePresetModal] = useState(false);
   const [showBackupRestoreModal, setShowBackupRestoreModal] = useState(false);
   const [backupRestoreInitialTab, setBackupRestoreInitialTab] = useState<'backup' | 'restore' | 'seeder'>('backup');
+  const [showDataImportExportModal, setShowDataImportExportModal] = useState(false);
+  const [dataImportExportInitialTab, setDataImportExportInitialTab] = useState<'import' | 'export'>('import');
+  const [dataImportExportInitialDataType, setDataImportExportInitialDataType] = useState<'books' | 'members'>('books');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const activeColorPreset = getColorPreset(colorPreset);
@@ -573,6 +578,23 @@ export const Header: React.FC<HeaderProps> = ({
                       </button>
 
                       <button
+                        id="menu-import-export-excel"
+                        onClick={() => {
+                          setShowProfileMenu(false);
+                          setDataImportExportInitialTab('import');
+                          setShowDataImportExportModal(true);
+                        }}
+                        className="w-full flex items-center px-4 py-2 text-xs text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 transition-colors font-medium cursor-pointer"
+                        title="Impor atau ekspor massal data buku, anggota, penjualan, dan mutasi Excel / CSV"
+                      >
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mr-2.5" />
+                        <span>Impor & Ekspor Excel (.xlsx)</span>
+                        <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/50">
+                          Spreadsheet
+                        </span>
+                      </button>
+
+                      <button
                         id="menu-backup-restore"
                         onClick={() => {
                           setShowProfileMenu(false);
@@ -903,6 +925,14 @@ export const Header: React.FC<HeaderProps> = ({
         initialTab={backupRestoreInitialTab}
       />
 
+      {/* Spreadsheet Excel / CSV Import & Export Modal */}
+      <DataImportExportModal
+        isOpen={showDataImportExportModal}
+        onClose={() => setShowDataImportExportModal(false)}
+        initialTab={dataImportExportInitialTab}
+        initialDataType={dataImportExportInitialDataType}
+      />
+
       {/* Mobile Navigation Drawer Portal (Small Screens < lg) */}
       {showMobileMenu && createPortal(
         <div className="fixed inset-0 z-50 lg:hidden flex justify-end">
@@ -1160,6 +1190,25 @@ export const Header: React.FC<HeaderProps> = ({
                   >
                     <Award className="w-4 h-4 text-amber-500 shrink-0" />
                     <span className="truncate">Laporan Tahunan</span>
+                  </button>
+
+                  {/* Excel / CSV Spreadsheet Import Export */}
+                  <button
+                    id="btn-mobile-excel-import-export"
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      setDataImportExportInitialTab('import');
+                      setShowDataImportExportModal(true);
+                    }}
+                    className="col-span-2 flex items-center justify-between p-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-semibold hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors text-left cursor-pointer"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span>Impor & Ekspor Excel (.xlsx)</span>
+                    </div>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-200 dark:bg-emerald-900 text-emerald-900 dark:text-emerald-200 font-mono">
+                      XLSX/CSV
+                    </span>
                   </button>
 
                   {/* Backup & Restore Database */}

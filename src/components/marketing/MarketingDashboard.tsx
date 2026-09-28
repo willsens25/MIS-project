@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
-import { Order, OrderItem, Promo, Book, Identitas, SalesChannel, Expedition } from '../../types';
+import { Order, OrderItem, Promo, Book, Identitas, SalesChannel, Expedition, BookBundle } from '../../types';
 import {
   ShoppingBag,
   Plus,
@@ -33,7 +33,10 @@ import {
   ExternalLink,
   ChevronDown,
   MessageSquare,
-  Zap
+  Zap,
+  Rocket,
+  Crown,
+  Boxes
 } from 'lucide-react';
 import { InvoicePrintModal } from '../modals/InvoicePrintModal';
 import { MarketingCharts } from '../charts/MarketingCharts';
@@ -46,6 +49,9 @@ import { WhatsAppModal } from './WhatsAppModal';
 import { WhatsAppAutomationTab } from './WhatsAppAutomationTab';
 import { EventPOSDashboard } from './EventPOSDashboard';
 import { BazaarEventsTab } from './BazaarEventsTab';
+import { PreOrderAndBundlingTab } from './PreOrderAndBundlingTab';
+import { MembershipLoyaltyTab } from './MembershipLoyaltyTab';
+import { computeMemberLoyaltyProfile } from '../../utils/membershipUtils';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
@@ -81,10 +87,33 @@ export const MarketingDashboard: React.FC = () => {
     setCurrentSubTab
   } = useApp();
 
-  const activeSubTab = (['pos', 'event_pos', 'bazaar', 'grafik', 'invoices', 'promos', 'saluran', 'agen', 'whatsapp'].includes(currentSubTab)
-    ? currentSubTab
-    : 'pos') as 'pos' | 'event_pos' | 'bazaar' | 'grafik' | 'invoices' | 'promos' | 'saluran' | 'agen' | 'whatsapp';
-  const setActiveSubTab = (tab: 'pos' | 'event_pos' | 'bazaar' | 'grafik' | 'invoices' | 'promos' | 'saluran' | 'agen' | 'whatsapp') => setCurrentSubTab(tab);
+  const validSubTabs = ['pos', 'event_pos', 'preorder', 'membership', 'bazaar', 'grafik', 'invoices', 'promos', 'saluran', 'agen', 'whatsapp'] as const;
+  type MarketingSubTab = typeof validSubTabs[number];
+
+  const activeSubTab: MarketingSubTab = validSubTabs.includes(currentSubTab as any)
+    ? (currentSubTab as MarketingSubTab)
+    : 'pos';
+  const setActiveSubTab = (tab: MarketingSubTab) => setCurrentSubTab(tab);
+
+  // Helper when clicking bundle or member in specialized tabs
+  const handleOpenPOSWithBundle = (bundle: BookBundle) => {
+    setActiveSubTab('pos');
+    const newItems = bundle.items.map(item => ({
+      buku_id: item.buku_id,
+      jumlah: item.jumlah,
+      promo_code: ''
+    }));
+    setOrderItems(newItems);
+    setToastMessage(`Paket "${bundle.nama_bundle}" telah dimuat ke kasir POS!`);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const handleOpenPOSForMember = (identitas: Identitas, discountPct: number) => {
+    setActiveSubTab('pos');
+    handleSelectAgent(identitas.id);
+    setToastMessage(`Sahabat ${identitas.nama_lengkap} terpilih! Hak diskon tier: ${discountPct}%.`);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
   const [invoiceSearch, setInvoiceSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [channelFilter, setChannelFilter] = useState<string>('all');
@@ -601,6 +630,30 @@ export const MarketingDashboard: React.FC = () => {
           </button>
 
           <button
+            onClick={() => setActiveSubTab('preorder')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              activeSubTab === 'preorder'
+                ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-sm'
+                : 'text-orange-700 dark:text-orange-400 hover:text-orange-900 dark:hover:text-white hover:bg-orange-50/50'
+            }`}
+          >
+            <Rocket className="w-3.5 h-3.5" />
+            <span>🚀 PO & Bundling</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('membership')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              activeSubTab === 'membership'
+                ? 'bg-gradient-to-r from-amber-600 to-yellow-600 text-white shadow-sm'
+                : 'text-amber-800 dark:text-amber-400 hover:text-amber-950 dark:hover:text-white hover:bg-amber-50/50'
+            }`}
+          >
+            <Crown className="w-3.5 h-3.5" />
+            <span>🎖️ Sahabat Member</span>
+          </button>
+
+          <button
             onClick={() => setActiveSubTab('saluran')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               activeSubTab === 'saluran'
@@ -830,6 +883,34 @@ export const MarketingDashboard: React.FC = () => {
                       </option>
                     ))}
                   </select>
+
+                  {/* Sahabat Lamrimnesia Loyalty Badge in POS */}
+                  {selectedIdentitasId && (() => {
+                    const member = identitasList.find(m => m.id === selectedIdentitasId);
+                    if (!member) return null;
+                    const profile = computeMemberLoyaltyProfile(member, orders);
+                    return (
+                      <div className="mt-2 p-3 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/40 dark:to-yellow-950/30 rounded-xl border border-amber-200 dark:border-amber-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                        <div className="flex items-center space-x-2.5">
+                          <Crown className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                          <div>
+                            <div className="font-bold text-amber-950 dark:text-amber-200 flex items-center gap-1.5 text-xs">
+                              <span>Sahabat Lamrimnesia: <b>{profile.tier.nama_tier}</b></span>
+                              <span className="text-[10px] font-black px-1.5 py-0.2 bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-200 rounded">
+                                Diskon {profile.tier.diskon_persen}%
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-amber-700 dark:text-amber-400">
+                              {profile.memberCode} • Total Kontribusi: Rp {profile.totalAkumulasi.toLocaleString('id-ID')} ({profile.orderCount} pesanan)
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+                          ⚡ Diskon {profile.tier.diskon_persen}% dapat dimasukkan di kolom promo per baris buku
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1746,6 +1827,26 @@ export const MarketingDashboard: React.FC = () => {
             ))}
           </div>
         </div>
+      )}
+
+      {/* PRE-ORDER CAMPAIGN & PAKET BUNDLING SUB TAB */}
+      {activeSubTab === 'preorder' && (
+        <PreOrderAndBundlingTab
+          onOpenPOSWithBundle={handleOpenPOSWithBundle}
+          onOpenPOSWithPreOrder={(campaign) => {
+            setActiveSubTab('pos');
+            setOrderItems([{ buku_id: campaign.buku_id, jumlah: 1, promo_code: '' }]);
+            setToastMessage(`Campaign PO "${campaign.judul_campaign}" dimuat ke kasir!`);
+            setTimeout(() => setToastMessage(null), 3000);
+          }}
+        />
+      )}
+
+      {/* SAHABAT LAMRIMNESIA MEMBERSHIP & LOYALTY TIER SUB TAB */}
+      {activeSubTab === 'membership' && (
+        <MembershipLoyaltyTab
+          onOpenPOSForMember={handleOpenPOSForMember}
+        />
       )}
 
       {/* SALURAN & EKSPEDISI SUB TAB */}

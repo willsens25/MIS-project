@@ -32,7 +32,10 @@ import {
   Check,
   Zap,
   Rocket,
-  Crown
+  Crown,
+  Heart,
+  Sparkles,
+  Award
 } from 'lucide-react';
 
 export interface BreadcrumbTabConfig {
@@ -146,11 +149,32 @@ export const NAVIGATION_CONFIG: Record<DivisionId, DivisionNavConfig> = {
         description: 'Daftar judul buku dharma, ISBN & harga jual'
       },
       {
+        id: 'donasi_cetak',
+        name: 'Fashili & Sponsorship Cetak',
+        shortName: '🪷 Donasi Cetak',
+        icon: Heart,
+        description: 'Penggalangan dana donasi cetak & layout Halaman Dedikasi'
+      },
+      {
+        id: 'royalti',
+        name: 'Royalti Penulis & Lisensi Naskah',
+        shortName: 'Royalti & Lisensi',
+        icon: Award,
+        description: 'Kalkulator royalti otomatis & slip transfer penerjemah'
+      },
+      {
+        id: 'ekonomi',
+        name: 'Unit Economics & HPP Buku',
+        shortName: 'Unit Economics',
+        icon: TrendingUp,
+        description: 'Analisis BEP, margin laba & struktur biaya naskah'
+      },
+      {
         id: 'grafik',
         name: 'Statistik Stok & Valuasi',
-        shortName: 'Statistik Royalti',
+        shortName: 'Statistik Valuasi',
         icon: TrendingUp,
-        description: 'Analisis valuasi inventori & data royalti'
+        description: 'Analisis valuasi inventori naskah dharma'
       },
       {
         id: 'pengajuan',
@@ -217,6 +241,20 @@ export const NAVIGATION_CONFIG: Record<DivisionId, DivisionNavConfig> = {
         shortName: 'Agen & Pembeli',
         icon: Users,
         description: 'Database pelanggan tetap & reseller'
+      },
+      {
+        id: 'preorder',
+        name: 'Pre-Order & Paket Bundling',
+        shortName: 'PO & Bundling',
+        icon: Rocket,
+        description: 'Peluncuran naskah baru, target kuota cetak PO & paket hemat bundling'
+      },
+      {
+        id: 'membership',
+        name: 'Sahabat Lamrimnesia (Loyalty Tier)',
+        shortName: 'Sahabat Member',
+        icon: Crown,
+        description: 'Program loyalitas pembaca, tingkatan keanggotaan & kartu digital'
       }
     ]
   },

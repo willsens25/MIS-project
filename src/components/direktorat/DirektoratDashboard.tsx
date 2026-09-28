@@ -27,6 +27,7 @@ import { IdentitasModal } from '../modals/IdentitasModal';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { DirektoratCharts } from '../charts/DirektoratCharts';
 import { AnnualReportModal } from '../modals/AnnualReportModal';
+import { DataImportExportModal } from '../modals/DataImportExportModal';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
@@ -74,6 +75,7 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   
   const [modalIdentitasOpen, setModalIdentitasOpen] = useState(false);
+  const [isImportExportModalOpen, setIsImportExportModalOpen] = useState(false);
   const [editingIdentitas, setEditingIdentitas] = useState<Identitas | null>(null);
   const [viewOnlyIdentitas, setViewOnlyIdentitas] = useState(false);
   const [annualReportOpen, setAnnualReportOpen] = useState(false);
@@ -332,17 +334,28 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
           )}
 
           {activeSubTab === 'identitas' && (
-            <button
-              onClick={() => {
-                setEditingIdentitas(null);
-                setViewOnlyIdentitas(false);
-                setModalIdentitasOpen(true);
-              }}
-              className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Tambah Anggota Baru</span>
-            </button>
+            <>
+              <button
+                onClick={() => setIsImportExportModalOpen(true)}
+                className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                title="Impor atau ekspor massal database anggota/umat format Excel (.xlsx) atau CSV"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                <span>Impor / Ekspor Excel</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setEditingIdentitas(null);
+                  setViewOnlyIdentitas(false);
+                  setModalIdentitasOpen(true);
+                }}
+                className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Tambah Anggota Baru</span>
+              </button>
+            </>
           )}
 
           {activeSubTab === 'users' && (
@@ -945,6 +958,14 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
       <AnnualReportModal
         isOpen={annualReportOpen}
         onClose={() => setAnnualReportOpen(false)}
+      />
+
+      {/* Spreadsheet Excel / CSV Import Export Modal */}
+      <DataImportExportModal
+        isOpen={isImportExportModalOpen}
+        onClose={() => setIsImportExportModalOpen(false)}
+        initialDataType="members"
+        initialTab="import"
       />
 
     </div>

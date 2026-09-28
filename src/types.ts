@@ -84,6 +84,77 @@ export interface MembershipTierConfig {
   keuntungan: string[];
 }
 
+export interface DonasiProyekCetak {
+  id: number;
+  kode_proyek: string;
+  judul_proyek: string;
+  buku_id?: number;
+  nama_buku: string;
+  penulis?: string;
+  target_eksemplar: number;
+  target_dana: number;
+  dana_terkumpul: number;
+  jumlah_donatur: number;
+  tanggal_mulai: string;
+  target_selesai: string;
+  status: 'Penggalangan' | 'Target Tercapai' | 'Proses Cetak' | 'Selesai & Didistribusikan';
+  deskripsi: string;
+  tujuan_distribusi: string;
+  halaman_dedikasi_catatan?: string;
+  created_at: string;
+}
+
+export interface DonasiSponsorRecord {
+  id: number;
+  proyek_id: number;
+  identitas_id?: number;
+  nama_donatur: string;
+  no_wa?: string;
+  nominal: number;
+  paket?: string;
+  jumlah_eksemplar_didukung: number;
+  nama_dedikasi: string;
+  doa_dedikasi: string;
+  tanggal: string;
+  account_id: number;
+  status_verifikasi: 'Terverifikasi' | 'Menunggu Konfirmasi';
+  nomor_tanda_terima?: string;
+  sertifikat_dikirim?: boolean;
+  created_at: string;
+}
+
+export interface RoyaltiPenulis {
+  id: number;
+  buku_id: number;
+  nama_penerima: string;
+  peran: 'Penulis' | 'Penerjemah' | 'Editor' | 'Illustrator';
+  no_kontak?: string;
+  email?: string;
+  rekening_bank?: string;
+  tipe_royalti: 'persentase' | 'nominal_per_buku';
+  nilai_royalti: number;
+  lisensi_nama?: string;
+  lisensi_asal?: string;
+  lisensi_kedaluwarsa?: string;
+  maksimal_cetak_lisensi?: number;
+  eksemplar_tercetak?: number;
+  status_lisensi: 'Aktif' | 'Mendekati Kedaluwarsa' | 'Perlu Perpanjangan';
+}
+
+export interface RoyaltiStatement {
+  id: number;
+  royalti_id: number;
+  periode: string;
+  total_terjual: number;
+  total_omzet: number;
+  total_hak_royalti: number;
+  status_bayar: 'Belum Dibayar' | 'Sudah Ditransfer';
+  tanggal_bayar?: string;
+  nomor_referensi_bayar?: string;
+  catatan?: string;
+  created_at: string;
+}
+
 export interface Promo {
   id: number;
   code: string;

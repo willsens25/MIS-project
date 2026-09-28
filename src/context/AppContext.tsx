@@ -23,6 +23,10 @@ import {
   BazaarAllocationItem,
   PreOrderCampaign,
   BookBundle,
+  DonasiProyekCetak,
+  DonasiSponsorRecord,
+  RoyaltiPenulis,
+  RoyaltiStatement,
   UserSettings,
   ThemeMode,
   BackupData,
@@ -58,6 +62,10 @@ import {
   INITIAL_BAZAAR_EVENTS,
   INITIAL_PRE_ORDERS,
   INITIAL_BOOK_BUNDLES,
+  INITIAL_DONASI_PROYEK,
+  INITIAL_DONASI_SPONSOR,
+  INITIAL_ROYALTI_PENULIS,
+  INITIAL_ROYALTI_STATEMENT,
   DEMO_USERS,
   DEMO_ACCOUNTS,
   DEMO_BOOKS,
@@ -73,7 +81,11 @@ import {
   DEMO_ACTIVITY_LOGS,
   DEMO_BAZAAR_EVENTS,
   DEMO_PRE_ORDERS,
-  DEMO_BOOK_BUNDLES
+  DEMO_BOOK_BUNDLES,
+  DEMO_DONASI_PROYEK,
+  DEMO_DONASI_SPONSOR,
+  DEMO_ROYALTI_PENULIS,
+  DEMO_ROYALTI_STATEMENT
 } from '../lib/initialData';
 import {
   hashPasswordServer,
@@ -138,6 +150,10 @@ interface AppContextType {
   bazaarEvents: BazaarEvent[];
   preOrderCampaigns: PreOrderCampaign[];
   bookBundles: BookBundle[];
+  donasiProyeks: DonasiProyekCetak[];
+  donasiSponsors: DonasiSponsorRecord[];
+  royaltiPenulisList: RoyaltiPenulis[];
+  royaltiStatements: RoyaltiStatement[];
 
   // AI & App Task Reactive State
   aiAppState: 'idle' | 'thinking' | 'success';
@@ -155,6 +171,18 @@ interface AppContextType {
   adjustBookStock: (id: number, qty: number, mode: 'add' | 'set', catatan?: string) => { success: boolean; message: string; newStock?: number };
   deleteBook: (id: number) => void;
   bulkDeleteBooks: (ids: number[]) => void;
+  bulkImportBooks: (
+    importedBooks: Array<{
+      judul: string;
+      penulis: string;
+      harga_jual: number;
+      stok_gudang?: number;
+      biaya_pokok?: number;
+      kategori?: string;
+      isbn?: string;
+    }>,
+    mode?: 'skip' | 'update'
+  ) => { added: number; updated: number; skipped: number; total: number };
   ajukanCetak: (bookId: number, jumlah: number) => void;
 
   // Order & Marketing actions
@@ -191,6 +219,20 @@ interface AppContextType {
   updateBookBundle: (id: number, updates: Partial<BookBundle>) => void;
   deleteBookBundle: (id: number) => { success: boolean; message: string };
 
+  // Donasi & Sponsorship Proyek Cetak actions
+  addDonasiProyek: (proyek: Omit<DonasiProyekCetak, 'id' | 'dana_terkumpul' | 'jumlah_donatur' | 'created_at'>) => DonasiProyekCetak;
+  updateDonasiProyek: (id: number, updates: Partial<DonasiProyekCetak>) => void;
+  deleteDonasiProyek: (id: number) => { success: boolean; message: string };
+  addDonasiSponsor: (sponsor: Omit<DonasiSponsorRecord, 'id' | 'created_at'>, autoCreateMutasi?: boolean) => { success: boolean; message: string; record?: DonasiSponsorRecord };
+  deleteDonasiSponsor: (id: number) => { success: boolean; message: string };
+
+  // Royalti Penulis & Lisensi Hak Cipta actions
+  addRoyaltiPenulis: (data: Omit<RoyaltiPenulis, 'id'>) => RoyaltiPenulis;
+  updateRoyaltiPenulis: (id: number, updates: Partial<RoyaltiPenulis>) => void;
+  deleteRoyaltiPenulis: (id: number) => { success: boolean; message: string };
+  addRoyaltiStatement: (statement: Omit<RoyaltiStatement, 'id' | 'created_at'>) => RoyaltiStatement;
+  updateRoyaltiStatement: (id: number, updates: Partial<RoyaltiStatement>) => void;
+
   // Finance actions
   addMutasi: (account_id: number, nama_kategori: string, tipe: 'Masuk' | 'Keluar', nominal: number, keterangan: string, tanggal?: string) => void;
   updateMutasi: (id: number, nama_kategori: string, tipe: 'Masuk' | 'Keluar', nominal: number, keterangan: string) => void;
@@ -218,6 +260,10 @@ interface AppContextType {
   updateIdentitas: (id: number, identitas: Partial<Identitas>) => void;
   deleteIdentitas: (id: number) => void;
   bulkDeleteIdentitas: (ids: number[]) => void;
+  bulkImportIdentitas: (
+    importedMembers: Array<Omit<Identitas, 'id' | 'created_at'>>,
+    mode?: 'skip' | 'update'
+  ) => { added: number; updated: number; skipped: number; total: number };
 
   // User management
   addUser: (name: string, email: string, divisi_id: DivisionId, role?: string, password?: string, phone?: string) => Promise<void> | void;
@@ -452,6 +498,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const stored = getStoredItem<BookBundle[]>('mis_book_bundles', DEMO_BOOK_BUNDLES);
     return stored && stored.length > 0 ? stored : DEMO_BOOK_BUNDLES;
   });
+  const [donasiProyeks, setDonasiProyeks] = useState<DonasiProyekCetak[]>(() => {
+    const stored = getStoredItem<DonasiProyekCetak[]>('mis_donasi_proyeks', DEMO_DONASI_PROYEK);
+    return stored && stored.length > 0 ? stored : DEMO_DONASI_PROYEK;
+  });
+  const [donasiSponsors, setDonasiSponsors] = useState<DonasiSponsorRecord[]>(() => {
+    const stored = getStoredItem<DonasiSponsorRecord[]>('mis_donasi_sponsors', DEMO_DONASI_SPONSOR);
+    return stored && stored.length > 0 ? stored : DEMO_DONASI_SPONSOR;
+  });
+  const [royaltiPenulisList, setRoyaltiPenulisList] = useState<RoyaltiPenulis[]>(() => {
+    const stored = getStoredItem<RoyaltiPenulis[]>('mis_royalti_penulis', DEMO_ROYALTI_PENULIS);
+    return stored && stored.length > 0 ? stored : DEMO_ROYALTI_PENULIS;
+  });
+  const [royaltiStatements, setRoyaltiStatements] = useState<RoyaltiStatement[]>(() => {
+    const stored = getStoredItem<RoyaltiStatement[]>('mis_royalti_statements', DEMO_ROYALTI_STATEMENT);
+    return stored && stored.length > 0 ? stored : DEMO_ROYALTI_STATEMENT;
+  });
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(() => {
     const stored = getStoredItem<ActivityLog[]>('mis_activity_logs', INITIAL_ACTIVITY_LOGS);
     if (!stored || stored.length === 0) {
@@ -512,6 +574,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => { setStoredItem('mis_bazaar_events', bazaarEvents); }, [bazaarEvents]);
   useEffect(() => { setStoredItem('mis_pre_orders', preOrderCampaigns); }, [preOrderCampaigns]);
   useEffect(() => { setStoredItem('mis_book_bundles', bookBundles); }, [bookBundles]);
+  useEffect(() => { setStoredItem('mis_donasi_proyeks', donasiProyeks); }, [donasiProyeks]);
+  useEffect(() => { setStoredItem('mis_donasi_sponsors', donasiSponsors); }, [donasiSponsors]);
+  useEffect(() => { setStoredItem('mis_royalti_penulis', royaltiPenulisList); }, [royaltiPenulisList]);
+  useEffect(() => { setStoredItem('mis_royalti_statements', royaltiStatements); }, [royaltiStatements]);
 
   // Evaluate solar schedule and auto-switch theme when in 'system-synced' mode
   const evaluateSolarTheme = useCallback((forcedLocation?: LocationCoordinates, forcedMode?: ThemeMode) => {
@@ -925,6 +991,84 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     recordActivity('Hapus Massal Buku', 'Book', `Menghapus ${ids.length} buku massal: [${deletedNames}]`);
   };
 
+  const bulkImportBooks = (
+    importedBooks: Array<{
+      judul: string;
+      penulis: string;
+      harga_jual: number;
+      stok_gudang?: number;
+      biaya_pokok?: number;
+      kategori?: string;
+      isbn?: string;
+    }>,
+    mode: 'skip' | 'update' = 'skip'
+  ): { added: number; updated: number; skipped: number; total: number } => {
+    let added = 0;
+    let updated = 0;
+    let skipped = 0;
+    let currentMaxId = books.length > 0 ? Math.max(...books.map(b => b.id)) : 0;
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:00`;
+
+    setBooks(prev => {
+      const bookList = [...prev];
+      for (const item of importedBooks) {
+        if (!item.judul || !item.judul.trim()) {
+          skipped++;
+          continue;
+        }
+
+        const normTitle = item.judul.trim().toLowerCase();
+        const normIsbn = item.isbn ? item.isbn.replace(/\D/g, '') : '';
+        const existingIndex = bookList.findIndex(b => {
+          if (normIsbn && b.isbn && b.isbn.replace(/\D/g, '') === normIsbn) return true;
+          return b.judul.trim().toLowerCase() === normTitle;
+        });
+
+        const calculatedHpp = item.biaya_pokok !== undefined && item.biaya_pokok >= 0
+          ? item.biaya_pokok
+          : Math.round(item.harga_jual * 0.4);
+
+        if (existingIndex >= 0) {
+          if (mode === 'update') {
+            bookList[existingIndex] = {
+              ...bookList[existingIndex],
+              penulis: item.penulis || bookList[existingIndex].penulis,
+              harga_jual: item.harga_jual > 0 ? item.harga_jual : bookList[existingIndex].harga_jual,
+              biaya_pokok: calculatedHpp,
+              kategori: item.kategori || bookList[existingIndex].kategori,
+              isbn: item.isbn || bookList[existingIndex].isbn,
+              stok_gudang: item.stok_gudang !== undefined ? item.stok_gudang : bookList[existingIndex].stok_gudang,
+              updated_at: dateStr
+            };
+            updated++;
+          } else {
+            skipped++;
+          }
+        } else {
+          currentMaxId += 1;
+          bookList.push({
+            id: currentMaxId,
+            judul: item.judul.trim(),
+            penulis: item.penulis?.trim() || 'Tim Penerjemah & Editor',
+            harga_jual: item.harga_jual || 0,
+            biaya_pokok: calculatedHpp,
+            stok_gudang: item.stok_gudang || 0,
+            kategori: item.kategori || 'Dharma Umum',
+            isbn: item.isbn || '',
+            created_at: dateStr
+          });
+          added++;
+        }
+      }
+      return bookList;
+    });
+
+    recordActivity('Impor Massal Buku', 'Book', `Impor data buku spreadsheet: ${added} judul baru ditambah, ${updated} diperbarui, ${skipped} dilewati.`, 3);
+    triggerTaskSuccess(`Impor buku tuntas! ${added} buku baru berhasil ditambahkan.`);
+    return { added, updated, skipped, total: importedBooks.length };
+  };
+
   const ajukanCetak = (bookId: number, jumlah: number) => {
     const book = books.find(b => b.id === bookId);
     const newPengajuan: PengajuanCetak = {
@@ -1304,6 +1448,169 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     recordActivity('Hapus Bundling Buku', 'BookBundle', `Menghapus paket bundling "${target.nama_bundle}"`, 4);
     triggerTaskSuccess(`Paket bundling "${target.nama_bundle}" berhasil dihapus.`);
     return { success: true, message: 'Paket bundling berhasil dihapus' };
+  };
+
+  // Donasi & Sponsorship Proyek Cetak
+  const addDonasiProyek = (proyekData: Omit<DonasiProyekCetak, 'id' | 'dana_terkumpul' | 'jumlah_donatur' | 'created_at'>): DonasiProyekCetak => {
+    const newId = donasiProyeks.length > 0 ? Math.max(...donasiProyeks.map(p => p.id)) + 1 : 1;
+    const now = new Date();
+    const created_at = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:00`;
+
+    const newProyek: DonasiProyekCetak = {
+      ...proyekData,
+      id: newId,
+      dana_terkumpul: 0,
+      jumlah_donatur: 0,
+      created_at
+    };
+
+    setDonasiProyeks(prev => [newProyek, ...prev]);
+    recordActivity('Tambah Proyek Donasi Cetak', 'DonasiProyekCetak', `Membuka program fashili/sponsorship: "${proyekData.judul_proyek}" (Target: Rp ${proyekData.target_dana.toLocaleString('id-ID')})`, 3);
+    triggerTaskSuccess(`Program fashili "${proyekData.judul_proyek}" berhasil dibuka!`);
+    return newProyek;
+  };
+
+  const updateDonasiProyek = (id: number, updates: Partial<DonasiProyekCetak>) => {
+    setDonasiProyeks(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+    recordActivity('Update Proyek Donasi', 'DonasiProyekCetak', `Memperbarui proyek donasi #${id}`, 3);
+    triggerTaskSuccess('Data proyek fashili berhasil diperbarui!');
+  };
+
+  const deleteDonasiProyek = (id: number): { success: boolean; message: string } => {
+    const target = donasiProyeks.find(p => p.id === id);
+    if (!target) return { success: false, message: 'Proyek donasi tidak ditemukan' };
+    setDonasiProyeks(prev => prev.filter(p => p.id !== id));
+    recordActivity('Hapus Proyek Donasi', 'DonasiProyekCetak', `Menghapus proyek donasi: "${target.judul_proyek}"`, 3);
+    triggerTaskSuccess(`Proyek donasi "${target.judul_proyek}" berhasil dihapus.`);
+    return { success: true, message: 'Proyek donasi berhasil dihapus' };
+  };
+
+  const addDonasiSponsor = (sponsorData: Omit<DonasiSponsorRecord, 'id' | 'created_at'>, autoCreateMutasi = true): { success: boolean; message: string; record?: DonasiSponsorRecord } => {
+    const newId = donasiSponsors.length > 0 ? Math.max(...donasiSponsors.map(s => s.id)) + 1 : 1;
+    const now = new Date();
+    const created_at = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:00`;
+    const noTandaTerima = sponsorData.nomor_tanda_terima || `KWT-DON-${now.getFullYear()}-${String(newId).padStart(4, '0')}`;
+
+    const newRecord: DonasiSponsorRecord = {
+      ...sponsorData,
+      id: newId,
+      nomor_tanda_terima: noTandaTerima,
+      created_at
+    };
+
+    setDonasiSponsors(prev => [newRecord, ...prev]);
+
+    // Update Proyek dana & count
+    setDonasiProyeks(prev => prev.map(p => {
+      if (p.id === sponsorData.proyek_id) {
+        const newDana = p.dana_terkumpul + sponsorData.nominal;
+        const newDonatur = p.jumlah_donatur + 1;
+        const newStatus = newDana >= p.target_dana && p.status === 'Penggalangan' ? 'Target Tercapai' : p.status;
+        return {
+          ...p,
+          dana_terkumpul: newDana,
+          jumlah_donatur: newDonatur,
+          status: newStatus
+        };
+      }
+      return p;
+    }));
+
+    // Auto create mutasi in Finance
+    if (autoCreateMutasi) {
+      const proyek = donasiProyeks.find(p => p.id === sponsorData.proyek_id);
+      const accId = sponsorData.account_id || accounts[0]?.id || 1;
+      const tgl = sponsorData.tanggal || created_at.substring(0, 10);
+      
+      const newMutasi: Mutasi = {
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        account_id: accId,
+        category_id: 2, // Dana Donasi & Sponsorship
+        user_id: currentUser?.id || 1,
+        tipe: 'Masuk',
+        nominal: sponsorData.nominal,
+        keterangan: `Donasi Fashili Cetak: ${sponsorData.nama_donatur} - ${proyek?.nama_buku || 'Buku Dharma'} (${noTandaTerima}) [Dedikasi: ${sponsorData.nama_dedikasi || '-'}]`,
+        tanggal: tgl,
+        jenis: 'MANUAL'
+      };
+      setMutasis(prev => [newMutasi, ...prev]);
+    }
+
+    recordActivity('Penerimaan Donasi Cetak', 'DonasiSponsorRecord', `Menerima donasi cetak Rp ${sponsorData.nominal.toLocaleString('id-ID')} dari ${sponsorData.nama_donatur} untuk ${noTandaTerima}`, 2);
+    triggerTaskSuccess(`Donasi dari ${sponsorData.nama_donatur} sebesar Rp ${sponsorData.nominal.toLocaleString('id-ID')} berhasil dicatat & masuk ke kas yayasan!`);
+    return { success: true, message: 'Donasi berhasil dicatat', record: newRecord };
+  };
+
+  const deleteDonasiSponsor = (id: number): { success: boolean; message: string } => {
+    const target = donasiSponsors.find(s => s.id === id);
+    if (!target) return { success: false, message: 'Data donasi sponsor tidak ditemukan' };
+
+    // Reverse project amount
+    setDonasiProyeks(prev => prev.map(p => {
+      if (p.id === target.proyek_id) {
+        return {
+          ...p,
+          dana_terkumpul: Math.max(0, p.dana_terkumpul - target.nominal),
+          jumlah_donatur: Math.max(0, p.jumlah_donatur - 1)
+        };
+      }
+      return p;
+    }));
+
+    setDonasiSponsors(prev => prev.filter(s => s.id !== id));
+    recordActivity('Hapus Data Donasi', 'DonasiSponsorRecord', `Menghapus catatan donasi #${id} (${target.nama_donatur})`, 2);
+    triggerTaskSuccess('Catatan donasi berhasil dihapus.');
+    return { success: true, message: 'Data donasi berhasil dihapus' };
+  };
+
+  // Royalti Penulis & Lisensi
+  const addRoyaltiPenulis = (data: Omit<RoyaltiPenulis, 'id'>): RoyaltiPenulis => {
+    const newId = royaltiPenulisList.length > 0 ? Math.max(...royaltiPenulisList.map(r => r.id)) + 1 : 1;
+    const newRecord: RoyaltiPenulis = {
+      ...data,
+      id: newId
+    };
+    setRoyaltiPenulisList(prev => [newRecord, ...prev]);
+    recordActivity('Tambah Royalti Penulis', 'RoyaltiPenulis', `Mendaftarkan royalti: ${data.nama_penerima} (${data.peran})`, 3);
+    triggerTaskSuccess(`Master royalti untuk ${data.nama_penerima} berhasil didaftarkan!`);
+    return newRecord;
+  };
+
+  const updateRoyaltiPenulis = (id: number, updates: Partial<RoyaltiPenulis>) => {
+    setRoyaltiPenulisList(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
+    recordActivity('Update Royalti Penulis', 'RoyaltiPenulis', `Memperbarui data royalti #${id}`, 3);
+    triggerTaskSuccess('Data royalti berhasil diperbarui!');
+  };
+
+  const deleteRoyaltiPenulis = (id: number): { success: boolean; message: string } => {
+    const target = royaltiPenulisList.find(r => r.id === id);
+    if (!target) return { success: false, message: 'Data royalti tidak ditemukan' };
+    setRoyaltiPenulisList(prev => prev.filter(r => r.id !== id));
+    recordActivity('Hapus Royalti Penulis', 'RoyaltiPenulis', `Menghapus data royalti ${target.nama_penerima}`, 3);
+    triggerTaskSuccess(`Data royalti ${target.nama_penerima} berhasil dihapus.`);
+    return { success: true, message: 'Data royalti berhasil dihapus' };
+  };
+
+  const addRoyaltiStatement = (statementData: Omit<RoyaltiStatement, 'id' | 'created_at'>): RoyaltiStatement => {
+    const newId = royaltiStatements.length > 0 ? Math.max(...royaltiStatements.map(s => s.id)) + 1 : 1;
+    const now = new Date();
+    const created_at = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:00`;
+
+    const newStatement: RoyaltiStatement = {
+      ...statementData,
+      id: newId,
+      created_at
+    };
+    setRoyaltiStatements(prev => [newStatement, ...prev]);
+    recordActivity('Generate Royalti Statement', 'RoyaltiStatement', `Membuat statement royalti periode ${statementData.periode} (Rp ${statementData.total_hak_royalti.toLocaleString('id-ID')})`, 3);
+    triggerTaskSuccess(`Statement royalti periode ${statementData.periode} berhasil digenerate!`);
+    return newStatement;
+  };
+
+  const updateRoyaltiStatement = (id: number, updates: Partial<RoyaltiStatement>) => {
+    setRoyaltiStatements(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+    recordActivity('Update Royalti Statement', 'RoyaltiStatement', `Memperbarui statement royalti #${id}`, 3);
+    triggerTaskSuccess('Statement royalti berhasil diperbarui!');
   };
 
   // Order & POS
@@ -1787,6 +2094,65 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     recordActivity('Hapus Massal Identitas', 'Identitas', `Menghapus ${ids.length} anggota secara massal: [${names}]`);
   };
 
+  const bulkImportIdentitas = (
+    importedMembers: Array<Omit<Identitas, 'id' | 'created_at'>>,
+    mode: 'skip' | 'update' = 'skip'
+  ): { added: number; updated: number; skipped: number; total: number } => {
+    let added = 0;
+    let updated = 0;
+    let skipped = 0;
+    let currentMaxId = identitasList.length > 0 ? Math.max(...identitasList.map(i => i.id)) : 0;
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:00`;
+
+    setIdentitasList(prev => {
+      const memberList = [...prev];
+      for (const item of importedMembers) {
+        if (!item.nama_lengkap || !item.nama_lengkap.trim()) {
+          skipped++;
+          continue;
+        }
+
+        const normName = item.nama_lengkap.trim().toUpperCase();
+        const cleanPhone = (item.nomor_hp_primary || '').replace(/\D/g, '');
+        const normKtp = (item.nomor_identitas || '').replace(/\D/g, '');
+
+        const existingIndex = memberList.findIndex(m => {
+          if (normKtp && m.nomor_identitas && m.nomor_identitas.replace(/\D/g, '') === normKtp) return true;
+          if (cleanPhone && m.nomor_hp_primary && m.nomor_hp_primary.replace(/\D/g, '') === cleanPhone) return true;
+          return m.nama_lengkap.trim().toUpperCase() === normName;
+        });
+
+        if (existingIndex >= 0) {
+          if (mode === 'update') {
+            memberList[existingIndex] = {
+              ...memberList[existingIndex],
+              ...item,
+              nama_lengkap: normName
+            };
+            updated++;
+          } else {
+            skipped++;
+          }
+        } else {
+          currentMaxId += 1;
+          memberList.push({
+            ...item,
+            nama_lengkap: normName,
+            id: currentMaxId,
+            created_at: dateStr
+          });
+          added++;
+        }
+      }
+      return memberList;
+    });
+
+    recordActivity('Impor Massal Anggota', 'Identitas', `Impor data anggota spreadsheet: ${added} anggota baru ditambah, ${updated} diperbarui, ${skipped} dilewati.`, 1);
+    triggerTaskSuccess(`Impor anggota tuntas! ${added} profil baru berhasil ditambahkan.`);
+    return { added, updated, skipped, total: importedMembers.length };
+  };
+
   // Authentication Handlers
   const login = async (email: string, password?: string): Promise<{ success: boolean; message: string; user?: User }> => {
     const cleanEmail = email.trim().toLowerCase();
@@ -1968,6 +2334,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActivityLogs([]);
     setPreOrderCampaigns(INITIAL_PRE_ORDERS);
     setBookBundles(INITIAL_BOOK_BUNDLES);
+    setDonasiProyeks(INITIAL_DONASI_PROYEK);
+    setDonasiSponsors(INITIAL_DONASI_SPONSOR);
+    setRoyaltiPenulisList(INITIAL_ROYALTI_PENULIS);
+    setRoyaltiStatements(INITIAL_ROYALTI_STATEMENT);
     setAccounts(INITIAL_ACCOUNTS);
     setUsersList(INITIAL_USERS);
     setCurrentUser(INITIAL_USERS[0]);
@@ -2015,6 +2385,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setBazaarEvents(DEMO_BAZAAR_EVENTS);
     setPreOrderCampaigns(DEMO_PRE_ORDERS);
     setBookBundles(DEMO_BOOK_BUNDLES);
+    setDonasiProyeks(DEMO_DONASI_PROYEK);
+    setDonasiSponsors(DEMO_DONASI_SPONSOR);
+    setRoyaltiPenulisList(DEMO_ROYALTI_PENULIS);
+    setRoyaltiStatements(DEMO_ROYALTI_STATEMENT);
     setCurrentUser(DEMO_USERS[0]);
     setIsAuthenticated(true);
     setAuthModalMode('login');
@@ -2395,6 +2769,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         adjustBookStock,
         deleteBook,
         bulkDeleteBooks,
+        bulkImportBooks,
         ajukanCetak,
         createOrder,
         tandaiLunasOrder,
@@ -2427,6 +2802,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addBookBundle,
         updateBookBundle,
         deleteBookBundle,
+        donasiProyeks,
+        addDonasiProyek,
+        updateDonasiProyek,
+        deleteDonasiProyek,
+        donasiSponsors,
+        addDonasiSponsor,
+        deleteDonasiSponsor,
+        royaltiPenulisList,
+        addRoyaltiPenulis,
+        updateRoyaltiPenulis,
+        deleteRoyaltiPenulis,
+        royaltiStatements,
+        addRoyaltiStatement,
+        updateRoyaltiStatement,
         addMutasi,
         updateMutasi,
         deleteMutasi,
@@ -2447,6 +2836,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateIdentitas,
         deleteIdentitas,
         bulkDeleteIdentitas,
+        bulkImportIdentitas,
         addUser,
         updateUser,
         updateUserProfile,

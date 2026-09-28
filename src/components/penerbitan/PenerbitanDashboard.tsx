@@ -19,12 +19,19 @@ import {
   Layers,
   Check,
   PieChart,
-  ScanBarcode
+  ScanBarcode,
+  FileSpreadsheet,
+  Heart,
+  Sparkles,
+  Award
 } from 'lucide-react';
 import { PenerbitanCharts } from '../charts/PenerbitanCharts';
 import { UnitEconomicsAnalysis } from './UnitEconomicsAnalysis';
+import { DonasiSponsorshipTab } from './DonasiSponsorshipTab';
+import { RoyaltiPenerbitanTab } from './RoyaltiPenerbitanTab';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { BarcodeScannerModal } from '../modals/BarcodeScannerModal';
+import { DataImportExportModal } from '../modals/DataImportExportModal';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
@@ -44,16 +51,18 @@ export const PenerbitanDashboard: React.FC = () => {
     bulkDeletePengajuanCetak,
     approvePengajuanCetak,
     accounts,
+    donasiProyeks,
+    royaltiPenulisList,
     switchDivision,
     currentSubTab,
     setCurrentSubTab
   } = useApp();
 
   const [searchBook, setSearchBook] = useState('');
-  const activeSubTab = (['katalog', 'ekonomi', 'grafik', 'pengajuan'].includes(currentSubTab)
+  const activeSubTab = (['katalog', 'ekonomi', 'donasi_cetak', 'royalti', 'grafik', 'pengajuan'].includes(currentSubTab)
     ? currentSubTab
-    : 'katalog') as 'katalog' | 'ekonomi' | 'grafik' | 'pengajuan';
-  const setActiveSubTab = (tab: 'katalog' | 'ekonomi' | 'grafik' | 'pengajuan') => setCurrentSubTab(tab);
+    : 'katalog') as 'katalog' | 'ekonomi' | 'donasi_cetak' | 'royalti' | 'grafik' | 'pengajuan';
+  const setActiveSubTab = (tab: 'katalog' | 'ekonomi' | 'donasi_cetak' | 'royalti' | 'grafik' | 'pengajuan') => setCurrentSubTab(tab);
   const [selectedBookIds, setSelectedBookIds] = useState<number[]>([]);
   const [selectedPengajuanIds, setSelectedPengajuanIds] = useState<number[]>([]);
   
@@ -78,6 +87,7 @@ export const PenerbitanDashboard: React.FC = () => {
   // Modals
   const [modalBookOpen, setModalBookOpen] = useState(false);
   const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
+  const [isImportExportModalOpen, setIsImportExportModalOpen] = useState(false);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
   const [bookForm, setBookForm] = useState({
     judul: '',
@@ -238,6 +248,10 @@ export const PenerbitanDashboard: React.FC = () => {
         subTabTitle={
           activeSubTab === 'katalog'
             ? 'Katalog Judul Buku & Valuasi'
+            : activeSubTab === 'donasi_cetak'
+            ? 'Program Fashili Donasi Cetak & Dedikasi Buku Dharma'
+            : activeSubTab === 'royalti'
+            ? 'Laporan Royalti Penulis & Lisensi Hak Cipta'
             : activeSubTab === 'ekonomi'
             ? 'Analisis Unit Ekonomi Buku & Margin Laba'
             : activeSubTab === 'grafik'
@@ -269,6 +283,15 @@ export const PenerbitanDashboard: React.FC = () => {
             filename={`Laporan_Penerbitan_${activeSubTab}`}
             tooltip="Unduh tampilan naskah & katalog buku langsung sebagai file PDF resmi berformat cetak"
           />
+
+          <button
+            onClick={() => setIsImportExportModalOpen(true)}
+            className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer"
+            title="Impor atau ekspor massal katalog buku format Excel (.xlsx) atau CSV"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>Impor / Ekspor Excel</span>
+          </button>
 
           <button
             onClick={() => setIsBarcodeModalOpen(true)}
@@ -316,6 +339,36 @@ export const PenerbitanDashboard: React.FC = () => {
         </button>
 
         <button
+          onClick={() => setActiveSubTab('donasi_cetak')}
+          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            activeSubTab === 'donasi_cetak'
+              ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-sm'
+              : 'text-amber-800 dark:text-amber-400 hover:text-amber-950 dark:hover:text-white hover:bg-amber-50/50'
+          }`}
+        >
+          <Heart className="w-3.5 h-3.5 fill-current" />
+          <span>🪷 Fashili & Donasi Cetak</span>
+          <span className="px-1.5 py-0.2 bg-white/20 text-white text-[10px] rounded-full font-bold">
+            {donasiProyeks.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('royalti')}
+          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            activeSubTab === 'royalti'
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'text-indigo-700 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-white hover:bg-indigo-50/50'
+          }`}
+        >
+          <Award className="w-3.5 h-3.5" />
+          <span>Royalti & Lisensi</span>
+          <span className="px-1.5 py-0.2 bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 text-[10px] rounded-full font-bold">
+            {royaltiPenulisList.length}
+          </span>
+        </button>
+
+        <button
           onClick={() => setActiveSubTab('ekonomi')}
           className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
             activeSubTab === 'ekonomi'
@@ -354,6 +407,16 @@ export const PenerbitanDashboard: React.FC = () => {
           <span>Riwayat Pengajuan Cetak ({pengajuans.length})</span>
         </button>
       </div>
+
+      {/* FASHILI & DONASI CETAK VIEW */}
+      {activeSubTab === 'donasi_cetak' && (
+        <DonasiSponsorshipTab />
+      )}
+
+      {/* ROYALTI & LISENSI VIEW */}
+      {activeSubTab === 'royalti' && (
+        <RoyaltiPenerbitanTab />
+      )}
 
       {/* UNIT ECONOMICS VIEW */}
       {activeSubTab === 'ekonomi' && (
@@ -890,6 +953,14 @@ export const PenerbitanDashboard: React.FC = () => {
           setToastMessage(msg);
           setTimeout(() => setToastMessage(null), 4000);
         }}
+      />
+
+      {/* Spreadsheet Excel / CSV Import Export Modal */}
+      <DataImportExportModal
+        isOpen={isImportExportModalOpen}
+        onClose={() => setIsImportExportModalOpen(false)}
+        initialDataType="books"
+        initialTab="import"
       />
 
       {/* Generic Confirmation Modal */}

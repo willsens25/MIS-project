@@ -20,7 +20,11 @@ import {
   BazaarAllocationItem,
   PreOrderCampaign,
   BookBundle,
-  MembershipTierConfig
+  MembershipTierConfig,
+  DonasiProyekCetak,
+  DonasiSponsorRecord,
+  RoyaltiPenulis,
+  RoyaltiStatement
 } from '../types';
 
 export const INITIAL_DIVISI: Divisi[] = [
@@ -813,6 +817,259 @@ export const DEMO_BOOK_BUNDLES: BookBundle[] = [
     badge: 'Edisi Terbatas',
     is_active: true,
     created_at: '2026-08-20 14:00:00'
+  }
+];
+
+export const INITIAL_DONASI_PROYEK: DonasiProyekCetak[] = [];
+
+export const DEMO_DONASI_PROYEK: DonasiProyekCetak[] = [
+  {
+    id: 1,
+    kode_proyek: 'FAS-2026-01',
+    judul_proyek: 'Fashili Cetak Massal: Sutra Hati (Prajnaparamita Hrdaya Sutra) & Penjelasannya',
+    buku_id: 1,
+    nama_buku: 'Pembebasan di Telapak Tangan Anda (Jilid 1)',
+    penulis: 'Pabongka Rinpoche',
+    target_eksemplar: 2000,
+    target_dana: 40000000,
+    dana_terkumpul: 32500000,
+    jumlah_donatur: 48,
+    tanggal_mulai: '2026-07-01',
+    target_selesai: '2026-10-31',
+    status: 'Penggalangan',
+    deskripsi: 'Program fashili cetak buku pedoman dasar meditasi dan tahapan jalan pencerahan untuk dibagikan gratis kepada para biksu/biksuni, vihara daerah perintis, dan perpustakaan kampus di seluruh Indonesia.',
+    tujuan_distribusi: 'Distribusi gratis ke 80 Vihara di Jawa, Sumatera, Kalimantan, dan Bali',
+    halaman_dedikasi_catatan: 'Nama-nama donatur tercetak pada Halaman Persembahan Kebajikan Dharma di lembar pembuka buku.',
+    created_at: '2026-07-01 09:00:00'
+  },
+  {
+    id: 2,
+    kode_proyek: 'FAS-2026-02',
+    judul_proyek: 'Sponsorship Cetak: Terjemahan Naskah Kuno Bodhicaryavatara (Panduan Hidup Bodhisattva)',
+    buku_id: 2,
+    nama_buku: 'Risalah Agung Tahapan Jalan Menuju Pencerahan (Lamrim Chenmo Jilid 1)',
+    penulis: 'Je Tsongkhapa',
+    target_eksemplar: 1500,
+    target_dana: 52500000,
+    dana_terkumpul: 52500000,
+    jumlah_donatur: 65,
+    tanggal_mulai: '2026-06-15',
+    target_selesai: '2026-09-15',
+    status: 'Proses Cetak',
+    deskripsi: 'Penerbitan naskah klasik karya Acarya Shantideva beranotasi lengkap nusantara. Dana cetak telah tercapai 100% dan naskah saat ini sedang dalam proses cetak offset di percetakan rekanan.',
+    tujuan_distribusi: 'Koleksi pembaca Dharma, pustaka vihara, dan peserta retret meditasi nasional',
+    halaman_dedikasi_catatan: 'Halaman dedikasi khusus pelindung naskah kuno dicetak di halaman 4-5 buku.',
+    created_at: '2026-06-15 10:30:00'
+  },
+  {
+    id: 3,
+    kode_proyek: 'FAS-2026-03',
+    judul_proyek: 'Cetak Buku Saku Meditasi Harian Bagi Generasi Muda Buddhis (Buku Saku Dharma)',
+    buku_id: 4,
+    nama_buku: 'Meditasi Ketenangan Batin (Samatha)',
+    penulis: 'Dagpo Rinpoche',
+    target_eksemplar: 3000,
+    target_dana: 25000000,
+    dana_terkumpul: 25000000,
+    jumlah_donatur: 82,
+    tanggal_mulai: '2026-05-01',
+    target_selesai: '2026-08-01',
+    status: 'Selesai & Didistribusikan',
+    deskripsi: 'Proyek pencetakan buku saku praktis ringkas meditasi untuk pemula. Telah selesai dicetak dan didistribusikan kepada 3.000 pemuda buddhis pada acara Waisak Nasional dan Temu Remaja Buddhis.',
+    tujuan_distribusi: '3.000 pelajar dan pemuda buddhis di seluruh Indonesia',
+    halaman_dedikasi_catatan: 'Telah terbit dengan lembar ucapan anumodana para donatur.',
+    created_at: '2026-05-01 08:00:00'
+  }
+];
+
+export const INITIAL_DONASI_SPONSOR: DonasiSponsorRecord[] = [];
+
+export const DEMO_DONASI_SPONSOR: DonasiSponsorRecord[] = [
+  {
+    id: 1,
+    proyek_id: 1,
+    identitas_id: 1,
+    nama_donatur: 'Budi Santoso',
+    no_wa: '081234567890',
+    nominal: 5000000,
+    paket: 'Paket Pelindung Dharma (25 Buku)',
+    jumlah_eksemplar_didukung: 250,
+    nama_dedikasi: 'Keluarga Besar Budi Santoso & Tan Ah Kow',
+    doa_dedikasi: 'Semoga kebajikan ini membawa kedamaian dan kesehatan bagi keluarga, serta membebaskan semua makhluk.',
+    tanggal: '2026-07-05',
+    account_id: 2,
+    status_verifikasi: 'Terverifikasi',
+    nomor_tanda_terima: 'KWT-DON-2026-001',
+    sertifikat_dikirim: true,
+    created_at: '2026-07-05 11:20:00'
+  },
+  {
+    id: 2,
+    proyek_id: 1,
+    identitas_id: 2,
+    nama_donatur: 'Siti Rahmawati (Upasika)',
+    no_wa: '081298765432',
+    nominal: 2500000,
+    paket: 'Paket Bodhisattva (12 Buku)',
+    jumlah_eksemplar_didukung: 125,
+    nama_dedikasi: 'Almh. Ibu Maryati binti Soedirman',
+    doa_dedikasi: 'Didedikasikan untuk kelahiran bahagia di alam suci Sukhavati bagi almarhumah ibunda tercinta.',
+    tanggal: '2026-07-12',
+    account_id: 2,
+    status_verifikasi: 'Terverifikasi',
+    nomor_tanda_terima: 'KWT-DON-2026-002',
+    sertifikat_dikirim: true,
+    created_at: '2026-07-12 14:15:00'
+  },
+  {
+    id: 3,
+    proyek_id: 1,
+    nama_donatur: 'Hendrik Wijaya & Liliana Tan',
+    no_wa: '081377889900',
+    nominal: 1000000,
+    paket: 'Paket Teratai (5 Buku)',
+    jumlah_eksemplar_didukung: 50,
+    nama_dedikasi: 'Hendrik Wijaya, Liliana Tan & Anak-Cucu',
+    doa_dedikasi: 'Semoga berkah kemakmuran, panjang umur, dan kebajikan senantiasa menyertai.',
+    tanggal: '2026-07-20',
+    account_id: 2,
+    status_verifikasi: 'Terverifikasi',
+    nomor_tanda_terima: 'KWT-DON-2026-003',
+    sertifikat_dikirim: false,
+    created_at: '2026-07-20 16:40:00'
+  },
+  {
+    id: 4,
+    proyek_id: 1,
+    nama_donatur: 'Hamba Allah (Anonim Dharma)',
+    no_wa: '081911223344',
+    nominal: 500000,
+    paket: 'Paket Sukarela',
+    jumlah_eksemplar_didukung: 25,
+    nama_dedikasi: 'Semua Makhluk yang Berhubungan Karma',
+    doa_dedikasi: 'Semoga benih Dharma bersemi di dalam kalbu setiap insan.',
+    tanggal: '2026-08-01',
+    account_id: 2,
+    status_verifikasi: 'Terverifikasi',
+    nomor_tanda_terima: 'KWT-DON-2026-004',
+    sertifikat_dikirim: false,
+    created_at: '2026-08-01 09:10:00'
+  },
+  {
+    id: 5,
+    proyek_id: 2,
+    identitas_id: 3,
+    nama_donatur: 'Agus Setiawan & Rekan Bisnis',
+    no_wa: '081255443322',
+    nominal: 10000000,
+    paket: 'Paket Mahadana Utama',
+    jumlah_eksemplar_didukung: 300,
+    nama_dedikasi: 'Yayasan Surya Dharma Indonesia & Karyawan',
+    doa_dedikasi: 'Untuk pelestarian naskah Dharma Nusantara dan kemajuan literasi spiritual bangsa.',
+    tanggal: '2026-06-20',
+    account_id: 2,
+    status_verifikasi: 'Terverifikasi',
+    nomor_tanda_terima: 'KWT-DON-2026-005',
+    sertifikat_dikirim: true,
+    created_at: '2026-06-20 10:00:00'
+  }
+];
+
+export const INITIAL_ROYALTI_PENULIS: RoyaltiPenulis[] = [];
+
+export const DEMO_ROYALTI_PENULIS: RoyaltiPenulis[] = [
+  {
+    id: 1,
+    buku_id: 1,
+    nama_penerima: 'Tim Penerjemah Yayasan Lamrim Chenmo Nusantara',
+    peran: 'Penerjemah',
+    no_kontak: '081122334455',
+    email: 'terjemahan@lamrimnesia.org',
+    rekening_bank: 'BCA 8001122334 a/n Tim Penerjemah Dharma',
+    tipe_royalti: 'persentase',
+    nilai_royalti: 8,
+    lisensi_nama: 'Izin Terjemahan Naskah Tibetan-Indonesian',
+    lisensi_asal: 'Lama Yeshe Wisdom Archive (LYWA) Boston',
+    lisensi_kedaluwarsa: '2028-12-31',
+    maksimal_cetak_lisensi: 10000,
+    eksemplar_tercetak: 3500,
+    status_lisensi: 'Aktif'
+  },
+  {
+    id: 2,
+    buku_id: 4,
+    nama_penerima: 'Bhikkhu Subhamitto (Penyusun & Pengulas)',
+    peran: 'Penulis',
+    no_kontak: '081233445566',
+    email: 'subhamitto@vihara.or.id',
+    rekening_bank: 'Mandiri 1370009988776 a/n Subhamitto',
+    tipe_royalti: 'nominal_per_buku',
+    nilai_royalti: 8500,
+    lisensi_nama: 'Karya Asli Nusantara',
+    lisensi_asal: 'Hak Cipta Penulis Terdaftar Ditjen KI RI',
+    lisensi_kedaluwarsa: '2035-01-01',
+    maksimal_cetak_lisensi: 50000,
+    eksemplar_tercetak: 4200,
+    status_lisensi: 'Aktif'
+  },
+  {
+    id: 3,
+    buku_id: 2,
+    nama_penerima: 'Wisdom Publications USA (Lisensi Bahasa)',
+    peran: 'Penulis',
+    no_kontak: '+1 617 776 7416',
+    email: 'rights@wisdompubs.org',
+    rekening_bank: 'SWIFT / Wire: Citibank Boston #88992211',
+    tipe_royalti: 'persentase',
+    nilai_royalti: 10,
+    lisensi_nama: 'Exclusive Indonesian Translation Rights',
+    lisensi_asal: 'Wisdom Publications, Somerville MA',
+    lisensi_kedaluwarsa: '2027-06-30',
+    maksimal_cetak_lisensi: 5000,
+    eksemplar_tercetak: 1800,
+    status_lisensi: 'Aktif'
+  }
+];
+
+export const INITIAL_ROYALTI_STATEMENT: RoyaltiStatement[] = [];
+
+export const DEMO_ROYALTI_STATEMENT: RoyaltiStatement[] = [
+  {
+    id: 1,
+    royalti_id: 1,
+    periode: 'Semester 1 (Januari - Juni 2026)',
+    total_terjual: 245,
+    total_omzet: 39200000,
+    total_hak_royalti: 3136000,
+    status_bayar: 'Sudah Ditransfer',
+    tanggal_bayar: '2026-07-10',
+    nomor_referensi_bayar: 'TRF-ROY-2026-001',
+    catatan: 'Pembayaran royalti semester 1 telah lunas via BCA Yayasan.',
+    created_at: '2026-07-10 15:00:00'
+  },
+  {
+    id: 2,
+    royalti_id: 2,
+    periode: 'Semester 1 (Januari - Juni 2026)',
+    total_terjual: 180,
+    total_omzet: 15300000,
+    total_hak_royalti: 1530000,
+    status_bayar: 'Sudah Ditransfer',
+    tanggal_bayar: '2026-07-12',
+    nomor_referensi_bayar: 'TRF-ROY-2026-002',
+    catatan: 'Ditransfer ke rekening Mandiri Bhikkhu Subhamitto.',
+    created_at: '2026-07-12 11:30:00'
+  },
+  {
+    id: 3,
+    royalti_id: 3,
+    periode: 'Triwulan 2 (April - Juni 2026)',
+    total_terjual: 110,
+    total_omzet: 24200000,
+    total_hak_royalti: 2420000,
+    status_bayar: 'Belum Dibayar',
+    catatan: 'Menunggu rekap kuartal 3 untuk transfer gabungan ke Wisdom Publications.',
+    created_at: '2026-07-01 10:00:00'
   }
 ];
 
