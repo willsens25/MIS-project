@@ -47,7 +47,12 @@ import {
   Menu,
   X,
   SlidersHorizontal,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Tv,
+  Eye,
+  EyeOff,
+  ShieldAlert,
+  MonitorPlay
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -82,11 +87,15 @@ export const Header: React.FC<HeaderProps> = ({
     logout,
     openLoginModal,
     openRegisterModal,
-    quickLoginAs
+    quickLoginAs,
+    isPrivacyMode,
+    togglePrivacyMode,
+    openPresentationMode
   } = useApp();
 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showDivisiMenu, setShowDivisiMenu] = useState(false);
+  const [showPlenoMenu, setShowPlenoMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showSwitchUserModal, setShowSwitchUserModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
@@ -204,6 +213,128 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center space-x-2 sm:space-x-2.5">
             {/* Desktop Actions Container (Hidden on Mobile < lg) */}
             <div className="hidden lg:flex items-center space-x-2.5">
+
+            {/* Mode Rapat Pleno (Projector View & Privacy Shield) */}
+            <div className="relative">
+              <motion.button
+                id="btn-mode-rapat-pleno"
+                onClick={() => setShowPlenoMenu(!showPlenoMenu)}
+                whileHover={{ scale: 1.05, y: -1 }}
+                whileTap={{ scale: 0.95 }}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer border ${
+                  isPrivacyMode
+                    ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
+                    : 'bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700'
+                }`}
+                title="Mode Rapat Pleno & Sensor Privasi Proyektor LCD (Alt+P)"
+              >
+                {isPrivacyMode ? (
+                  <EyeOff className="w-3.5 h-3.5 text-slate-950 animate-pulse" />
+                ) : (
+                  <Tv className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
+                )}
+                <span className="hidden xl:inline">Rapat Pleno</span>
+                <span className="xl:hidden inline">Pleno</span>
+                {isPrivacyMode && (
+                  <span className="w-2 h-2 rounded-full bg-slate-950 animate-ping" />
+                )}
+                <ChevronDown className="w-3 h-3 opacity-60 ml-0.5" />
+              </motion.button>
+
+              <AnimatePresence>
+                {showPlenoMenu && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-30"
+                      onClick={() => setShowPlenoMenu(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 mt-2 w-72 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl py-2 z-40 text-slate-800 dark:text-slate-100"
+                    >
+                      <div className="px-3.5 py-2 border-b border-slate-100 dark:border-slate-800">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                            Fitur Rapat Pleno LCD
+                          </span>
+                          <span className="text-[10px] font-mono bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded font-bold border border-indigo-200 dark:border-indigo-800">
+                            Proyektor
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                          Dirancang untuk presentasi ke layar besar di hadapan dewan pengurus & pengawas.
+                        </p>
+                      </div>
+
+                      <div className="p-1 space-y-1">
+                        {/* Option 1: Open Presentation Slides Modal */}
+                        <button
+                          onClick={() => {
+                            setShowPlenoMenu(false);
+                            openPresentationMode();
+                          }}
+                          className="w-full flex items-start gap-2.5 p-2 rounded-xl text-left hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group"
+                        >
+                          <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 shrink-0 group-hover:scale-105 transition-transform">
+                            <Tv className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center justify-between">
+                              <span>Buka Layar Rapat Pleno</span>
+                              <span className="text-[10px] bg-amber-500 text-slate-950 font-bold px-1.5 py-0.2 rounded font-mono">
+                                Slide
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">
+                              Tampilan ringkas metrik besar, grafik naskah, fashili, & risalah pengesahan dewan.
+                            </p>
+                          </div>
+                        </button>
+
+                        {/* Option 2: Toggle Privacy Masking */}
+                        <button
+                          onClick={() => {
+                            togglePrivacyMode();
+                            setShowPlenoMenu(false);
+                          }}
+                          className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-left transition-colors cursor-pointer group ${
+                            isPrivacyMode
+                              ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700/60'
+                              : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+                          }`}
+                        >
+                          <div
+                            className={`p-2 rounded-lg shrink-0 group-hover:scale-105 transition-transform ${
+                              isPrivacyMode
+                                ? 'bg-amber-500 text-slate-950'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                            }`}
+                          >
+                            {isPrivacyMode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-bold flex items-center justify-between">
+                              <span>{isPrivacyMode ? 'Nonaktifkan Sensor' : 'Aktifkan Sensor Privasi'}</span>
+                              <kbd className="text-[9px] font-mono px-1 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                Alt+P
+                              </kbd>
+                            </div>
+                            <p className="text-[11px] opacity-75 leading-tight mt-0.5">
+                              {isPrivacyMode
+                                ? 'Seluruh angka & nominal saat ini disensor dengan efek blur / asterik.'
+                                : 'Samarkan saldo kas & nomor kontak pribadi saat laptop terhubung proyektor.'}
+                            </p>
+                          </div>
+                        </button>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
 
             {/* Download PDF Report Button */}
             <motion.button
@@ -574,6 +705,46 @@ export const Header: React.FC<HeaderProps> = ({
                         <span>Laporan Tahunan Yayasan</span>
                         <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/50">
                           Annual
+                        </span>
+                      </button>
+
+                      {/* Mode Rapat Pleno */}
+                      <button
+                        id="menu-mode-rapat-pleno"
+                        onClick={() => {
+                          setShowProfileMenu(false);
+                          openPresentationMode();
+                        }}
+                        className="w-full flex items-center px-4 py-2 text-xs text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors font-medium cursor-pointer"
+                      >
+                        <Tv className="w-4 h-4 text-indigo-600 dark:text-indigo-400 mr-2.5" />
+                        <span>Mode Rapat Pleno (Layar Presentasi)</span>
+                        <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700/50">
+                          Slide LCD
+                        </span>
+                      </button>
+
+                      {/* Sensor Privasi Finansial */}
+                      <button
+                        id="menu-toggle-privacy-mode"
+                        onClick={() => {
+                          togglePrivacyMode();
+                          setShowProfileMenu(false);
+                        }}
+                        className={`w-full flex items-center px-4 py-2 text-xs transition-colors font-medium cursor-pointer ${
+                          isPrivacyMode
+                            ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300'
+                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                        }`}
+                      >
+                        {isPrivacyMode ? (
+                          <EyeOff className="w-4 h-4 text-amber-500 mr-2.5" />
+                        ) : (
+                          <Eye className="w-4 h-4 text-slate-500 mr-2.5" />
+                        )}
+                        <span>{isPrivacyMode ? 'Sensor Finansial (Aktif)' : 'Sensor Finansial Layar'}</span>
+                        <span className="ml-auto text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700">
+                          Alt+P
                         </span>
                       </button>
 
@@ -1190,6 +1361,40 @@ export const Header: React.FC<HeaderProps> = ({
                   >
                     <Award className="w-4 h-4 text-amber-500 shrink-0" />
                     <span className="truncate">Laporan Tahunan</span>
+                  </button>
+
+                  {/* Mode Rapat Pleno Mobile */}
+                  <button
+                    id="btn-mobile-pleno-mode"
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      openPresentationMode();
+                    }}
+                    className="flex items-center space-x-2 p-2.5 rounded-xl bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs font-semibold hover:bg-amber-500/20 transition-colors text-left cursor-pointer"
+                  >
+                    <Tv className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span className="truncate">Mode Rapat Pleno</span>
+                  </button>
+
+                  {/* Toggle Sensor Privasi Mobile */}
+                  <button
+                    id="btn-mobile-toggle-privacy"
+                    onClick={() => {
+                      togglePrivacyMode();
+                      setShowMobileMenu(false);
+                    }}
+                    className={`flex items-center space-x-2 p-2.5 rounded-xl border text-xs font-semibold transition-colors text-left cursor-pointer ${
+                      isPrivacyMode
+                        ? 'bg-amber-500 text-slate-950 border-amber-400'
+                        : 'bg-slate-100/80 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    {isPrivacyMode ? (
+                      <EyeOff className="w-4 h-4 text-slate-950 shrink-0" />
+                    ) : (
+                      <Eye className="w-4 h-4 text-slate-500 shrink-0" />
+                    )}
+                    <span className="truncate">{isPrivacyMode ? 'Sensor Aktif' : 'Sensor Layar'}</span>
                   </button>
 
                   {/* Excel / CSV Spreadsheet Import Export */}

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Penyaluran, LogisticLog } from '../../types';
-import { Printer, X, Download, FileDown, Loader2 } from 'lucide-react';
+import { useApp } from '../../context/AppContext';
+import { Printer, X, Download, FileDown, Loader2, MessageSquare } from 'lucide-react';
 import { printElement, downloadDocumentAsPdf, downloadDocumentAsHtml } from '../../utils/documentExport';
+import { WhatsAppModal } from '../marketing/WhatsAppModal';
 
 interface SuratJalanPrintModalProps {
   noInvoice: string;
@@ -11,8 +13,12 @@ interface SuratJalanPrintModalProps {
 }
 
 export const SuratJalanPrintModal: React.FC<SuratJalanPrintModalProps> = ({ noInvoice, items, onClose }) => {
+  const { orders } = useApp();
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
   if (!items || items.length === 0) return null;
+
+  const linkedOrder = orders.find(o => o.no_invoice.toLowerCase() === noInvoice.toLowerCase());
 
   const docTitle = `Surat Jalan Pengiriman #${noInvoice} - Yayasan Dharma Patriot`;
   const filenameBase = `Surat_Jalan_${noInvoice}`;
@@ -74,6 +80,18 @@ export const SuratJalanPrintModal: React.FC<SuratJalanPrintModalProps> = ({ noIn
                 )}
                 <span>{isGeneratingPdf ? 'Membuat PDF...' : 'Download PDF'}</span>
               </button>
+
+              {linkedOrder && (
+                <button
+                  type="button"
+                  onClick={() => setIsWhatsAppOpen(true)}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 active:scale-95 text-white rounded-lg text-xs font-semibold cursor-pointer border border-emerald-600 transition-all shadow-xs"
+                  title="Kirim detail surat jalan & nomor resi pengiriman ke WhatsApp penerima"
+                >
+                  <MessageSquare className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>Kirim WA Resi</span>
+                </button>
+              )}
 
               <button
                 onClick={handlePrint}
@@ -172,6 +190,17 @@ export const SuratJalanPrintModal: React.FC<SuratJalanPrintModalProps> = ({ noIn
           </div>
         </div>
       </div>
+
+      {linkedOrder && (
+        <WhatsAppModal
+          isOpen={isWhatsAppOpen}
+          onClose={() => setIsWhatsAppOpen(false)}
+          order={linkedOrder}
+          initialTemplateId="resi_pengiriman"
+          defaultPhone={linkedOrder.kontak_penerima || linkedOrder.kontak_pembeli}
+          defaultRecipientName={linkedOrder.nama_penerima || linkedOrder.nama_pembeli}
+        />
+      )}
     </div>,
     document.body
   );

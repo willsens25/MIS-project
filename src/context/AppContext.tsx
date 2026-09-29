@@ -31,10 +31,14 @@ import {
   ThemeMode,
   BackupData,
   RestoreSummary,
-  SeederSummary
+  SeederSummary,
+  ToastNotification,
+  ToastType,
+  ToastCategory
 } from '../types';
 import { SeedOptions, generateSeedData } from '../lib/dummySeeder';
 import { DEFAULT_COLOR_PRESET } from '../lib/themePresets';
+import { playPleasantSuccessChime } from '../utils/soundEffects';
 import {
   LocationCoordinates,
   SolarScheduleInfo,
@@ -282,6 +286,20 @@ interface AppContextType {
     mode?: 'replace' | 'merge'
   ) => { success: boolean; message: string; summary?: RestoreSummary };
   seedDummyData: (options: SeedOptions) => SeederSummary;
+
+  // Privacy & Presentation Mode for Board Meetings
+  isPrivacyMode: boolean;
+  togglePrivacyMode: (force?: boolean) => void;
+  isPresentationOpen: boolean;
+  setIsPresentationOpen: (isOpen: boolean) => void;
+  openPresentationMode: () => void;
+
+  // Toast Notifications System for Real-time Status Updates
+  toasts: ToastNotification[];
+  showToast: (toast: Omit<ToastNotification, 'id' | 'timestamp'> | string, type?: ToastType) => string;
+  dismissToast: (id: string) => void;
+  clearAllToasts: () => void;
+  simulateToastNotification: (category?: ToastCategory) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -443,6 +461,88 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const toggleMascotSpeechBubble = () => {
     updateUserSettings({ mascotSpeechBubbleEnabled: !userSettings.mascotSpeechBubbleEnabled });
   };
+
+  // Privacy & Presentation Mode for Board Meetings (Mode Rapat Pengurus)
+  const [isPrivacyMode, setIsPrivacyMode] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem('mis_privacy_mode');
+      return stored === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const [isPresentationOpen, setIsPresentationOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('mis_privacy_mode', String(isPrivacyMode));
+      if (typeof document !== 'undefined') {
+        document.documentElement.classList.toggle('privacy-mode', isPrivacyMode);
+      }
+    } catch (e) {
+      console.warn('Storage save privacy mode error', e);
+    }
+  }, [isPrivacyMode]);
+
+  const togglePrivacyMode = (force?: boolean) => {
+    setIsPrivacyMode(prev => (force !== undefined ? force : !prev));
+  };
+
+  const openPresentationMode = () => {
+    setIsPresentationOpen(true);
+  };
+
+  // Toast Notifications State & Handlers
+  const [toasts, setToasts] = useState<ToastNotification[]>([]);
+  const previousBookStocksRef = useRef<Record<number, number>>({});
+  const hasInitializedStockRef = useRef<boolean>(false);
+
+  const dismissToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  const clearAllToasts = useCallback(() => {
+    setToasts([]);
+  }, []);
+
+  const showToast = useCallback((
+    toastInput: Omit<ToastNotification, 'id' | 'timestamp'> | string,
+    type: ToastType = 'info'
+  ): string => {
+    const id = `toast-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+    let newToast: ToastNotification;
+    if (typeof toastInput === 'string') {
+      newToast = {
+        id,
+        title: type === 'success' ? 'Berhasil' : type === 'warning' ? 'Peringatan' : type === 'error' ? 'Pemberitahuan' : 'Info Terkini',
+        message: toastInput,
+        type,
+        duration: 5000,
+        timestamp: timeStr
+      };
+    } else {
+      newToast = {
+        ...toastInput,
+        id,
+        type: toastInput.type || type,
+        duration: toastInput.duration || 5000,
+        timestamp: timeStr
+      };
+    }
+
+    try {
+      playPleasantSuccessChime();
+    } catch {
+      // ignore
+    }
+
+    setToasts(prev => [newToast, ...prev.slice(0, 5)]); // Keep maximum 6 toasts simultaneously
+    return id;
+  }, []);
 
   const [divisiList] = useState<Divisi[]>(INITIAL_DIVISI);
   const [usersList, setUsersList] = useState<User[]>(() => getStoredItem('mis_users', INITIAL_USERS));
@@ -839,6 +939,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     recordActivity('Ganti Divisi', 'User', `Beralih ke divisi: ${divisiList.find(d => d.id === divisiId)?.nama_divisi}`);
   };
 
+  // Toast Notification Simulation Helper for Testing & Demos
+  const simulateToastNotification = useCallback((category: ToastCategory = 'stock') => {
+    switch (category) {
+      case 'stock':
+        showToast({
+          title: '⚠️ Stok Gudang Menipis!',
+          message: 'Buku "Lamrim Komprehensif Jilid 1" tersisa 14 eksemplar di gudang. Segera ajukan cetak ulang.',
+          type: 'warning',
+          category: 'stock',
+          actionLabel: 'Ajukan Cetak',
+          onAction: () => switchDivision(3, 'katalog')
+        });
+        break;
+      case 'finance':
+        showToast({
+          title: '💰 Invoice Disetujui (Lunas)',
+          message: 'Invoice #INV-2026-089 (Dharma Center Surabaya) telah lunas Rp 1.850.000 & dicatat ke kas!',
+          type: 'success',
+          category: 'finance',
+          actionLabel: 'Lihat Kas',
+          onAction: () => switchDivision(2, 'mutasi')
+        });
+        break;
+      case 'order':
+        showToast({
+          title: '📝 Pesanan Baru Masuk',
+          message: 'Invoice baru #INV-2026-092 dibuat untuk Komunitas Meditasi Bali (Total Rp 950.000).',
+          type: 'info',
+          category: 'order',
+          actionLabel: 'Cek Pesanan',
+          onAction: () => switchDivision(4, 'pesanan')
+        });
+        break;
+      case 'production':
+        showToast({
+          title: '✅ Persetujuan Cetak Disetujui',
+          message: 'Permohonan cetak "Katalog Sutra Mahayana" (500 Eks) disetujui! SPK otomatis diterbitkan.',
+          type: 'success',
+          category: 'production',
+          actionLabel: 'Cek SPK',
+          onAction: () => switchDivision(5, 'spk')
+        });
+        break;
+      case 'logistic':
+        showToast({
+          title: '🚚 Pesanan Selesai Dikirim',
+          message: 'Invoice #INV-2026-085 telah diproses kirim via JNE Express (Resi: JNE988210344).',
+          type: 'info',
+          category: 'logistic',
+          actionLabel: 'Surat Jalan',
+          onAction: () => switchDivision(6, 'surat-jalan')
+        });
+        break;
+      case 'system':
+      default:
+        showToast({
+          title: '🔄 Sinkronisasi Sistem Berhasil',
+          message: 'Seluruh data operasional yayasan dan pencatatan kas telah tersimpan dengan aman.',
+          type: 'info',
+          category: 'system'
+        });
+        break;
+    }
+  }, [showToast]);
+
   // AI & App Task Reactive State
   const [aiAppState, setAiAppState] = useState<'idle' | 'thinking' | 'success'>('idle');
   const [lastCompletedTaskMessage, setLastCompletedTaskMessage] = useState<string>('');
@@ -880,6 +1045,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Automatic Real-Time Low Stock Watcher: Triggers instant toast when stock falls <= 20
+  useEffect(() => {
+    if (!hasInitializedStockRef.current) {
+      books.forEach(b => {
+        previousBookStocksRef.current[b.id] = b.stok_gudang;
+      });
+      hasInitializedStockRef.current = true;
+      return;
+    }
+
+    books.forEach(b => {
+      const prev = previousBookStocksRef.current[b.id];
+      if (prev !== undefined && prev > 20 && b.stok_gudang <= 20) {
+        showToast({
+          title: '⚠️ Stok Gudang Menipis!',
+          message: `Buku "${b.judul}" tersisa ${b.stok_gudang} eksemplar di gudang. Segera ajukan cetak ulang.`,
+          type: 'warning',
+          category: 'stock',
+          actionLabel: 'Ajukan Cetak',
+          onAction: () => switchDivision(3, 'katalog')
+        });
+      }
+      previousBookStocksRef.current[b.id] = b.stok_gudang;
+    });
+  }, [books, showToast]);
+
   // Book CRUD
   const addBook = (
     judul: string,
@@ -910,6 +1101,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       'Book',
       `Mendaftarkan buku baru: "${judul}" karya ${penulis} (Harga: Rp ${harga_jual.toLocaleString('id-ID')}, HPP: Rp ${calculatedHpp.toLocaleString('id-ID')})`
     );
+    showToast({
+      title: '📚 Buku Baru Ditambahkan',
+      message: `Buku "${judul}" berhasil ditambahkan ke katalog (Stok awal: ${stok} eks).`,
+      type: 'success',
+      category: 'stock'
+    });
     return newBook;
   };
 
@@ -969,6 +1166,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       : `Penyesuaian stok opname buku "${book.judul}" menjadi ${newStock} eksemplar (Perubahan: ${selisih >= 0 ? `+${selisih}` : selisih} eks). ${catatan ? `[${catatan}]` : ''}`;
 
     recordActivity(mode === 'add' ? 'Tambah Stok Buku' : 'Stock Opname', 'Book', aksiDesc);
+
+    showToast({
+      title: mode === 'add' ? '📦 Stok Gudang Bertambah' : '📋 Stok Opname Disimpan',
+      message: `Buku "${book.judul}" kini memiliki ${newStock} eksemplar di gudang.`,
+      type: newStock <= 20 ? 'warning' : 'success',
+      category: 'stock',
+      actionLabel: 'Katalog Buku',
+      onAction: () => switchDivision(3, 'katalog')
+    });
 
     return {
       success: true,
@@ -1692,6 +1898,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     recordActivity('Tambah Pesanan', 'Order', `Membuat pesanan baru ${newOrder.no_invoice} untuk ${newOrder.nama_pembeli} via ${newOrder.via} (Total: Rp ${newOrder.total_tagihan.toLocaleString('id-ID')})`);
+    showToast({
+      title: newOrder.status === 'Lunas' ? '💰 Invoice Lunas Baru (POS)' : '📝 Invoice / Pesanan Baru',
+      message: `Invoice #${newOrder.no_invoice} (${newOrder.nama_pembeli}) senilai Rp ${newOrder.total_tagihan.toLocaleString('id-ID')} berhasil dibuat!`,
+      type: newOrder.status === 'Lunas' ? 'success' : 'info',
+      category: newOrder.status === 'Lunas' ? 'finance' : 'order',
+      actionLabel: 'Detail Order',
+      onAction: () => switchDivision(4, 'pesanan')
+    });
     return { success: true, message: `Invoice #${newOrder.no_invoice} berhasil disimpan dan stok gudang terpotong!`, invoice: newOrder.no_invoice, orderId: newOrder.id, order: newOrder };
   };
 
@@ -1758,6 +1972,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPenjualans(prev => [newPenjualan, ...prev]);
 
     recordActivity('Konfirmasi Lunas', 'Order', `Mengubah status invoice ${order.no_invoice} menjadi LUNAS. Sinkron otomatis ke Finance & antrean Logistik.`);
+    showToast({
+      title: '💰 Invoice Disetujui (Lunas)',
+      message: `Invoice #${order.no_invoice} (${order.nama_pembeli}) telah lunas Rp ${order.total_tagihan.toLocaleString('id-ID')} & diteruskan ke antrean packing!`,
+      type: 'success',
+      category: 'finance',
+      actionLabel: 'Cek Logistik',
+      onAction: () => switchDivision(6, 'antrean')
+    });
     return { success: true, message: `Invoice #${order.no_invoice} berhasil ditandai LUNAS!` };
   };
 
@@ -1781,6 +2003,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 3. Mark status as Cancelled
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'Cancelled', tercatat_finance: 0 } : o));
     recordActivity('Batalkan Invoice', 'Order', `Membatalkan (Cancel) Invoice ${order.no_invoice}. Stok buku otomatis dikembalikan ke gudang.`);
+    showToast({
+      title: '❌ Invoice Dibatalkan',
+      message: `Invoice #${order.no_invoice} (${order.nama_pembeli}) telah dibatalkan & stok dikembalikan ke gudang.`,
+      type: 'warning',
+      category: 'order'
+    });
   };
 
   const bulkDeleteOrders = (ids: number[]) => {
@@ -1820,6 +2048,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setMutasis(prev => [newMutasi, ...prev]);
     recordActivity('Tambah Transaksi', 'Mutasi', `Membuat transaksi ${tipe}: "${keterangan}" (Rp ${nominal.toLocaleString('id-ID')}) pada akun ${acc?.nama_akun}`);
+    showToast({
+      title: tipe === 'Masuk' ? '💵 Penerimaan Kas Dicatat' : '💸 Pengeluaran Kas Dicatat',
+      message: `${keterangan} (Rp ${nominal.toLocaleString('id-ID')}) pada ${acc?.nama_akun || 'Kas'}.`,
+      type: tipe === 'Masuk' ? 'success' : 'info',
+      category: 'finance',
+      actionLabel: 'Cek Kas',
+      onAction: () => switchDivision(2, 'mutasi')
+    });
   };
 
   const updateMutasi = (id: number, nama_kategori: string, tipe: 'Masuk' | 'Keluar', nominal: number, keterangan: string) => {
@@ -1912,6 +2148,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, ...prev]);
 
     recordActivity('Setujui Cetak Buku', 'PengajuanCetak', `Menyetujui cetak ulang "${book.judul}" (${pengajuan.jumlah_pengajuan} Eks). Biaya Rp ${biayaCetak.toLocaleString('id-ID')} dicairkan dari ${acc.nama_akun} & stok bertambah!`);
+    showToast({
+      title: '✅ Persetujuan Cetak Disetujui',
+      message: `Permohonan cetak "${book.judul}" (${pengajuan.jumlah_pengajuan} Eks) disetujui! SPK otomatis diterbitkan.`,
+      type: 'success',
+      category: 'production',
+      actionLabel: 'Cek SPK',
+      onAction: () => switchDivision(5, 'spk')
+    });
   };
 
   const rejectPengajuanCetak = (pengajuanId: number, catatan: string) => {
@@ -1919,6 +2163,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const book = books.find(b => b.id === pengajuan?.buku_id);
     setPengajuans(prev => prev.map(p => p.id === pengajuanId ? { ...p, status: 'rejected', catatan_bendahara: catatan } : p));
     recordActivity('Tolak Cetak Buku', 'PengajuanCetak', `Menolak pengajuan cetak buku "${book?.judul}" dengan catatan: "${catatan}"`);
+    showToast({
+      title: '❌ Pengajuan Cetak Ditolak',
+      message: `Permohonan cetak "${book?.judul || pengajuanId}" ditolak: "${catatan || 'Anggaran belum disetujui'}".`,
+      type: 'error',
+      category: 'production'
+    });
   };
 
   const bulkDeletePengajuanCetak = (ids: number[]) => {
@@ -2026,6 +2276,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       'LogisticLog',
       `Memproses pengiriman pesanan #${no_invoice} (${items.length} jenis buku) ke ${recipientName}${noResi ? ` (Resi: ${noResi})` : ''}.`
     );
+
+    showToast({
+      title: '🚚 Pesanan Selesai Dikirim',
+      message: `Invoice #${no_invoice} telah diproses kirim ke ${recipientName}${noResi ? ` (Resi: ${noResi})` : ''}.`,
+      type: 'info',
+      category: 'logistic',
+      actionLabel: 'Surat Jalan',
+      onAction: () => switchDivision(6, 'surat-jalan')
+    });
 
     return { success: true, message: `Seluruh barang untuk Invoice #${no_invoice} berhasil dikirim!` };
   };
@@ -2847,7 +3106,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         loadDemoData,
         exportBackupData,
         importBackupData,
-        seedDummyData
+        seedDummyData,
+        isPrivacyMode,
+        togglePrivacyMode,
+        isPresentationOpen,
+        setIsPresentationOpen,
+        openPresentationMode,
+        toasts,
+        showToast,
+        dismissToast,
+        clearAllToasts,
+        simulateToastNotification
       }}
     >
       {children}

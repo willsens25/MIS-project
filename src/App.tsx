@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Volume2, VolumeX, Check, Sparkles, Loader2, Settings, Sliders } from 'lucide-react';
+import { Volume2, VolumeX, Check, Sparkles, Loader2, Settings, Sliders, Tv, Eye, EyeOff, Shield } from 'lucide-react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/Header';
 import { BreadcrumbNav } from './components/navigation/BreadcrumbNav';
@@ -17,6 +17,8 @@ import { AuthModal } from './components/auth/AuthModal';
 import { SessionTimeoutModal } from './components/modals/SessionTimeoutModal';
 import { DivisionReportModal } from './components/modals/DivisionReportModal';
 import { AnnualReportModal } from './components/modals/AnnualReportModal';
+import { ExecutivePresentationModal } from './components/modals/ExecutivePresentationModal';
+import { ToastContainer } from './components/common/ToastContainer';
 import { UserSettingsModal } from './components/profile/UserSettingsModal';
 import { QuickActionsFloatingMenu } from './components/navigation/QuickActionsFloatingMenu';
 import { useAutoLogout } from './hooks/useAutoLogout';
@@ -179,6 +181,15 @@ const AppContent: React.FC = () => {
     lastCompletedTaskMessage,
     userSettings,
     toggleMascotSpeechBubble,
+    isPrivacyMode,
+    togglePrivacyMode,
+    isPresentationOpen,
+    setIsPresentationOpen,
+    openPresentationMode,
+    toasts,
+    dismissToast,
+    clearAllToasts,
+    showToast,
   } = useApp();
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isUserSettingsOpen, setIsUserSettingsOpen] = useState(false);
@@ -329,6 +340,25 @@ const AppContent: React.FC = () => {
       playPleasantSuccessChime();
     }
   }, [aiAppState]);
+
+  // Global Hotkey for Privacy Mode (Alt + P) and Presentation Mode (Alt + Shift + P)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+      if (e.altKey && (e.key === 'p' || e.key === 'P')) {
+        e.preventDefault();
+        if (e.shiftKey) {
+          setIsPresentationOpen(true);
+        } else {
+          togglePrivacyMode();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [togglePrivacyMode, setIsPresentationOpen]);
 
   const contextInfo = getDivisionContextInfo(currentUser.divisi_id, currentSubTab);
 
@@ -881,6 +911,60 @@ const AppContent: React.FC = () => {
       <UserSettingsModal
         isOpen={isUserSettingsOpen}
         onClose={() => setIsUserSettingsOpen(false)}
+      />
+
+      {/* Mode Rapat Pleno (Projector View) Modal */}
+      <ExecutivePresentationModal
+        isOpen={isPresentationOpen}
+        onClose={() => setIsPresentationOpen(false)}
+      />
+
+      {/* Floating Privacy Mode Indicator Banner when screen is mirrored to projector */}
+      <AnimatePresence>
+        {isPrivacyMode && (
+          <motion.div
+            initial={{ opacity: 0, y: 30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 30, scale: 0.95 }}
+            transition={{ duration: 0.22 }}
+            className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 dark:bg-slate-950/95 text-white px-4 py-2.5 rounded-2xl shadow-2xl border border-amber-500/50 backdrop-blur-md flex items-center gap-3 text-xs print:hidden max-w-[94vw] sm:max-w-md ring-1 ring-amber-500/30"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0 animate-ping" />
+              <div className="min-w-0">
+                <span className="font-extrabold text-amber-300 block sm:inline">Sensor Layar Aktif</span>
+                <span className="hidden sm:inline text-slate-300 text-[11px] ml-1.5 truncate">
+                  Nominal finansial & kontak disamarkan untuk proyektor.
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 ml-auto shrink-0">
+              <button
+                onClick={openPresentationMode}
+                className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg font-bold text-[11px] transition-colors flex items-center gap-1 cursor-pointer shadow-xs"
+                title="Buka Layar Slide Rapat Pleno (F11/Slide)"
+              >
+                <Tv className="w-3 h-3" />
+                <span>Layar Pleno</span>
+              </button>
+              <button
+                onClick={() => togglePrivacyMode(false)}
+                className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] transition-colors cursor-pointer"
+                title="Nonaktifkan Sensor (Alt+P)"
+              >
+                Matikan
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Global Real-time Toast Notifications Container */}
+      <ToastContainer
+        toasts={toasts}
+        onDismiss={dismissToast}
+        onClearAll={clearAllToasts}
       />
 
     </div>

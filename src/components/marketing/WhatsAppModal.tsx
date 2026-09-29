@@ -30,6 +30,7 @@ interface WhatsAppModalProps {
   defaultPhone?: string;
   defaultRecipientName?: string;
   initialTemplateId?: string;
+  initialCustomResi?: string;
   onLogSent?: (log: WhatsAppLogItem) => void;
 }
 
@@ -40,14 +41,15 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
   defaultPhone = '',
   defaultRecipientName = '',
   initialTemplateId,
+  initialCustomResi = '',
   onLogSent
 }) => {
   const [recipientName, setRecipientName] = useState('');
   const [phone, setPhone] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(
-    initialTemplateId || (order?.status === 'Pending' ? 'pengingat_ramah' : 'tagihan_pending')
+    initialTemplateId || (order?.status === 'Pending' ? 'pengingat_ramah' : order?.status === 'Dikirim' ? 'resi_pengiriman' : order?.status === 'Lunas' ? 'lunas_packing' : 'tagihan_pending')
   );
-  const [customResi, setCustomResi] = useState('');
+  const [customResi, setCustomResi] = useState(initialCustomResi);
   const [messageText, setMessageText] = useState('');
   const [copied, setCopied] = useState(false);
   const [previewTab, setPreviewTab] = useState<'preview' | 'edit'>('edit');
@@ -56,9 +58,11 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       const initialName = order?.nama_pembeli || defaultRecipientName || '';
-      const rawPhone = order?.kontak_pembeli || order?.kontak_penerima || defaultPhone || '';
+      const rawPhone = order?.kontak_penerima || order?.kontak_pembeli || defaultPhone || '';
+      const extractedResi = initialCustomResi || order?.keterangan?.match(/Resi:\s*([^,\s\]]+)/i)?.[1] || '';
       setRecipientName(initialName);
       setPhone(rawPhone);
+      setCustomResi(extractedResi);
 
       const templateToUse = initialTemplateId || (
         order?.status === 'Pending' ? 'pengingat_ramah' :
@@ -73,11 +77,11 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
         order,
         customPembeli: initialName,
         customPhone: rawPhone,
-        customResi
+        customResi: extractedResi
       });
       setMessageText(generated);
     }
-  }, [isOpen, order, defaultPhone, defaultRecipientName, initialTemplateId]);
+  }, [isOpen, order, defaultPhone, defaultRecipientName, initialTemplateId, initialCustomResi]);
 
   // Handle template selection change
   const handleSelectTemplate = (tmplId: string) => {

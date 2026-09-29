@@ -190,7 +190,8 @@ export function replaceWhatsAppVariables(
   const totalTagihan = order ? order.total_tagihan.toLocaleString('id-ID') : '0';
   const ekspedisi = order?.ekspedisi || 'JNE Reguler';
   const alamatPenerima = order?.alamat_penerima || identitas?.alamat || 'Alamat Penerima';
-  const nomorResi = customResi || 'RESI-SEDANG-DIPROSES';
+  const extractedResi = order?.keterangan?.match(/Resi:\s*([^,\s\]]+)/i)?.[1];
+  const nomorResi = customResi || extractedResi || 'RESI-SEDANG-DIPROSES';
 
   let daftarBuku = '';
   if (order && order.items && order.items.length > 0) {
@@ -214,4 +215,50 @@ export function replaceWhatsAppVariables(
   text = text.replace(/{nomor_resi}/g, nomorResi);
 
   return text;
+}
+
+/**
+ * 1-Klik Pintas: Bangun pesan dan buka link WhatsApp secara instan
+ */
+export function openDirectWhatsApp(
+  order: Order,
+  templateId: string = 'tagihan_pending',
+  options?: {
+    customResi?: string;
+    onLogSent?: (log: WhatsAppLogItem) => void;
+  }
+): { success: boolean; message: string; url: string } {
+  const phone = order.kontak_penerima || order.kontak_pembeli || '';
+  const formattedPhone = formatIndonesianPhone(phone);
+
+  const tmpl = WHATSAPP_TEMPLATES.find(t => t.id === templateId) || WHATSAPP_TEMPLATES[0];
+  const messageText = replaceWhatsAppVariables(tmpl.defaultText, {
+    order,
+    customResi: options?.customResi
+  });
+
+  const url = buildWhatsAppLink(formattedPhone, messageText);
+  if (typeof window !== 'undefined') {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  if (options?.onLogSent) {
+    options.onLogSent({
+      id: 'walog_' + Date.now(),
+      orderId: order.id,
+      invoiceNo: order.no_invoice,
+      pembeliName: order.nama_pembeli || 'Pelanggan',
+      phone: formattedPhone,
+      templateId: tmpl.id,
+      templateName: tmpl.nama,
+      sentAt: new Date().toLocaleString('id-ID'),
+      status: 'Terkirim (WA Link Terbuka)'
+    });
+  }
+
+  return {
+    success: true,
+    message: `Membuka WhatsApp ke ${order.nama_pembeli || 'Pelanggan'}...`,
+    url
+  };
 }

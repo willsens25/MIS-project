@@ -48,7 +48,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
     accounts,
     productionLogs,
     logisticLogs,
-    switchDivision
+    switchDivision,
+    showToast
   } = useApp();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -653,21 +654,61 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
               )}
             </div>
 
-            {/* Footer */}
-            <div className="p-2.5 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-              <span className="text-[10px]">
-                {unreadAlerts.length} alert aktif untuk {currentDivisi?.kode}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  markAllAsRead();
-                  setIsOpen(false);
-                }}
-                className="text-[10px] text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium cursor-pointer"
-              >
-                Tutup Panel
-              </button>
+            {/* Footer with Toast Simulator */}
+            <div className="p-2.5 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] opacity-70">Uji Toast:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    showToast({
+                      title: '💰 Invoice Disetujui (Lunas)',
+                      message: 'Invoice #INV-2026-0088 (Vihara Dharmakirti) telah diverifikasi Lunas Rp 1.500.000.',
+                      type: 'success',
+                      category: 'order',
+                      actionLabel: 'Cek Logistik',
+                      onAction: () => switchDivision(6, 'antrean')
+                    });
+                  }}
+                  className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 cursor-pointer transition-colors"
+                  title="Simulasi Toast Invoice Disetujui"
+                >
+                  + Invoice Lunas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    showToast({
+                      title: '⚠️ Stok Gudang Menipis!',
+                      message: 'Buku "Lamrim Chenmo Bab IV" tersisa 12 eksemplar di gudang (< 20).',
+                      type: 'warning',
+                      category: 'stock',
+                      actionLabel: 'Ajukan Cetak',
+                      onAction: () => switchDivision(3, 'katalog')
+                    });
+                  }}
+                  className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 hover:bg-amber-200 dark:bg-amber-950 dark:hover:bg-amber-900 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 cursor-pointer transition-colors"
+                  title="Simulasi Toast Stok Menipis"
+                >
+                  + Stok Menipis
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between sm:justify-end gap-2">
+                <span className="text-[10px]">
+                  {unreadAlerts.length} alert aktif
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    markAllAsRead();
+                    setIsOpen(false);
+                  }}
+                  className="text-[10px] text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium cursor-pointer"
+                >
+                  Tutup
+                </button>
+              </div>
             </div>
           </motion.div>
         )}

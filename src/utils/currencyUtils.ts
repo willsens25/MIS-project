@@ -55,3 +55,18 @@ export function parseRupiah(value: string | number | null | undefined): number {
 export function formatNumberWithDots(value: number | string | null | undefined): string {
   return formatRupiah(value, false);
 }
+
+/**
+ * Formats a currency value with privacy masking support for meetings and projector displays.
+ * When isPrivacyMode is true, replaces the numerical digits with dots/bullets e.g. "Rp ••••••••".
+ */
+export function formatPrivateRupiah(
+  value: number | string | null | undefined,
+  isPrivacyMode: boolean,
+  withPrefix: boolean = true
+): string {
+  if (isPrivacyMode) {
+    return withPrefix ? 'Rp ••••••••' : '••••••••';
+  }
+  return formatRupiah(value, withPrefix);
+}

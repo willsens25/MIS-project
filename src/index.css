@@ -428,3 +428,66 @@ html[data-color-preset="sunset-amber"] {
   page-break-inside: avoid;
 }
 
+/* ==========================================================================
+   MODE RAPAT PRESENTASI PENGURUS & PRIVACY MODE
+   ========================================================================== */
+.privacy-mode .privacy-blur,
+.privacy-mode td.font-mono,
+.privacy-mode [data-privacy="mask"],
+.privacy-mode .currency-sensitive {
+  filter: blur(5.5px) !important;
+  user-select: none !important;
+  transition: filter 0.18s ease-in-out;
+}
+
+.privacy-mode .privacy-blur:hover,
+.privacy-mode td.font-mono:hover,
+.privacy-mode [data-privacy="mask"]:hover,
+.privacy-mode .currency-sensitive:hover {
+  filter: blur(0px) !important;
+}
+
+.privacy-mode .privacy-mask-nominal {
+  font-family: var(--font-mono), monospace;
+  letter-spacing: 0.12em;
+  opacity: 0.85;
+}
+
+/* Virtual Laser Pointer in Projector Mode */
+.virtual-laser-cursor {
+  cursor: none !important;
+}
+
+.virtual-laser-dot {
+  pointer-events: none;
+  position: fixed;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, #ff2a2a 20%, rgba(255, 0, 0, 0.4) 60%, transparent 100%);
+  box-shadow: 0 0 16px 6px rgba(255, 30, 30, 0.85);
+  transform: translate(-50%, -50%);
+  z-index: 99999;
+  transition: opacity 0.15s ease;
+}
+
+/* Dharma Maroon Theme for Projector View */
+[data-presentation-theme="dharma-maroon"] {
+  background: radial-gradient(circle at 50% 20%, #4a0404 0%, #2b0202 55%, #150000 100%) !important;
+  color: #fef3c7 !important;
+}
+
+[data-presentation-theme="dharma-maroon"] .presentation-card {
+  background-color: rgba(60, 8, 8, 0.7) !important;
+  border-color: rgba(217, 119, 6, 0.35) !important;
+}
+
+[data-presentation-theme="studio-dark"] {
+  background: radial-gradient(circle at 50% 20%, #0f172a 0%, #020617 70%, #000000 100%) !important;
+}
+
+[data-presentation-theme="bright-white"] {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+}
+

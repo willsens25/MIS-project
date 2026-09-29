@@ -410,6 +410,48 @@ export interface UserSettings {
   };
 }
 
+export interface BoardResolutionItem {
+  id: string;
+  category: 'Anggaran & Cetak' | 'Sosial & Dharma' | 'Legalitas & Hak Cipta' | 'Distribusi & Kemitraan' | 'Tata Kelola Yayasan';
+  title: string;
+  description: string;
+  status: 'approved' | 'pending' | 'rejected';
+  pic: string;
+  targetDate?: string;
+  notes?: string;
+}
+
+export interface PlenoMeetingRecord {
+  meetingNumber: string;
+  date: string;
+  location: string;
+  quarter: string;
+  attendees: string[];
+  notes: string;
+  resolutions: BoardResolutionItem[];
+  signedBy: {
+    ketuaUmum: boolean;
+    dewanPengawas: boolean;
+    bendahara: boolean;
+    sekretaris: boolean;
+  };
+}
+
+export type ToastType = 'success' | 'warning' | 'error' | 'info' | 'urgent';
+export type ToastCategory = 'order' | 'stock' | 'finance' | 'production' | 'logistic' | 'system';
+
+export interface ToastNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: ToastType;
+  duration?: number;
+  timestamp: string;
+  actionLabel?: string;
+  onAction?: () => void;
+  category?: ToastCategory;
+}
+
 export interface BackupMetadata {
   app_version: string;
   app_name: string;

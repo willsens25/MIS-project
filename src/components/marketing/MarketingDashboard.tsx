@@ -2130,10 +2130,25 @@ export const MarketingDashboard: React.FC = () => {
                     setTimeout(() => setToastMessage(null), 4000);
                     setPelunasanModalOrder(null);
                   }}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm shadow-emerald-600/20 cursor-pointer flex items-center space-x-1.5 transition-all"
+                  className="px-3.5 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-semibold cursor-pointer flex items-center space-x-1.5 transition-all"
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Konfirmasi Lunas & Sinkronkan</span>
+                  <span>Konfirmasi Saja</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const orderToNotify = pelunasanModalOrder;
+                    const res = tandaiLunasOrder(pelunasanModalOrder.id, pelunasanAccountId);
+                    setToastMessage(res?.message || `Invoice #${orderToNotify.no_invoice} berhasil ditandai LUNAS!`);
+                    setTimeout(() => setToastMessage(null), 4000);
+                    setPelunasanModalOrder(null);
+                    handleOpenWhatsAppModal(orderToNotify, 'lunas_packing');
+                  }}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm shadow-emerald-600/20 cursor-pointer flex items-center space-x-1.5 transition-all"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  <span>Konfirmasi & Buka WA (1-Klik)</span>
                 </button>
               </div>
             </div>
