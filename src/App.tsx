@@ -20,6 +20,7 @@ import { AnnualReportModal } from './components/modals/AnnualReportModal';
 import { ExecutivePresentationModal } from './components/modals/ExecutivePresentationModal';
 import { ToastContainer } from './components/common/ToastContainer';
 import { UserSettingsModal } from './components/profile/UserSettingsModal';
+import { NightShiftFloatingWidget } from './components/theme/NightShiftFloatingWidget';
 import { QuickActionsFloatingMenu } from './components/navigation/QuickActionsFloatingMenu';
 import { useAutoLogout } from './hooks/useAutoLogout';
 import { DivisionId } from './types';
@@ -966,6 +967,12 @@ const AppContent: React.FC = () => {
         onDismiss={dismissToast}
         onClearAll={clearAllToasts}
       />
+
+      {/* Night Shift Mode Ambient Eye-Shield Overlay */}
+      <div id="night-shift-shield-overlay" className="night-shift-ui-exclude" />
+
+      {/* Night Shift Floating Quick Widget (Active during overtime) */}
+      <NightShiftFloatingWidget />
 
     </div>
   );

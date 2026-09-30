@@ -206,6 +206,7 @@ export interface Identitas {
   nomor_hp_primary?: string;
   email?: string;
   pekerjaan?: string;
+  jabatan?: string;
   alamat?: string;
   kota?: string;
   kode_pos?: string;
@@ -281,6 +282,43 @@ export interface Mutasi {
   keterangan: string;
   tanggal: string;
   jenis: 'MANUAL' | 'INVOICE';
+}
+
+export interface BankStatementItem {
+  id: string;
+  account_id: number;
+  tanggal: string;
+  keterangan: string;
+  tipe: 'Masuk' | 'Keluar'; // Masuk = Kredit (Uang Masuk ke Bank), Keluar = Debet (Uang Keluar dari Bank)
+  nominal: number;
+  referensi?: string;
+  saldo_setelahnya?: number;
+  status_rekonsiliasi: 'Cocok' | 'Belum Cocok' | 'Setoran Dalam Perjalanan' | 'Cek Beredar' | 'Penyesuaian Buku';
+  matched_mutasi_id?: number;
+  catatan?: string;
+  created_at?: string;
+}
+
+export interface BankReconciliationRecord {
+  id: string;
+  account_id: number;
+  periode_bulan: string; // Format 'YYYY-MM'
+  tanggal_rekonsiliasi: string;
+  saldo_buku: number;
+  saldo_bank: number;
+  total_setoran_dalam_perjalanan: number;
+  total_cek_beredar: number;
+  total_pendapatan_bank_belum_tercatat: number; // Bagi hasil / jasa giro
+  total_beban_bank_belum_tercatat: number; // Biaya admin bank / pajak
+  saldo_disesuaikan_buku: number;
+  saldo_disesuaikan_bank: number;
+  selisih: number;
+  is_balanced: boolean;
+  status: 'Draft' | 'Terekonsiliasi' | 'Ada Selisih';
+  diverifikasi_oleh?: string;
+  catatan_revisi?: string;
+  created_at: string;
+  updated_at?: string;
 }
 
 export interface PengajuanCetak {
@@ -396,6 +434,22 @@ export type ColorPresetId =
 
 export type ThemeMode = 'light' | 'dark' | 'system-synced';
 
+export type NightShiftScheduleType = 'overtime-hours' | 'sunset-to-sunrise' | 'always-on-dark' | 'manual';
+
+export type NightShiftPreset = 'balanced' | 'deep-night' | 'paper-reading' | 'minimal' | 'custom';
+
+export interface NightShiftConfig {
+  enabled: boolean;          // Is Night Shift mode toggled ON
+  autoOvertime: boolean;     // Automatically engages during overtime / night hours
+  scheduleType: NightShiftScheduleType;
+  startTime: string;         // Overtime start time, e.g. "19:00"
+  endTime: string;           // Overtime end time, e.g. "06:00"
+  warmth: number;            // 0 - 100% (Amber temperature / blue-light reduction)
+  contrast: number;          // 70 - 100% (Soft contrast / anti-glare easing)
+  brightness: number;        // 70 - 100% (Backlight dimming for late night comfort)
+  preset: NightShiftPreset;
+}
+
 export interface UserSettings {
   mascotSpeechBubbleEnabled: boolean; // Toggle mascot speech bubbles on/off globally
   mascotSoundEffectsEnabled: boolean; // Audio tactile feedback on interaction
@@ -408,6 +462,7 @@ export interface UserSettings {
     longitude: number;
     name?: string;
   };
+  nightShift?: NightShiftConfig; // Night Shift Mode settings for overtime comfort
 }
 
 export interface BoardResolutionItem {

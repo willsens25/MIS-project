@@ -34,11 +34,26 @@ import {
   SeederSummary,
   ToastNotification,
   ToastType,
-  ToastCategory
+  ToastCategory,
+  NightShiftConfig,
+  NightShiftPreset,
+  NightShiftScheduleType,
+  BankStatementItem,
+  BankReconciliationRecord
 } from '../types';
 import { SeedOptions, generateSeedData } from '../lib/dummySeeder';
 import { DEFAULT_COLOR_PRESET } from '../lib/themePresets';
 import { playPleasantSuccessChime } from '../utils/soundEffects';
+import {
+  DEFAULT_NIGHT_SHIFT_CONFIG,
+  NIGHT_SHIFT_PRESETS,
+  evaluateNightShiftActive,
+  applyNightShiftToDom
+} from '../lib/nightShiftHelper';
+import {
+  generateSampleBankStatements,
+  runSmartAutoMatch
+} from '../lib/reconciliationHelper';
 import {
   LocationCoordinates,
   SolarScheduleInfo,
@@ -118,6 +133,14 @@ interface AppContextType {
   userSettings: UserSettings;
   updateUserSettings: (settings: Partial<UserSettings>) => void;
   toggleMascotSpeechBubble: () => void;
+
+  // Night Shift Mode (Eye-Care & Overtime Display Comfort)
+  nightShift: NightShiftConfig;
+  isNightShiftActive: boolean;
+  updateNightShift: (config: Partial<NightShiftConfig>) => void;
+  toggleNightShift: () => void;
+  setNightShiftPreset: (preset: NightShiftPreset) => void;
+  evaluateNightShift: (currentConfig?: NightShiftConfig, currentTheme?: 'light' | 'dark') => boolean;
   
   // Auth state & methods
   isAuthenticated: boolean;
@@ -248,6 +271,19 @@ interface AppContextType {
   approvePengajuanCetak: (pengajuanId: number, accountId: number) => void;
   rejectPengajuanCetak: (pengajuanId: number, catatan: string) => void;
   bulkDeletePengajuanCetak: (ids: number[]) => void;
+
+  // Bank Statements & Reconciliation actions
+  bankStatements: BankStatementItem[];
+  bankReconciliations: BankReconciliationRecord[];
+  addBankStatement: (item: Omit<BankStatementItem, 'id' | 'created_at'>) => BankStatementItem;
+  addBankStatementsBulk: (items: BankStatementItem[]) => void;
+  updateBankStatement: (id: string, updates: Partial<BankStatementItem>) => void;
+  deleteBankStatement: (id: string) => void;
+  clearBankStatements: (accountId?: number) => void;
+  loadSampleBankStatements: (accountId: number) => number;
+  autoMatchBankStatements: (accountId: number) => { matchedCount: number; unmatchedBankCount: number; unmatchedMutasiCount: number };
+  createAdjustmentMutasiFromBankItem: (bankItem: BankStatementItem) => { success: boolean; message: string };
+  saveBankReconciliationRecord: (record: Omit<BankReconciliationRecord, 'id' | 'created_at'>) => BankReconciliationRecord;
 
   // Production actions
   addProductionOutput: (bookId: number, jumlah: number) => void;
@@ -431,7 +467,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       latitude: autoThemeLocation.latitude,
       longitude: autoThemeLocation.longitude,
       name: autoThemeLocation.name
-    }
+    },
+    nightShift: DEFAULT_NIGHT_SHIFT_CONFIG
   };
 
   const [userSettings, setUserSettings] = useState<UserSettings>(() => {
@@ -444,6 +481,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Error reading user settings from storage:', e);
     }
     return DEFAULT_USER_SETTINGS;
+  });
+
+  // Night Shift Mode (Eye-Care & Overtime Display Comfort) State
+  const [nightShift, setNightShiftState] = useState<NightShiftConfig>(() => {
+    try {
+      const stored = localStorage.getItem('mis_night_shift');
+      if (stored) {
+        return { ...DEFAULT_NIGHT_SHIFT_CONFIG, ...JSON.parse(stored) };
+      }
+      const userSettingsStored = localStorage.getItem('mis_user_settings');
+      if (userSettingsStored) {
+        const parsed = JSON.parse(userSettingsStored);
+        if (parsed.nightShift) {
+          return { ...DEFAULT_NIGHT_SHIFT_CONFIG, ...parsed.nightShift };
+        }
+      }
+    } catch (e) {
+      console.warn('Error reading night shift config from storage:', e);
+    }
+    return DEFAULT_NIGHT_SHIFT_CONFIG;
+  });
+
+  const [isNightShiftActive, setIsNightShiftActive] = useState<boolean>(() => {
+    const now = new Date();
+    return evaluateNightShiftActive(DEFAULT_NIGHT_SHIFT_CONFIG, now, true, 'light');
   });
 
   const updateUserSettings = (newSettings: Partial<UserSettings>) => {
@@ -614,6 +676,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const stored = getStoredItem<RoyaltiStatement[]>('mis_royalti_statements', DEMO_ROYALTI_STATEMENT);
     return stored && stored.length > 0 ? stored : DEMO_ROYALTI_STATEMENT;
   });
+  const [bankStatements, setBankStatements] = useState<BankStatementItem[]>(() => {
+    return getStoredItem<BankStatementItem[]>('mis_bank_statements', []);
+  });
+  const [bankReconciliations, setBankReconciliations] = useState<BankReconciliationRecord[]>(() => {
+    return getStoredItem<BankReconciliationRecord[]>('mis_bank_reconciliations', []);
+  });
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(() => {
     const stored = getStoredItem<ActivityLog[]>('mis_activity_logs', INITIAL_ACTIVITY_LOGS);
     if (!stored || stored.length === 0) {
@@ -678,6 +746,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => { setStoredItem('mis_donasi_sponsors', donasiSponsors); }, [donasiSponsors]);
   useEffect(() => { setStoredItem('mis_royalti_penulis', royaltiPenulisList); }, [royaltiPenulisList]);
   useEffect(() => { setStoredItem('mis_royalti_statements', royaltiStatements); }, [royaltiStatements]);
+  useEffect(() => { setStoredItem('mis_bank_statements', bankStatements); }, [bankStatements]);
+  useEffect(() => { setStoredItem('mis_bank_reconciliations', bankReconciliations); }, [bankReconciliations]);
 
   // Evaluate solar schedule and auto-switch theme when in 'system-synced' mode
   const evaluateSolarTheme = useCallback((forcedLocation?: LocationCoordinates, forcedMode?: ThemeMode) => {
@@ -890,6 +960,135 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return nextTheme;
     });
   };
+
+  // ==========================================================================
+  // NIGHT SHIFT MODE: Dynamic Eye-Care & Overtime Glare Reduction
+  // ==========================================================================
+  const hasNotifiedOvertimeRef = useRef<boolean>(false);
+  const nightShiftRef = useRef<NightShiftConfig>(nightShift);
+  nightShiftRef.current = nightShift;
+
+  const evaluateNightShift = useCallback((currentConfig?: NightShiftConfig, currentTheme?: 'light' | 'dark') => {
+    const cfg = currentConfig || nightShift;
+    const thm = currentTheme || theme;
+    const now = new Date();
+    const isDay = solarSchedule ? solarSchedule.isDaytime : (now.getHours() >= 6 && now.getHours() < 18);
+    const active = evaluateNightShiftActive(cfg, now, isDay, thm);
+    setIsNightShiftActive(active);
+    applyNightShiftToDom(active, cfg);
+    return active;
+  }, [nightShift, solarSchedule, theme]);
+
+  // Periodic scheduler & visibility change for Night Shift evaluation (Overtime threshold)
+  useEffect(() => {
+    const isActive = evaluateNightShift();
+
+    // Notify user once when overtime auto-activates during evening work
+    if (isActive && nightShift.autoOvertime && !hasNotifiedOvertimeRef.current) {
+      hasNotifiedOvertimeRef.current = true;
+    }
+
+    const intervalId = setInterval(() => {
+      const currentlyActive = evaluateNightShift();
+      if (currentlyActive && nightShift.autoOvertime && !hasNotifiedOvertimeRef.current) {
+        hasNotifiedOvertimeRef.current = true;
+        showToast({
+          title: '🌙 Night Shift Mode Aktif (Lembur)',
+          message: `Intensitas warna dihangatkan (${nightShift.warmth}%) & kontras dilembutkan (${nightShift.contrast}%) untuk kenyamanan mata saat lembur.`,
+          type: 'info',
+          category: 'system'
+        });
+      }
+    }, 20000); // Check every 20 seconds for overtime time transition
+
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        evaluateNightShift();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+    };
+  }, [evaluateNightShift, nightShift, showToast]);
+
+  // Apply to DOM on state updates
+  useEffect(() => {
+    applyNightShiftToDom(isNightShiftActive, nightShift);
+  }, [isNightShiftActive, nightShift]);
+
+  // Cross-tab sync for Night Shift settings
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'mis_night_shift' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setNightShiftState(parsed);
+          evaluateNightShift(parsed, theme);
+        } catch (err) {
+          console.warn('Error reading night shift from storage event:', err);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [evaluateNightShift, theme]);
+
+  const updateNightShift = useCallback((updates: Partial<NightShiftConfig>) => {
+    const next = { ...nightShiftRef.current, ...updates };
+    setNightShiftState(next);
+    try {
+      localStorage.setItem('mis_night_shift', JSON.stringify(next));
+    } catch (e) {
+      console.warn('Error saving night shift config:', e);
+    }
+    updateUserSettings({ nightShift: next });
+    evaluateNightShift(next, theme);
+  }, [evaluateNightShift, theme, updateUserSettings]);
+
+  const toggleNightShift = useCallback(() => {
+    const nextEnabled = !nightShiftRef.current.enabled;
+    const next = { ...nightShiftRef.current, enabled: nextEnabled };
+    setNightShiftState(next);
+    try {
+      localStorage.setItem('mis_night_shift', JSON.stringify(next));
+    } catch (e) {
+      console.warn('Error toggling night shift:', e);
+    }
+    updateUserSettings({ nightShift: next });
+    evaluateNightShift(next, theme);
+    showToast({
+      title: nextEnabled ? '🌙 Night Shift Mode Diaktifkan' : '☀️ Night Shift Mode Dimatikan',
+      message: nextEnabled
+        ? `Intensitas warna dihangatkan (${next.warmth}%) dan kontras dilembutkan (${next.contrast}%) untuk kenyamanan lembur.`
+        : 'Tampilan dikembalikan ke profil warna dan kontras standar.',
+      type: 'info',
+      category: 'system'
+    });
+  }, [evaluateNightShift, showToast, theme, updateUserSettings]);
+
+  const setNightShiftPreset = useCallback((presetId: NightShiftPreset) => {
+    const preset = NIGHT_SHIFT_PRESETS[presetId];
+    if (!preset) return;
+    updateNightShift({
+      preset: presetId,
+      warmth: preset.warmth,
+      contrast: preset.contrast,
+      brightness: preset.brightness,
+      enabled: true
+    });
+    showToast({
+      title: `🌙 Preset: ${preset.name}`,
+      message: `${preset.description} (Kehangatan: ${preset.warmth}%, Kontras: ${preset.contrast}%)`,
+      type: 'info',
+      category: 'system'
+    });
+  }, [updateNightShift, showToast]);
 
   const DEFAULT_SUBTABS: Record<number, string> = {
     1: 'overview',
@@ -2177,6 +2376,134 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     recordActivity('Hapus Massal Pengajuan', 'PengajuanCetak', `Menghapus ${ids.length} pengajuan cetak buku secara massal.`);
   };
 
+  // Bank Statements & Bank Reconciliation Management
+  const addBankStatement = (item: Omit<BankStatementItem, 'id' | 'created_at'>): BankStatementItem => {
+    const newItem: BankStatementItem = {
+      ...item,
+      id: `BS-${item.account_id}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      created_at: new Date().toISOString()
+    };
+    setBankStatements(prev => [newItem, ...prev]);
+    recordActivity('Tambah Rekening Koran', 'BankStatement', `Mencatat mutasi bank: "${newItem.keterangan}" (${newItem.tipe} Rp ${newItem.nominal.toLocaleString('id-ID')})`);
+    return newItem;
+  };
+
+  const addBankStatementsBulk = (items: BankStatementItem[]) => {
+    if (items.length === 0) return;
+    setBankStatements(prev => [...items, ...prev]);
+    recordActivity('Impor Rekening Koran Massal', 'BankStatement', `Mengimpor ${items.length} transaksi rekening koran bank.`);
+    showToast({
+      title: '📥 Rekening Koran Diimpor',
+      message: `Berhasil mengimpor ${items.length} baris mutasi bank. Siap dilakukan pencocokan otomatis.`,
+      type: 'success',
+      category: 'finance'
+    });
+  };
+
+  const updateBankStatement = (id: string, updates: Partial<BankStatementItem>) => {
+    setBankStatements(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
+  };
+
+  const deleteBankStatement = (id: string) => {
+    setBankStatements(prev => prev.filter(item => item.id !== id));
+  };
+
+  const clearBankStatements = (accountId?: number) => {
+    if (accountId) {
+      setBankStatements(prev => prev.filter(item => item.account_id !== accountId));
+    } else {
+      setBankStatements([]);
+    }
+    showToast({
+      title: '🗑️ Data Rekening Koran Dikosongkan',
+      message: accountId ? 'Daftar rekening koran akun terpilih telah dibersihkan.' : 'Semua rekening koran telah dibersihkan.',
+      type: 'info',
+      category: 'finance'
+    });
+  };
+
+  const loadSampleBankStatements = (accountId: number): number => {
+    const samples = generateSampleBankStatements(accountId, mutasis);
+    setBankStatements(prev => {
+      const filtered = prev.filter(item => item.account_id !== accountId);
+      return [...samples, ...filtered];
+    });
+    showToast({
+      title: '🏦 Contoh Rekening Koran Dimuat',
+      message: `Berhasil memuat ${samples.length} baris rekening koran bank (termasuk biaya admin, bagi hasil, dan transaksi penjualan) untuk simulasi rekonsiliasi.`,
+      type: 'success',
+      category: 'finance'
+    });
+    return samples.length;
+  };
+
+  const autoMatchBankStatements = (accountId: number) => {
+    const currentAccountItems = bankStatements.filter(item => item.account_id === accountId);
+    const result = runSmartAutoMatch(mutasis, currentAccountItems, accountId);
+
+    setBankStatements(prev => {
+      const otherAccountItems = prev.filter(item => item.account_id !== accountId);
+      return [...result.updatedBankItems, ...otherAccountItems];
+    });
+
+    showToast({
+      title: '⚡ Pencocokan Rekonsiliasi Selesai',
+      message: `${result.matchedCount} transaksi cocok dengan buku kas yayasan! ${result.unmatchedBankCount} transaksi bank belum cocok / perlu jurnal penyesuaian.`,
+      type: result.unmatchedBankCount === 0 ? 'success' : 'info',
+      category: 'finance'
+    });
+
+    recordActivity('Auto Match Rekonsiliasi', 'BankReconciliation', `Menjalankan pencocokan otomatis rekening koran akun ID #${accountId}: ${result.matchedCount} cocok, ${result.unmatchedBankCount} transaksi memerlukan perhatian.`);
+    return result;
+  };
+
+  const createAdjustmentMutasiFromBankItem = (bankItem: BankStatementItem) => {
+    let categoryName = 'Beban Administrasi Bank & Pajak';
+    if (bankItem.tipe === 'Masuk') {
+      categoryName = 'Pendapatan Bagi Hasil & Jasa Giro';
+    }
+
+    addMutasi(
+      bankItem.account_id,
+      categoryName,
+      bankItem.tipe,
+      bankItem.nominal,
+      `[JURNAL PENYESUAIAN REKONSILIASI] ${bankItem.keterangan} (Ref: ${bankItem.referensi || bankItem.id})`,
+      bankItem.tanggal
+    );
+
+    updateBankStatement(bankItem.id, {
+      status_rekonsiliasi: 'Cocok',
+      catatan: 'Telah disesuaikan ke buku kas yayasan secara otomatis'
+    });
+
+    showToast({
+      title: '✅ Jurnal Penyesuaian Dibuat',
+      message: `Transaksi "${bankItem.keterangan}" (${bankItem.tipe} Rp ${bankItem.nominal.toLocaleString('id-ID')}) telah otomatis dicatat ke Jurnal Mutasi Kas Yayasan.`,
+      type: 'success',
+      category: 'finance'
+    });
+
+    return { success: true, message: 'Jurnal penyesuaian kas berhasil dibuat!' };
+  };
+
+  const saveBankReconciliationRecord = (record: Omit<BankReconciliationRecord, 'id' | 'created_at'>): BankReconciliationRecord => {
+    const newRecord: BankReconciliationRecord = {
+      ...record,
+      id: `REC-${record.account_id}-${Date.now()}`,
+      created_at: new Date().toISOString()
+    };
+    setBankReconciliations(prev => [newRecord, ...prev]);
+    recordActivity('Simpan Berita Acara Rekonsiliasi', 'BankReconciliation', `Menyimpan berita acara rekonsiliasi akun ID #${record.account_id} periode ${record.periode_bulan} (Status: ${record.status})`);
+    showToast({
+      title: '📋 Berita Acara Rekonsiliasi Disimpan',
+      message: `Rekonsiliasi bank periode ${record.periode_bulan} berhasil diarsipkan secara resmi.`,
+      type: 'success',
+      category: 'finance'
+    });
+    return newRecord;
+  };
+
   // Production Output
   const addProductionOutput = (bookId: number, jumlah: number) => {
     const book = books.find(b => b.id === bookId);
@@ -2597,6 +2924,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setDonasiSponsors(INITIAL_DONASI_SPONSOR);
     setRoyaltiPenulisList(INITIAL_ROYALTI_PENULIS);
     setRoyaltiStatements(INITIAL_ROYALTI_STATEMENT);
+    setBankStatements([]);
+    setBankReconciliations([]);
     setAccounts(INITIAL_ACCOUNTS);
     setUsersList(INITIAL_USERS);
     setCurrentUser(INITIAL_USERS[0]);
@@ -2617,6 +2946,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.removeItem('mis_activity_logs');
       localStorage.removeItem('mis_wa_logs');
       localStorage.removeItem('mis_accounts');
+      localStorage.removeItem('mis_bank_statements');
+      localStorage.removeItem('mis_bank_reconciliations');
       localStorage.removeItem('mis_users');
       localStorage.removeItem('mis_bazaar_events');
       localStorage.removeItem('mis_current_user');
@@ -2648,6 +2979,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setDonasiSponsors(DEMO_DONASI_SPONSOR);
     setRoyaltiPenulisList(DEMO_ROYALTI_PENULIS);
     setRoyaltiStatements(DEMO_ROYALTI_STATEMENT);
+    const demoBankBca = generateSampleBankStatements(2, DEMO_MUTASI);
+    const demoBankMandiri = generateSampleBankStatements(3, DEMO_MUTASI);
+    const combinedBankDemo = [...demoBankBca, ...demoBankMandiri];
+    setBankStatements(combinedBankDemo);
     setCurrentUser(DEMO_USERS[0]);
     setIsAuthenticated(true);
     setAuthModalMode('login');
@@ -3085,6 +3420,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         approvePengajuanCetak,
         rejectPengajuanCetak,
         bulkDeletePengajuanCetak,
+        bankStatements,
+        bankReconciliations,
+        addBankStatement,
+        addBankStatementsBulk,
+        updateBankStatement,
+        deleteBankStatement,
+        clearBankStatements,
+        loadSampleBankStatements,
+        autoMatchBankStatements,
+        createAdjustmentMutasiFromBankItem,
+        saveBankReconciliationRecord,
         addProductionOutput,
         bulkDeleteProductionLogs,
         dispatchShipment,
@@ -3116,7 +3462,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         showToast,
         dismissToast,
         clearAllToasts,
-        simulateToastNotification
+        simulateToastNotification,
+        nightShift,
+        isNightShiftActive,
+        updateNightShift,
+        toggleNightShift,
+        setNightShiftPreset,
+        evaluateNightShift
       }}
     >
       {children}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
 import { Identitas, User, DivisionId } from '../../types';
@@ -21,7 +21,9 @@ import {
   CheckCircle2,
   Layers,
   FileSpreadsheet,
-  Award
+  Award,
+  Briefcase,
+  X
 } from 'lucide-react';
 import { IdentitasModal } from '../modals/IdentitasModal';
 import { ConfirmModal } from '../modals/ConfirmModal';
@@ -32,6 +34,7 @@ import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
 import { ConfigurableDashboardGrid } from '../dashboard-layout/ConfigurableDashboardGrid';
+import { Pagination } from '../common/Pagination';
 
 interface DirektoratDashboardProps {
   initialSubTab?: 'overview' | 'identitas' | 'users';
@@ -124,25 +127,66 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
   const totalInvoiceLunas = orders.filter(o => o.status === 'Lunas').length;
   const totalBukuStok = books.reduce((sum, b) => sum + b.stok_gudang, 0);
 
-  // Filtered identitas
-  const filteredIdentitas = identitasList.filter(item => {
-    const matchSearch = item.nama_lengkap.toLowerCase().includes(searchIdentitas.toLowerCase()) ||
-      item.nomor_identitas.includes(searchIdentitas) ||
-      (item.kota && item.kota.toLowerCase().includes(searchIdentitas.toLowerCase())) ||
-      (item.nomor_hp_primary && item.nomor_hp_primary.includes(searchIdentitas));
-    
-    const matchUmat = filterUmat === 'all' || item.jenis_umat === filterUmat;
-    const matchKeamanan = filterKeamanan === 'all' || item.status_keamanan === filterKeamanan;
+  // Filtered identitas with instant text search by name or position/title (jabatan)
+  const filteredIdentitas = useMemo(() => {
+    const q = searchIdentitas.toLowerCase().trim();
+    return identitasList.filter(item => {
+      const linkedUser = usersList.find(u => u.identitas_id === item.id);
 
-    return matchSearch && matchUmat && matchKeamanan;
-  });
+      const matchSearch = !q || (
+        item.nama_lengkap.toLowerCase().includes(q) ||
+        (Boolean(item.panggilan) && item.panggilan!.toLowerCase().includes(q)) ||
+        (Boolean(item.jabatan) && item.jabatan!.toLowerCase().includes(q)) ||
+        (Boolean(item.pekerjaan) && item.pekerjaan!.toLowerCase().includes(q)) ||
+        (Boolean(linkedUser?.role) && linkedUser!.role!.toLowerCase().includes(q)) ||
+        item.nomor_identitas.toLowerCase().includes(q) ||
+        (Boolean(item.kota) && item.kota!.toLowerCase().includes(q)) ||
+        (Boolean(item.nomor_hp_primary) && item.nomor_hp_primary!.includes(q))
+      );
+      
+      const matchUmat = filterUmat === 'all' || item.jenis_umat === filterUmat;
+      const matchKeamanan = filterKeamanan === 'all' || item.status_keamanan === filterKeamanan;
 
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+      return matchSearch && matchUmat && matchKeamanan;
+    });
+  }, [identitasList, usersList, searchIdentitas, filterUmat, filterKeamanan]);
+
+  // Pagination State for Database Anggota
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+
+  // Auto-reset page to 1 when search or filter criteria change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchIdentitas, filterUmat, filterKeamanan]);
+
+  // Paginated identitas slice
+  const paginatedIdentitas = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredIdentitas.slice(startIndex, startIndex + pageSize);
+  }, [filteredIdentitas, currentPage, pageSize]);
+
+  // Check if all visible items on current page are selected
+  const isAllCurrentPageSelected = useMemo(() => {
+    return paginatedIdentitas.length > 0 && paginatedIdentitas.every(i => selectedIdentitasIds.includes(i.id));
+  }, [paginatedIdentitas, selectedIdentitasIds]);
+
+  const handleSelectAllCurrentPage = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      setSelectedIdentitasIds(filteredIdentitas.map(i => i.id));
+      const pageIds = paginatedIdentitas.map(i => i.id);
+      setSelectedIdentitasIds(prev => Array.from(new Set([...prev, ...pageIds])));
     } else {
-      setSelectedIdentitasIds([]);
+      const pageIdsSet = new Set(paginatedIdentitas.map(i => i.id));
+      setSelectedIdentitasIds(prev => prev.filter(id => !pageIdsSet.has(id)));
     }
+  };
+
+  const handleSelectAllFiltered = () => {
+    setSelectedIdentitasIds(filteredIdentitas.map(i => i.id));
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIdentitasIds([]);
   };
 
   const handleToggleSelect = (id: number) => {
@@ -513,25 +557,36 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
       {activeSubTab === 'identitas' && (
         <div className="space-y-4">
           
-          {/* Filter Bar */}
+          {/* Filter Bar & Kolom Pencarian Teks Instan */}
           <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-3">
             <div className="flex flex-col md:flex-row gap-3">
+              {/* Kolom Pencarian Teks Instan Berdasarkan Nama atau Jabatan */}
               <div className="flex-1 relative">
                 <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Cari berdasarkan nama lengkap, NIK, kota, nomor WA..."
+                  placeholder="Cari berdasarkan nama anggota atau jabatan secara instan (contoh: Anand, Koordinator, Penasihat)..."
                   value={searchIdentitas}
                   onChange={e => setSearchIdentitas(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500"
+                  className="w-full pl-9 pr-9 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 text-slate-900 dark:text-white placeholder:text-slate-400"
                 />
+                {searchIdentitas && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchIdentitas('')}
+                    className="absolute right-2.5 top-2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
+                    title="Bersihkan pencarian"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                 <select
                   value={filterUmat}
                   onChange={e => setFilterUmat(e.target.value)}
-                  className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs"
+                  className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-700 dark:text-slate-300"
                 >
                   <option value="all">Semua Kategori Umat</option>
                   <option value="Anggota">Anggota</option>
@@ -543,7 +598,7 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
                 <select
                   value={filterKeamanan}
                   onChange={e => setFilterKeamanan(e.target.value)}
-                  className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs"
+                  className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-700 dark:text-slate-300"
                 >
                   <option value="all">Semua Status Keamanan</option>
                   <option value="Normal">Normal</option>
@@ -554,7 +609,7 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
                 {selectedIdentitasIds.length > 0 && (
                   <button
                     onClick={handleBulkDelete}
-                    className="flex items-center space-x-1 px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold"
+                    className="flex items-center space-x-1 px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>Hapus ({selectedIdentitasIds.length})</span>
@@ -562,7 +617,73 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
                 )}
               </div>
             </div>
+
+            {/* Status bar info filter & pencarian instan */}
+            <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span>
+                  Menampilkan <strong className="text-slate-800 dark:text-slate-200">{filteredIdentitas.length}</strong> dari <strong className="text-slate-800 dark:text-slate-200">{identitasList.length}</strong> total anggota
+                </span>
+                {searchIdentitas && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-medium">
+                    Filter nama/jabatan: "{searchIdentitas}"
+                    <button
+                      onClick={() => setSearchIdentitas('')}
+                      className="hover:text-indigo-900 dark:hover:text-indigo-100 ml-0.5 cursor-pointer"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+              </div>
+              {(searchIdentitas || filterUmat !== 'all' || filterKeamanan !== 'all') && (
+                <button
+                  onClick={() => {
+                    setSearchIdentitas('');
+                    setFilterUmat('all');
+                    setFilterKeamanan('all');
+                  }}
+                  className="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold cursor-pointer"
+                >
+                  Reset Semua Filter
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* Active Selection Banner */}
+          {selectedIdentitasIds.length > 0 && (
+            <div className="bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs animate-in fade-in">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-indigo-900 dark:text-indigo-200">
+                  {selectedIdentitasIds.length} data anggota terpilih
+                </span>
+                {selectedIdentitasIds.length < filteredIdentitas.length && (
+                  <button
+                    onClick={handleSelectAllFiltered}
+                    className="text-indigo-600 dark:text-indigo-400 underline font-semibold hover:text-indigo-800 dark:hover:text-indigo-300 cursor-pointer"
+                  >
+                    Pilih seluruh {filteredIdentitas.length} anggota hasil filter
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleClearSelection}
+                  className="px-2.5 py-1 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium cursor-pointer"
+                >
+                  Batalkan Pilihan
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  className="flex items-center space-x-1 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Hapus Terpilih ({selectedIdentitasIds.length})</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Table */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
@@ -573,12 +694,13 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
                     <th className="p-3.5 w-10">
                       <input
                         type="checkbox"
-                        onChange={handleSelectAll}
-                        checked={selectedIdentitasIds.length === filteredIdentitas.length && filteredIdentitas.length > 0}
-                        className="rounded text-indigo-600 focus:ring-indigo-500"
+                        onChange={handleSelectAllCurrentPage}
+                        checked={isAllCurrentPageSelected}
+                        className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                        title={isAllCurrentPageSelected ? 'Batal pilih halaman ini' : 'Pilih semua di halaman ini'}
                       />
                     </th>
-                    <th className="p-3.5">Nama Lengkap & NIK</th>
+                    <th className="p-3.5">Nama & Jabatan / NIK</th>
                     <th className="p-3.5">Kontak / Kota</th>
                     <th className="p-3.5">Kategori / Status</th>
                     <th className="p-3.5">Badge Khusus</th>
@@ -586,19 +708,30 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {filteredIdentitas.map((item) => (
+                  {paginatedIdentitas.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
                       <td className="p-3.5">
                         <input
                           type="checkbox"
                           checked={selectedIdentitasIds.includes(item.id)}
                           onChange={() => handleToggleSelect(item.id)}
-                          className="rounded text-indigo-600 focus:ring-indigo-500"
+                          className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                         />
                       </td>
                       <td className="p-3.5">
-                        <div className="font-bold text-slate-900 dark:text-white">{item.nama_lengkap}</div>
-                        <div className="text-[11px] text-slate-500 font-mono">
+                        <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5 flex-wrap">
+                          <span>{item.nama_lengkap}</span>
+                          {item.panggilan && (
+                            <span className="text-[11px] text-slate-400 font-normal">({item.panggilan})</span>
+                          )}
+                        </div>
+                        {item.jabatan && (
+                          <div className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400 flex items-center gap-1 mt-0.5">
+                            <Briefcase className="w-3 h-3 shrink-0" />
+                            <span>{item.jabatan}</span>
+                          </div>
+                        )}
+                        <div className="text-[11px] text-slate-500 font-mono mt-0.5">
                           {item.jenis_identitas}: {item.nomor_identitas}
                         </div>
                       </td>
@@ -670,9 +803,50 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
                       </td>
                     </tr>
                   ))}
+                  {filteredIdentitas.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="p-12 text-center text-slate-400">
+                        <Users className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-700 mb-2" />
+                        <p className="font-semibold text-slate-600 dark:text-slate-400 text-sm">
+                          {searchIdentitas
+                            ? `Tidak ada data anggota dengan nama atau jabatan "${searchIdentitas}".`
+                            : 'Tidak ada data anggota yang sesuai dengan kriteria filter.'}
+                        </p>
+                        <p className="text-xs text-slate-400 mt-1">
+                          Coba ubah kata kunci pencarian nama atau jabatan, atau bersihkan filter.
+                        </p>
+                        {(searchIdentitas || filterUmat !== 'all' || filterKeamanan !== 'all') && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSearchIdentitas('');
+                              setFilterUmat('all');
+                              setFilterKeamanan('all');
+                            }}
+                            className="mt-3 inline-flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+                          >
+                            <span>Reset Pencarian & Filter</span>
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            {filteredIdentitas.length > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredIdentitas.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+                pageSizeOptions={[5, 10, 20, 50, 100]}
+                itemLabel="anggota"
+              />
+            )}
           </div>
         </div>
       )}

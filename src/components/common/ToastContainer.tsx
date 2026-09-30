@@ -38,26 +38,40 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [progress, setProgress] = useState(100);
   const duration = toast.duration || 5000;
+  const onDismissRef = useRef(onDismiss);
+
+  useEffect(() => {
+    onDismissRef.current = onDismiss;
+  }, [onDismiss]);
 
   useEffect(() => {
     if (isHovered) return;
 
-    const intervalTime = 50;
-    const step = (intervalTime / duration) * 100;
+    const startTime = Date.now();
+    const initialProgress = progress;
+    const remainingMs = Math.max(0, (initialProgress / 100) * duration);
 
-    const timer = setInterval(() => {
-      setProgress(prev => {
-        if (prev <= 0) {
-          clearInterval(timer);
-          onDismiss(toast.id);
-          return 0;
-        }
-        return Math.max(0, prev - step);
-      });
+    if (remainingMs <= 0) {
+      onDismissRef.current(toast.id);
+      return;
+    }
+
+    const dismissTimeout = setTimeout(() => {
+      onDismissRef.current(toast.id);
+    }, remainingMs);
+
+    const intervalTime = 50;
+    const progressInterval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const currentProgress = Math.max(0, initialProgress - (elapsed / duration) * 100);
+      setProgress(currentProgress);
     }, intervalTime);
 
-    return () => clearInterval(timer);
-  }, [isHovered, duration, toast.id, onDismiss]);
+    return () => {
+      clearTimeout(dismissTimeout);
+      clearInterval(progressInterval);
+    };
+  }, [isHovered, duration, toast.id]);
 
   const getIcon = () => {
     switch (toast.type) {

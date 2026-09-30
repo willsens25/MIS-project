@@ -32,10 +32,20 @@ import {
   Wallet,
   FileCheck,
   Truck,
-  Printer
+  Printer,
+  Shield,
+  ShieldAlert,
+  SlidersHorizontal,
+  Flame
 } from 'lucide-react';
 import { MascotAvatar } from '../MascotAvatar';
 import { PRESET_LOCATIONS, LocationCoordinates } from '../../lib/solarCalculator';
+import {
+  NIGHT_SHIFT_PRESETS,
+  getNightShiftStatusText,
+  DEFAULT_NIGHT_SHIFT_CONFIG
+} from '../../lib/nightShiftHelper';
+import { NightShiftPreset, NightShiftScheduleType } from '../../types';
 
 interface UserSettingsModalProps {
   isOpen: boolean;
@@ -61,7 +71,12 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
     refreshSolarSchedule,
     autoThemeLocation,
     setAutoThemeLocation,
-    simulateToastNotification
+    simulateToastNotification,
+    nightShift,
+    isNightShiftActive,
+    updateNightShift,
+    toggleNightShift,
+    setNightShiftPreset
   } = useApp();
 
   const [toastNotice, setToastNotice] = useState<string | null>(null);
@@ -206,7 +221,8 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
       mascotIdleAnimationEnabled: true,
       themeMode: 'system-synced',
     });
-    showToast('🔄 Preferensi Maskot AI & Tema dikembalikan ke setelan default (System-Synced)');
+    updateNightShift(DEFAULT_NIGHT_SHIFT_CONFIG);
+    showToast('🔄 Preferensi Maskot AI, Tema, & Night Shift dikembalikan ke setelan default');
   };
 
   return createPortal(
@@ -533,6 +549,408 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                 </div>
               </motion.div>
             )}
+          </div>
+
+          {/* SECTION: Night Shift Mode (Kenyamanan Mata & Lembur) */}
+          <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-amber-50/70 via-orange-50/40 to-amber-50/20 dark:from-amber-950/30 dark:via-slate-900/50 dark:to-orange-950/20 border border-amber-300/80 dark:border-amber-700/60 shadow-xs space-y-4">
+            {/* Header & Status Indicator */}
+            <div className="flex items-start justify-between">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/30 shrink-0">
+                  <Moon className="w-5 h-5 fill-amber-400/30" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>Night Shift Mode (Mode Lembur)</span>
+                    <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded-md bg-amber-500 text-slate-950 uppercase">
+                      Eye-Care
+                    </span>
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Menyesuaikan suhu warna (amber) dan meredam kontras dashboard secara otomatis saat lembur
+                  </p>
+                </div>
+              </div>
+
+              {/* Master Power Toggle Button */}
+              <button
+                type="button"
+                onClick={toggleNightShift}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-500 ${
+                  nightShift.enabled ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-700'
+                }`}
+                role="switch"
+                aria-checked={nightShift.enabled}
+              >
+                <span className="sr-only">Toggle Night Shift</span>
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                    nightShift.enabled ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Status Pill & Explanation */}
+            {(() => {
+              const status = getNightShiftStatusText(
+                nightShift,
+                isNightShiftActive,
+                new Date(),
+                solarSchedule ? solarSchedule.isDaytime : true
+              );
+              return (
+                <div className="p-3 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-amber-200 dark:border-amber-800/60 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2.5">
+                    <span className={`w-2.5 h-2.5 rounded-full ${status.indicatorColor} shrink-0`} />
+                    <div>
+                      <span className="font-bold text-slate-800 dark:text-slate-200">
+                        {status.title}
+                      </span>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        {status.subtitle}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-lg shrink-0 border border-amber-200 dark:border-amber-800">
+                    {nightShift.warmth}% Amber • {nightShift.contrast}% Kontras
+                  </span>
+                </div>
+              );
+            })()}
+
+            {/* Schedule Type Selection (Berdasarkan Jam Lembur vs Matahari vs Manual) */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <span>Pemicu & Penjadwalan Otomatis Mode Lembur:</span>
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {/* Option 1: Fixed Overtime Hours (19:00 - 06:00) */}
+                <button
+                  type="button"
+                  onClick={() => updateNightShift({ autoOvertime: true, scheduleType: 'overtime-hours', enabled: true })}
+                  className={`p-3 rounded-2xl text-left border transition-all cursor-pointer flex flex-col justify-between ${
+                    nightShift.autoOvertime && nightShift.scheduleType === 'overtime-hours'
+                      ? 'bg-amber-100/90 dark:bg-amber-950/70 border-amber-400 dark:border-amber-600 text-amber-950 dark:text-amber-100 ring-2 ring-amber-400/20'
+                      : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 hover:border-slate-300 text-slate-700 dark:text-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-bold flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-amber-600" />
+                      Jam Lembur Terjadwal
+                    </span>
+                    {nightShift.autoOvertime && nightShift.scheduleType === 'overtime-hours' && (
+                      <Check className="w-3.5 h-3.5 text-amber-600 font-bold" />
+                    )}
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Aktif otomatis saat jam lembur: <strong>{nightShift.startTime} - {nightShift.endTime}</strong>
+                  </div>
+                </button>
+
+                {/* Option 2: Sunset to Sunrise */}
+                <button
+                  type="button"
+                  onClick={() => updateNightShift({ autoOvertime: true, scheduleType: 'sunset-to-sunrise', enabled: true })}
+                  className={`p-3 rounded-2xl text-left border transition-all cursor-pointer flex flex-col justify-between ${
+                    nightShift.autoOvertime && nightShift.scheduleType === 'sunset-to-sunrise'
+                      ? 'bg-amber-100/90 dark:bg-amber-950/70 border-amber-400 dark:border-amber-600 text-amber-950 dark:text-amber-100 ring-2 ring-amber-400/20'
+                      : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 hover:border-slate-300 text-slate-700 dark:text-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-bold flex items-center gap-1.5">
+                      <Sunset className="w-3.5 h-3.5 text-amber-600" />
+                      Matahari Terbenam ke Terbit
+                    </span>
+                    {nightShift.autoOvertime && nightShift.scheduleType === 'sunset-to-sunrise' && (
+                      <Check className="w-3.5 h-3.5 text-amber-600 font-bold" />
+                    )}
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Sinkron otomatis sensor matahari ({solarSchedule ? `${solarSchedule.sunsetFormatted} - ${solarSchedule.sunriseFormatted}` : 'Malam'})
+                  </div>
+                </button>
+
+                {/* Option 3: Always On Dark Theme */}
+                <button
+                  type="button"
+                  onClick={() => updateNightShift({ autoOvertime: true, scheduleType: 'always-on-dark', enabled: true })}
+                  className={`p-3 rounded-2xl text-left border transition-all cursor-pointer flex flex-col justify-between ${
+                    nightShift.autoOvertime && nightShift.scheduleType === 'always-on-dark'
+                      ? 'bg-amber-100/90 dark:bg-amber-950/70 border-amber-400 dark:border-amber-600 text-amber-950 dark:text-amber-100 ring-2 ring-amber-400/20'
+                      : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 hover:border-slate-300 text-slate-700 dark:text-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-bold flex items-center gap-1.5">
+                      <Moon className="w-3.5 h-3.5 text-amber-600" />
+                      Selalu Aktif Saat Tema Gelap
+                    </span>
+                    {nightShift.autoOvertime && nightShift.scheduleType === 'always-on-dark' && (
+                      <Check className="w-3.5 h-3.5 text-amber-600 font-bold" />
+                    )}
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Otomatis redam kontras ketika mode gelap diaktifkan
+                  </div>
+                </button>
+
+                {/* Option 4: Manual Only */}
+                <button
+                  type="button"
+                  onClick={() => updateNightShift({ autoOvertime: false, scheduleType: 'manual' })}
+                  className={`p-3 rounded-2xl text-left border transition-all cursor-pointer flex flex-col justify-between ${
+                    !nightShift.autoOvertime
+                      ? 'bg-amber-100/90 dark:bg-amber-950/70 border-amber-400 dark:border-amber-600 text-amber-950 dark:text-amber-100 ring-2 ring-amber-400/20'
+                      : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 hover:border-slate-300 text-slate-700 dark:text-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-bold flex items-center gap-1.5">
+                      <Sliders className="w-3.5 h-3.5 text-amber-600" />
+                      Manual Sepenuhnya
+                    </span>
+                    {!nightShift.autoOvertime && (
+                      <Check className="w-3.5 h-3.5 text-amber-600 font-bold" />
+                    )}
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Hanya aktif saat sakelar utama dinyalakan secara manual
+                  </div>
+                </button>
+              </div>
+
+              {/* Time Inputs for Overtime Hours */}
+              {nightShift.autoOvertime && nightShift.scheduleType === 'overtime-hours' && (
+                <div className="p-3 rounded-2xl bg-white/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 flex flex-wrap items-center gap-3 text-xs mt-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-semibold text-slate-600 dark:text-slate-300">Mulai Lembur:</span>
+                    <input
+                      type="time"
+                      value={nightShift.startTime}
+                      onChange={(e) => updateNightShift({ startTime: e.target.value })}
+                      className="px-2 py-1 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 font-mono text-xs text-slate-800 dark:text-slate-200"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-semibold text-slate-600 dark:text-slate-300">Selesai Lembur:</span>
+                    <input
+                      type="time"
+                      value={nightShift.endTime}
+                      onChange={(e) => updateNightShift({ endTime: e.target.value })}
+                      className="px-2 py-1 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 font-mono text-xs text-slate-800 dark:text-slate-200"
+                    />
+                  </div>
+                  <span className="text-[10px] text-slate-400 italic">
+                    (Default jam kerja yayasan: 19:00 malam s/d 06:00 pagi)
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Presets Grid */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                <span>Pilih Profil Preset Kenyamanan Mata:</span>
+                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-mono">
+                  Suhu Warna: {NIGHT_SHIFT_PRESETS[nightShift.preset]?.colorTempKelvin}
+                </span>
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {(['balanced', 'deep-night', 'paper-reading', 'minimal'] as NightShiftPreset[]).map((presetId) => {
+                  const p = NIGHT_SHIFT_PRESETS[presetId];
+                  const isSelected = nightShift.preset === presetId;
+                  return (
+                    <button
+                      key={presetId}
+                      type="button"
+                      onClick={() => setNightShiftPreset(presetId)}
+                      className={`p-3 rounded-2xl text-left border transition-all cursor-pointer flex flex-col justify-between ${
+                        isSelected
+                          ? 'bg-amber-100/90 dark:bg-amber-950/70 border-amber-400 dark:border-amber-600 text-amber-950 dark:text-amber-100 ring-2 ring-amber-400/20 shadow-xs'
+                          : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 hover:border-slate-300 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-bold flex items-center gap-1.5">
+                          <span>{p.name}</span>
+                          <span className={`text-[9px] px-1.5 py-0.2 rounded font-medium ${p.badgeColor}`}>
+                            {p.subtitle}
+                          </span>
+                        </span>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-amber-600 font-bold" />}
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight mb-2">
+                        {p.description}
+                      </p>
+                      <div className="text-[10px] font-mono text-amber-700 dark:text-amber-400 flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-700/60">
+                        <span>Hangat: {p.warmth}%</span>
+                        <span>Kontras: {p.contrast}%</span>
+                        <span>Suhu: {p.colorTempKelvin}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Fine Tuning Sliders */}
+            <div className="p-4 rounded-2xl bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 space-y-3.5">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                <span className="flex items-center gap-1.5">
+                  <SlidersHorizontal className="w-4 h-4 text-amber-500" />
+                  Kustomisasi Slider Presisi
+                </span>
+                <span className="text-[10px] text-slate-400 font-normal">
+                  (Menggeser slider otomatis memilih profil 'Kustom')
+                </span>
+              </div>
+
+              {/* Slider 1: Kehangatan Warna / Amber */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                    <Sun className="w-3.5 h-3.5 text-amber-500" />
+                    Intensitas Kehangatan (Reduksi Cahaya Biru):
+                  </span>
+                  <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                    {nightShift.warmth}% ({NIGHT_SHIFT_PRESETS[nightShift.preset]?.colorTempKelvin || 'Kustom'})
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value={nightShift.warmth}
+                  onChange={(e) => updateNightShift({ warmth: Number(e.target.value), preset: 'custom' })}
+                  className="w-full accent-amber-500 cursor-pointer h-2 bg-gradient-to-r from-sky-200 via-amber-200 to-orange-400 dark:from-sky-900 dark:via-amber-800 dark:to-orange-700 rounded-lg"
+                />
+                <div className="flex justify-between text-[9.5px] text-slate-400">
+                  <span>6500K (Cerah Dingin)</span>
+                  <span>4500K (Hangat Alami)</span>
+                  <span>3200K (Amber Intensif)</span>
+                </div>
+              </div>
+
+              {/* Slider 2: Dashboard Contrast Softening */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                    <Sliders className="w-3.5 h-3.5 text-indigo-500" />
+                    Kontras Dashboard (Anti-Silau / Easing Halus):
+                  </span>
+                  <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                    {nightShift.contrast}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="70"
+                  max="100"
+                  step="2"
+                  value={nightShift.contrast}
+                  onChange={(e) => updateNightShift({ contrast: Number(e.target.value), preset: 'custom' })}
+                  className="w-full accent-indigo-500 cursor-pointer h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
+                />
+                <div className="flex justify-between text-[9.5px] text-slate-400">
+                  <span>70% (Kontras Sangat Teduh)</span>
+                  <span>88% (Rekomendasi Lembur)</span>
+                  <span>100% (Kontras Standar Tajam)</span>
+                </div>
+              </div>
+
+              {/* Slider 3: Backlight Brightness Dimming */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                    <Flame className="w-3.5 h-3.5 text-orange-500" />
+                    Kecerahan Tampilan (Dimming Layar Lembut):
+                  </span>
+                  <span className="font-mono font-bold text-orange-600 dark:text-orange-400">
+                    {nightShift.brightness}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="70"
+                  max="100"
+                  step="2"
+                  value={nightShift.brightness}
+                  onChange={(e) => updateNightShift({ brightness: Number(e.target.value), preset: 'custom' })}
+                  className="w-full accent-orange-500 cursor-pointer h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
+                />
+                <div className="flex justify-between text-[9.5px] text-slate-400">
+                  <span>70% (Meredupkan Backlight)</span>
+                  <span>95% (Ideal Ruangan Temaram)</span>
+                  <span>100% (Maksimal)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Live Interactive Preview Box */}
+            <div className="p-3.5 rounded-2xl bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-2">
+              <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Eye className="w-3.5 h-3.5 text-amber-500" />
+                Pratinjau Efek Kenyamanan Mata Pada Data Dashboard:
+              </span>
+              <div
+                className="p-3 rounded-xl border border-slate-300 dark:border-slate-700 transition-all duration-300"
+                style={{
+                  filter: `sepia(${(nightShift.warmth / 100) * 0.42}) hue-rotate(${-(nightShift.warmth / 100) * 12}deg) contrast(${nightShift.contrast / 100}) brightness(${nightShift.brightness / 100})`,
+                  backgroundColor: theme === 'dark' ? '#0f172a' : '#ffffff'
+                }}
+              >
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-700">
+                  <div>
+                    <div className="text-xs font-bold text-slate-900 dark:text-white">
+                      Katalog Naskah: Lamrim Chenmo Vol. 1
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Stok Tersedia: 142 eksemplar • HPP Rp 45.000
+                    </div>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-800">
+                    Rp 120.000
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">
+                  Pratinjau visual menunjukkan bagaimana kontras tajam LED putih diredam secara lembut menjadi nada amber hangat papirus yang bersahabat untuk retina mata saat bekerja lembur.
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Action Buttons */}
+            <div className="flex items-center justify-between pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  updateNightShift(DEFAULT_NIGHT_SHIFT_CONFIG);
+                  showToast('🔄 Night Shift Mode dikembalikan ke profil default (Lembur Seimbang 45%)');
+                }}
+                className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1 cursor-pointer font-medium"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Reset ke Standar Lembur</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  updateNightShift({ enabled: true });
+                  showToast('🌙 Efek Night Shift Mode aktif seketika pada seluruh layar dashboard.');
+                }}
+                className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Uji Tampilan Sekarang</span>
+              </button>
+            </div>
           </div>
 
           {/* SECTION 2: Mascot AI Interactive Live Preview Box */}

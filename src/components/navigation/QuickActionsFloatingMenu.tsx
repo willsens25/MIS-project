@@ -25,7 +25,9 @@ import {
   ArrowUpRight,
   CornerDownLeft,
   AlertTriangle,
-  ScanBarcode
+  ScanBarcode,
+  Scale,
+  RefreshCw
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { DivisionId } from '../../types';
@@ -266,6 +268,30 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
     },
 
     // Quick Submenu Navigation
+    {
+      id: 'nav-keuangan-rekonsiliasi',
+      title: 'Buka Rekonsiliasi Bank',
+      description: 'Pencocokan saldo buku kas yayasan dengan rekening koran bank',
+      category: 'navigation',
+      icon: RefreshCw,
+      action: () => {
+        switchDivision(2, 'rekonsiliasi');
+        setIsOpen(false);
+      },
+      keywords: ['rekonsiliasi', 'bank', 'rekening', 'koran', 'keuangan', 'bca', 'mandiri', 'matching'],
+    },
+    {
+      id: 'nav-keuangan-laporan-psak',
+      title: 'Buka Laporan Keuangan Standar (PSAK / ISAK 35)',
+      description: 'Lihat Neraca Posisi Keuangan, Laporan Aktivitas, dan Arus Kas',
+      category: 'navigation',
+      icon: Scale,
+      action: () => {
+        switchDivision(2, 'laporan');
+        setIsOpen(false);
+      },
+      keywords: ['laporan', 'keuangan', 'psak', 'isak35', 'neraca', 'labarugi', 'aruskas', 'aktivitas'],
+    },
     {
       id: 'nav-keuangan-persetujuan',
       title: 'Buka Tabel Persetujuan Keuangan',

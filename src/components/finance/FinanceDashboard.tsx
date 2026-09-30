@@ -21,7 +21,9 @@ import {
   AlertCircle,
   TrendingUp,
   X,
-  Check
+  Check,
+  Scale,
+  RefreshCw
 } from 'lucide-react';
 import { FinanceCharts } from '../charts/FinanceCharts';
 import { SixMonthCashFlowBarChart } from '../charts/SixMonthCashFlowBarChart';
@@ -33,9 +35,11 @@ import { DownloadPdfButton } from '../common/DownloadPdfButton';
 import { exportDataToCsv, getCsvDateStamp } from '../../utils/exportCsv';
 import { formatLogDateTime } from '../../utils/greetingUtils';
 import { RupiahInput } from '../common/RupiahInput';
+import { BankReconciliationView } from './BankReconciliationView';
+import { FinancialReportsView } from './FinancialReportsView';
 
 interface FinanceDashboardProps {
-  initialSubTab?: 'grafik' | 'mutasi' | 'persetujuan' | 'penjualan' | 'akun';
+  initialSubTab?: 'grafik' | 'mutasi' | 'persetujuan' | 'penjualan' | 'akun' | 'rekonsiliasi' | 'laporan';
 }
 
 export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTab }) => {
@@ -56,14 +60,15 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
     bulkDeletePengajuanCetak,
     penjualans,
     books,
+    bankStatements,
     currentSubTab,
     setCurrentSubTab
   } = useApp();
 
-  const activeSubTab = (['grafik', 'mutasi', 'persetujuan', 'penjualan', 'akun'].includes(currentSubTab)
+  const activeSubTab = (['grafik', 'mutasi', 'persetujuan', 'penjualan', 'akun', 'rekonsiliasi', 'laporan'].includes(currentSubTab)
     ? currentSubTab
-    : 'grafik') as 'grafik' | 'mutasi' | 'persetujuan' | 'penjualan' | 'akun';
-  const setActiveSubTab = (tab: 'grafik' | 'mutasi' | 'persetujuan' | 'penjualan' | 'akun') => setCurrentSubTab(tab);
+    : 'grafik') as 'grafik' | 'mutasi' | 'persetujuan' | 'penjualan' | 'akun' | 'rekonsiliasi' | 'laporan';
+  const setActiveSubTab = (tab: 'grafik' | 'mutasi' | 'persetujuan' | 'penjualan' | 'akun' | 'rekonsiliasi' | 'laporan') => setCurrentSubTab(tab);
 
   useEffect(() => {
     if (initialSubTab) {
@@ -257,6 +262,8 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
       case 'persetujuan': return pengajuans.length;
       case 'penjualan': return penjualans.length;
       case 'akun': return accounts.length;
+      case 'rekonsiliasi': return bankStatements.length;
+      case 'laporan': return undefined;
       default: return undefined;
     }
   };
@@ -267,6 +274,8 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
       case 'persetujuan': return 'Persetujuan Anggaran Cetak';
       case 'penjualan': return 'Rekapitulasi Penjualan';
       case 'akun': return 'Akun Kas & Bank';
+      case 'rekonsiliasi': return 'Rekonsiliasi Bank';
+      case 'laporan': return 'Laporan Keuangan PSAK';
       default: return 'Finansial';
     }
   };
@@ -404,7 +413,11 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
             ? 'Persetujuan Pengajuan Anggaran Cetak'
             : activeSubTab === 'penjualan'
             ? 'Rekapitulasi Penjualan Buku'
-            : 'Daftar Akun Kas & Bank'
+            : activeSubTab === 'akun'
+            ? 'Daftar Akun Kas & Bank'
+            : activeSubTab === 'rekonsiliasi'
+            ? 'Rekonsiliasi Kas & Rekening Koran Bank'
+            : 'Laporan Keuangan Standar Yayasan (PSAK / SAK ETAP)'
         }
       />
 
@@ -519,6 +532,38 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
           >
             <CreditCard className="w-3.5 h-3.5" />
             <span>Akun Kas & Bank ({accounts.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('rekonsiliasi')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              activeSubTab === 'rekonsiliasi'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Rekonsiliasi Bank</span>
+            {bankStatements.length > 0 && (
+              <span className="bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold px-1.5 py-0.2 rounded-full text-[10px]">
+                {bankStatements.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('laporan')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              activeSubTab === 'laporan'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Scale className="w-3.5 h-3.5" />
+            <span>Laporan Standar PSAK</span>
+            <span className="bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold px-1.5 py-0.2 rounded-full text-[10px]">
+              ISAK 35
+            </span>
           </button>
         </div>
 
@@ -1244,6 +1289,16 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
             </div>
           </div>
         </div>
+      )}
+
+      {/* REKONSILIASI BANK SUB TAB */}
+      {activeSubTab === 'rekonsiliasi' && (
+        <BankReconciliationView />
+      )}
+
+      {/* LAPORAN KEUANGAN STANDAR PSAK SUB TAB */}
+      {activeSubTab === 'laporan' && (
+        <FinancialReportsView />
       )}
 
       {/* Mutasi Modal */}
