@@ -14,6 +14,7 @@ import {
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
+import { DivisionCalendarTodoView } from '../common/DivisionCalendarTodoView';
 
 export const ProduksiDashboard: React.FC = () => {
   const {
@@ -25,10 +26,10 @@ export const ProduksiDashboard: React.FC = () => {
     setCurrentSubTab
   } = useApp();
 
-  const activeSubTab = (['overview', 'input', 'logs'].includes(currentSubTab)
+  const activeSubTab = (['overview', 'input', 'logs', 'kalender'].includes(currentSubTab)
     ? currentSubTab
-    : 'overview') as 'overview' | 'input' | 'logs';
-  const setActiveSubTab = (tab: 'overview' | 'input' | 'logs') => setCurrentSubTab(tab);
+    : 'overview') as 'overview' | 'input' | 'logs' | 'kalender';
+  const setActiveSubTab = (tab: 'overview' | 'input' | 'logs' | 'kalender') => setCurrentSubTab(tab);
 
   const [selectedBookId, setSelectedBookId] = useState<number>(books[0]?.id || 1);
   const [qtyProduksi, setQtyProduksi] = useState<number>(100);
@@ -85,6 +86,8 @@ export const ProduksiDashboard: React.FC = () => {
             ? 'Pusat Cetak & Ringkasan Produksi'
             : activeSubTab === 'input'
             ? 'Pencatatan Hasil Cetak Eksemplar'
+            : activeSubTab === 'kalender'
+            ? 'Kalender Kerja & To-Do List Direktorat Produksi'
             : 'Riwayat Batch Log Produksi Percetakan'
         }
       />
@@ -153,6 +156,18 @@ export const ProduksiDashboard: React.FC = () => {
           >
             <History className="w-3.5 h-3.5" />
             <span>Riwayat Log Produksi ({productionLogs.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('kalender')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeSubTab === 'kalender'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Kalender & To-Do</span>
           </button>
         </div>
 
@@ -304,6 +319,11 @@ export const ProduksiDashboard: React.FC = () => {
             </table>
           </div>
         </div>
+        )}
+
+        {/* KALENDER & TO-DO LIST PRODUKSI SUB TAB */}
+        {activeSubTab === 'kalender' && (
+          <DivisionCalendarTodoView divisionId={5} />
         )}
 
       </div>

@@ -23,6 +23,7 @@ import {
   FileSpreadsheet,
   Award,
   Briefcase,
+  Calendar,
   X
 } from 'lucide-react';
 import { IdentitasModal } from '../modals/IdentitasModal';
@@ -35,9 +36,10 @@ import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
 import { ConfigurableDashboardGrid } from '../dashboard-layout/ConfigurableDashboardGrid';
 import { Pagination } from '../common/Pagination';
+import { DirektoratCalendarTodoTab } from './DirektoratCalendarTodoTab';
 
 interface DirektoratDashboardProps {
-  initialSubTab?: 'overview' | 'identitas' | 'users';
+  initialSubTab?: 'overview' | 'identitas' | 'users' | 'kalender';
 }
 
 export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initialSubTab }) => {
@@ -60,10 +62,10 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
     setCurrentSubTab
   } = useApp();
 
-  const activeSubTab = (['overview', 'identitas', 'users'].includes(currentSubTab)
+  const activeSubTab = (['overview', 'identitas', 'users', 'kalender'].includes(currentSubTab)
     ? currentSubTab
-    : 'overview') as 'overview' | 'identitas' | 'users';
-  const setActiveSubTab = (tab: 'overview' | 'identitas' | 'users') => setCurrentSubTab(tab);
+    : 'overview') as 'overview' | 'identitas' | 'users' | 'kalender';
+  const setActiveSubTab = (tab: 'overview' | 'identitas' | 'users' | 'kalender') => setCurrentSubTab(tab);
 
   useEffect(() => {
     if (initialSubTab) {
@@ -309,16 +311,18 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
             ? 'Executive Summary & Analisis'
             : activeSubTab === 'identitas'
             ? 'Database Master Anggota & Identitas'
+            : activeSubTab === 'kalender'
+            ? 'Kalender Kerja 12 Bulan & To-Do List'
             : 'Daftar Pengguna & Tim Operasional'
         }
       />
 
       {/* Sub navigation tabs */}
       <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
-        <div className="flex items-center space-x-1.5 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl">
+        <div className="flex flex-wrap items-center gap-1.5 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl">
           <button
             onClick={() => setActiveSubTab('overview')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'overview'
                 ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -330,7 +334,7 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
 
           <button
             onClick={() => setActiveSubTab('identitas')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'identitas'
                 ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -341,8 +345,20 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
           </button>
 
           <button
+            onClick={() => setActiveSubTab('kalender')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeSubTab === 'kalender'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Kalender & To-Do List</span>
+          </button>
+
+          <button
             onClick={() => setActiveSubTab('users')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'users'
                 ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -850,6 +866,9 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
           </div>
         </div>
       )}
+
+      {/* KALENDER & TO-DO LIST 12 BULAN SUB TAB */}
+      {activeSubTab === 'kalender' && <DirektoratCalendarTodoTab />}
 
       {/* MANAJEMEN USER SUB TAB */}
       {activeSubTab === 'users' && (

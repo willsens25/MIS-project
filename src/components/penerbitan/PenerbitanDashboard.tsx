@@ -23,12 +23,14 @@ import {
   FileSpreadsheet,
   Heart,
   Sparkles,
-  Award
+  Award,
+  Calendar
 } from 'lucide-react';
 import { PenerbitanCharts } from '../charts/PenerbitanCharts';
 import { UnitEconomicsAnalysis } from './UnitEconomicsAnalysis';
 import { DonasiSponsorshipTab } from './DonasiSponsorshipTab';
 import { RoyaltiPenerbitanTab } from './RoyaltiPenerbitanTab';
+import { DivisionCalendarTodoView } from '../common/DivisionCalendarTodoView';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { BarcodeScannerModal } from '../modals/BarcodeScannerModal';
 import { DataImportExportModal } from '../modals/DataImportExportModal';
@@ -59,10 +61,10 @@ export const PenerbitanDashboard: React.FC = () => {
   } = useApp();
 
   const [searchBook, setSearchBook] = useState('');
-  const activeSubTab = (['katalog', 'ekonomi', 'donasi_cetak', 'royalti', 'grafik', 'pengajuan'].includes(currentSubTab)
+  const activeSubTab = (['katalog', 'ekonomi', 'donasi_cetak', 'royalti', 'grafik', 'pengajuan', 'kalender'].includes(currentSubTab)
     ? currentSubTab
-    : 'katalog') as 'katalog' | 'ekonomi' | 'donasi_cetak' | 'royalti' | 'grafik' | 'pengajuan';
-  const setActiveSubTab = (tab: 'katalog' | 'ekonomi' | 'donasi_cetak' | 'royalti' | 'grafik' | 'pengajuan') => setCurrentSubTab(tab);
+    : 'katalog') as 'katalog' | 'ekonomi' | 'donasi_cetak' | 'royalti' | 'grafik' | 'pengajuan' | 'kalender';
+  const setActiveSubTab = (tab: 'katalog' | 'ekonomi' | 'donasi_cetak' | 'royalti' | 'grafik' | 'pengajuan' | 'kalender') => setCurrentSubTab(tab);
   const [selectedBookIds, setSelectedBookIds] = useState<number[]>([]);
   const [selectedPengajuanIds, setSelectedPengajuanIds] = useState<number[]>([]);
   
@@ -256,6 +258,8 @@ export const PenerbitanDashboard: React.FC = () => {
             ? 'Analisis Unit Ekonomi Buku & Margin Laba'
             : activeSubTab === 'grafik'
             ? 'Grafik Stok & Analisis Valuasi'
+            : activeSubTab === 'kalender'
+            ? 'Kalender Kerja & To-Do List Direktorat Penerbitan'
             : 'Riwayat Pengajuan Anggaran Cetak'
         }
       />
@@ -406,7 +410,24 @@ export const PenerbitanDashboard: React.FC = () => {
           <FileText className="w-3.5 h-3.5" />
           <span>Riwayat Pengajuan Cetak ({pengajuans.length})</span>
         </button>
+
+        <button
+          onClick={() => setActiveSubTab('kalender')}
+          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            activeSubTab === 'kalender'
+              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          }`}
+        >
+          <Calendar className="w-3.5 h-3.5" />
+          <span>Kalender & To-Do</span>
+        </button>
       </div>
+
+      {/* KALENDER & TO-DO LIST PENERBITAN VIEW */}
+      {activeSubTab === 'kalender' && (
+        <DivisionCalendarTodoView divisionId={3} />
+      )}
 
       {/* FASHILI & DONASI CETAK VIEW */}
       {activeSubTab === 'donasi_cetak' && (

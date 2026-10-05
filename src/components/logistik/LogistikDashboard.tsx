@@ -21,7 +21,8 @@ import {
   ArrowUpRight,
   Filter,
   ScanBarcode,
-  MessageSquare
+  MessageSquare,
+  Calendar
 } from 'lucide-react';
 import { SuratJalanPrintModal } from '../modals/SuratJalanPrintModal';
 import { ConfirmModal } from '../modals/ConfirmModal';
@@ -33,6 +34,7 @@ import { PrintReportHeader } from '../common/PrintReportHeader';
 import { ExportCsvButton } from '../common/ExportCsvButton';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
 import { exportDataToCsv, getCsvDateStamp } from '../../utils/exportCsv';
+import { DivisionCalendarTodoView } from '../common/DivisionCalendarTodoView';
 
 export const LogistikDashboard: React.FC = () => {
   const {
@@ -48,10 +50,10 @@ export const LogistikDashboard: React.FC = () => {
     setCurrentSubTab
   } = useApp();
 
-  const activeSubTab = (['antrean', 'manual', 'logs'].includes(currentSubTab)
+  const activeSubTab = (['antrean', 'manual', 'logs', 'kalender'].includes(currentSubTab)
     ? currentSubTab
-    : 'antrean') as 'antrean' | 'manual' | 'logs';
-  const setActiveSubTab = (tab: 'antrean' | 'manual' | 'logs') => setCurrentSubTab(tab);
+    : 'antrean') as 'antrean' | 'manual' | 'logs' | 'kalender';
+  const setActiveSubTab = (tab: 'antrean' | 'manual' | 'logs' | 'kalender') => setCurrentSubTab(tab);
 
   // Bulk delete selection states
   const [selectedLogIds, setSelectedLogIds] = useState<number[]>([]);
@@ -451,6 +453,8 @@ export const LogistikDashboard: React.FC = () => {
             ? 'Antrean Packing & Pengiriman Pesanan'
             : activeSubTab === 'manual'
             ? 'Pengeluaran Manual Stok Gudang'
+            : activeSubTab === 'kalender'
+            ? 'Kalender Kerja & To-Do List Direktorat Logistik'
             : 'Riwayat Logistik & Distribusi Keluar'
         }
       />
@@ -497,6 +501,18 @@ export const LogistikDashboard: React.FC = () => {
           >
             <History className="w-3.5 h-3.5" />
             <span>Riwayat Pengeluaran ({logisticLogs.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('kalender')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeSubTab === 'kalender'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Kalender & To-Do</span>
           </button>
         </div>
 
@@ -1100,6 +1116,11 @@ export const LogistikDashboard: React.FC = () => {
             </table>
           </div>
         </div>
+      )}
+
+      {/* KALENDER & TO-DO LIST LOGISTIK SUB TAB */}
+      {activeSubTab === 'kalender' && (
+        <DivisionCalendarTodoView divisionId={6} />
       )}
 
       {/* Surat Jalan Modal */}

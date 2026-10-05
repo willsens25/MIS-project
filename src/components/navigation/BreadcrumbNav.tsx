@@ -80,6 +80,13 @@ export const NAVIGATION_CONFIG: Record<DivisionId, DivisionNavConfig> = {
         description: 'Master identitas umat, simpatisan & agen'
       },
       {
+        id: 'kalender',
+        name: 'Kalender & To-Do List',
+        shortName: 'Kalender 12 Bulan',
+        icon: Calendar,
+        description: 'Kalender kerja 12 bulan, buat event & delegasi PIC'
+      },
+      {
         id: 'users',
         name: 'Manajemen Pengguna',
         shortName: 'Pengguna Sistem',
@@ -130,6 +137,13 @@ export const NAVIGATION_CONFIG: Record<DivisionId, DivisionNavConfig> = {
         shortName: 'Rekening Bank',
         icon: Building,
         description: 'Daftar buku tabungan & dompet kas operasional'
+      },
+      {
+        id: 'kalender',
+        name: 'Kalender & To-Do Finance',
+        shortName: 'Kalender & To-Do',
+        icon: Calendar,
+        description: 'Jadwal tutup buku, audit kas & penetapan PIC'
       }
     ]
   },
@@ -182,6 +196,13 @@ export const NAVIGATION_CONFIG: Record<DivisionId, DivisionNavConfig> = {
         shortName: 'Riwayat Pengajuan',
         icon: Printer,
         description: 'Permohonan cetak ulang buku ke Finance'
+      },
+      {
+        id: 'kalender',
+        name: 'Kalender & To-Do Penerbitan',
+        shortName: 'Kalender & To-Do',
+        icon: Calendar,
+        description: 'Jadwal naskah, ISBN & penetapan PIC redaksi'
       }
     ]
   },
@@ -255,6 +276,13 @@ export const NAVIGATION_CONFIG: Record<DivisionId, DivisionNavConfig> = {
         shortName: 'Sahabat Member',
         icon: Crown,
         description: 'Program loyalitas pembaca, tingkatan keanggotaan & kartu digital'
+      },
+      {
+        id: 'kalender',
+        name: 'Kalender & To-Do Marketing',
+        shortName: 'Kalender & To-Do',
+        icon: Calendar,
+        description: 'Jadwal bazar, kampanye PO & penetapan PIC'
       }
     ]
   },
@@ -286,6 +314,13 @@ export const NAVIGATION_CONFIG: Record<DivisionId, DivisionNavConfig> = {
         shortName: 'Log Percetakan',
         icon: History,
         description: 'Histori kuantitas eksemplar yang telah selesai'
+      },
+      {
+        id: 'kalender',
+        name: 'Kalender & To-Do Produksi',
+        shortName: 'Kalender & To-Do',
+        icon: Calendar,
+        description: 'Jadwal naik cetak, QC & penetapan PIC pabrikasi'
       }
     ]
   },
@@ -317,6 +352,13 @@ export const NAVIGATION_CONFIG: Record<DivisionId, DivisionNavConfig> = {
         shortName: 'Log Pengeluaran',
         icon: History,
         description: 'Catatan surat jalan & nomor resi pengiriman'
+      },
+      {
+        id: 'kalender',
+        name: 'Kalender & To-Do Logistik',
+        shortName: 'Kalender & To-Do',
+        icon: Calendar,
+        description: 'Jadwal pengiriman kargo, stock opname & PIC gudang'
       }
     ]
   }

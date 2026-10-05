@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
+import { getStoredCalendarEvents, getDeadlineInfo } from './common/DivisionCalendarTodoView';
 import {
   Bell,
   AlertTriangle,
@@ -65,6 +66,14 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Listen to calendar updates to refresh deadline alerts
+  const [calendarVersion, setCalendarVersion] = useState(0);
+  useEffect(() => {
+    const handleCalUpdate = () => setCalendarVersion(v => v + 1);
+    window.addEventListener('mis-calendar-events-updated', handleCalUpdate);
+    return () => window.removeEventListener('mis-calendar-events-updated', handleCalUpdate);
+  }, []);
+
   // Sync read alert IDs to localStorage
   useEffect(() => {
     try {
@@ -93,6 +102,38 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
   const divisionAlerts = useMemo<AlertItem[]>(() => {
     const items: AlertItem[] = [];
     const divId = currentUser.divisi_id;
+
+    // 0. CALENDAR DEADLINE ALERTS FOR THIS DIVISION (Overdue, Due Today, & Approaching)
+    const calendarEvents = getStoredCalendarEvents();
+    const divCalendarEvents = calendarEvents.filter(ev => {
+      const evtDiv = ev.divisionId || ev.picDivisionId || 1;
+      return evtDiv === divId && ev.status !== 'Selesai';
+    });
+
+    divCalendarEvents.forEach(ev => {
+      const dl = getDeadlineInfo(ev.date, ev.status);
+      if (dl.state === 'overdue' || dl.state === 'today' || dl.state === 'approaching') {
+        items.push({
+          id: `cal-dl-${ev.id}-${ev.date}`,
+          title:
+            dl.state === 'overdue'
+              ? `🚨 Melewati Tenggat (${dl.label}): ${ev.title}`
+              : dl.state === 'today'
+              ? `⏰ Deadline Hari Ini: ${ev.title}`
+              : `⏳ Mendekati Deadline (${dl.label}): ${ev.title}`,
+          description: `PIC: ${ev.picName} • Tenggat: ${ev.date} • Status: ${ev.status}. Klik untuk membuka Kalender & To-Do List.`,
+          time: dl.label,
+          type: dl.state === 'overdue' || dl.state === 'today' ? 'urgent' : 'warning',
+          category: 'Tenggat Kalender',
+          isRead: false,
+          actionLabel: 'Buka Kalender',
+          onAction: () => {
+            switchDivision(divId, 'kalender');
+            setIsOpen(false);
+          }
+        });
+      }
+    });
 
     const pendingPengajuans = pengajuans.filter(p => p.status === 'pending');
     const approvedPengajuans = pengajuans.filter(p => p.status === 'approved');
@@ -391,7 +432,9 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
     productionLogs,
     logisticLogs,
     readAlertIds,
-    onOpenPersetujuan
+    onOpenPersetujuan,
+    calendarVersion,
+    switchDivision
   ]);
 
   const unreadAlerts = useMemo(() => {

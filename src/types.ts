@@ -493,7 +493,7 @@ export interface PlenoMeetingRecord {
 }
 
 export type ToastType = 'success' | 'warning' | 'error' | 'info' | 'urgent';
-export type ToastCategory = 'order' | 'stock' | 'finance' | 'production' | 'logistic' | 'system';
+export type ToastCategory = 'order' | 'stock' | 'finance' | 'production' | 'logistic' | 'deadline' | 'system';
 
 export interface ToastNotification {
   id: string;

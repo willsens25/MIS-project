@@ -51,6 +51,7 @@ import { EventPOSDashboard } from './EventPOSDashboard';
 import { BazaarEventsTab } from './BazaarEventsTab';
 import { PreOrderAndBundlingTab } from './PreOrderAndBundlingTab';
 import { MembershipLoyaltyTab } from './MembershipLoyaltyTab';
+import { DivisionCalendarTodoView } from '../common/DivisionCalendarTodoView';
 import { computeMemberLoyaltyProfile } from '../../utils/membershipUtils';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
@@ -87,7 +88,7 @@ export const MarketingDashboard: React.FC = () => {
     setCurrentSubTab
   } = useApp();
 
-  const validSubTabs = ['pos', 'event_pos', 'preorder', 'membership', 'bazaar', 'grafik', 'invoices', 'promos', 'saluran', 'agen', 'whatsapp'] as const;
+  const validSubTabs = ['pos', 'event_pos', 'preorder', 'membership', 'bazaar', 'grafik', 'invoices', 'promos', 'saluran', 'agen', 'whatsapp', 'kalender'] as const;
   type MarketingSubTab = typeof validSubTabs[number];
 
   const activeSubTab: MarketingSubTab = validSubTabs.includes(currentSubTab as any)
@@ -538,6 +539,8 @@ export const MarketingDashboard: React.FC = () => {
             ? 'Saluran Penjualan & Ekspedisi Pengiriman'
             : activeSubTab === 'agen'
             ? 'Direktori Agen & Mitra Pembeli'
+            : activeSubTab === 'kalender'
+            ? 'Kalender Kerja & To-Do List Direktorat Marketing'
             : 'Integrasi & Notifikasi WhatsApp'
         }
       />
@@ -697,6 +700,18 @@ export const MarketingDashboard: React.FC = () => {
               </span>
             )}
           </button>
+
+          <button
+            onClick={() => setActiveSubTab('kalender')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeSubTab === 'kalender'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Kalender & To-Do</span>
+          </button>
         </div>
 
         <div className="flex items-center space-x-2">
@@ -748,6 +763,11 @@ export const MarketingDashboard: React.FC = () => {
       {/* GRAFIK & ANALISIS SUB TAB */}
       {activeSubTab === 'grafik' && (
         <MarketingCharts orders={orders} books={books} />
+      )}
+
+      {/* KALENDER & TO-DO LIST MARKETING SUB TAB */}
+      {activeSubTab === 'kalender' && (
+        <DivisionCalendarTodoView divisionId={4} />
       )}
 
       {/* POS / BUAT PESANAN SUB TAB */}

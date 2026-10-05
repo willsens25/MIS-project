@@ -22,6 +22,7 @@ import { ToastContainer } from './components/common/ToastContainer';
 import { UserSettingsModal } from './components/profile/UserSettingsModal';
 import { NightShiftFloatingWidget } from './components/theme/NightShiftFloatingWidget';
 import { QuickActionsFloatingMenu } from './components/navigation/QuickActionsFloatingMenu';
+import { getStoredCalendarEvents, getDeadlineInfo } from './components/common/DivisionCalendarTodoView';
 import { useAutoLogout } from './hooks/useAutoLogout';
 import { DivisionId } from './types';
 import { playPleasantClickSound, playPleasantSuccessChime, isEnvironmentMuted, toggleSoundMuted } from './utils/soundEffects';
@@ -157,6 +158,7 @@ const getDivisionContextInfo = (divisiId: number, subTab: string): DivisionConte
         activeComponentLabel:
           subTab === 'users' ? 'Manajemen Staf' :
           subTab === 'identitas' ? 'Database Anggota' :
+          subTab === 'kalender' ? 'Kalender & To-Do List' :
           subTab === 'kpi' ? 'KPI & Evaluasi' : 'Ringkasan Eksekutif',
         primaryShortcut: 'Query Direktorat',
         suggestedPrompt: 'Rangkum performa operasional seluruh divisi dan peringatan penting',
@@ -245,6 +247,76 @@ const AppContent: React.FC = () => {
 
   // Auto-welcome greeting upon entering the app or switching division/account
   const lastWelcomedUserKeyRef = useRef<string>('');
+  const notifiedDivisionDeadlinesRef = useRef<Set<number>>(new Set());
+
+  // Automatic Dashboard Deadline Toast Reminder System (triggers when entering dashboard or switching directorate)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const divId = currentUser.divisi_id;
+    // Only auto-fire once per division session unless manually triggered from Kalender tab
+    if (notifiedDivisionDeadlinesRef.current.has(divId)) {
+      return;
+    }
+    notifiedDivisionDeadlinesRef.current.add(divId);
+
+    const timer = setTimeout(() => {
+      const allCalendarEvents = getStoredCalendarEvents();
+      const divisionEvents = allCalendarEvents.filter(
+        ev => (ev.divisionId || ev.picDivisionId || 1) === divId && ev.status !== 'Selesai'
+      );
+
+      const overdueTasks = divisionEvents.filter(
+        ev => getDeadlineInfo(ev.date, ev.status).state === 'overdue'
+      );
+      const dueTodayTasks = divisionEvents.filter(
+        ev => getDeadlineInfo(ev.date, ev.status).state === 'today'
+      );
+      const approachingTasks = divisionEvents.filter(
+        ev => getDeadlineInfo(ev.date, ev.status).state === 'approaching'
+      );
+
+      const currentDivName = divisiList.find(d => d.id === divId)?.nama_divisi || 'Direktorat';
+
+      // 1. Fire Toast for Overdue Task(s)
+      if (overdueTasks.length > 0) {
+        const topOverdue = overdueTasks[0];
+        const info = getDeadlineInfo(topOverdue.date, topOverdue.status);
+        const extraCount = overdueTasks.length > 1 ? ` (+${overdueTasks.length - 1} tugas terlambat lainnya)` : '';
+        showToast({
+          title: `🚨 Tugas Melewati Tenggat (${info.label})`,
+          message: `[${currentDivName}] "${topOverdue.title}" — PIC: ${topOverdue.picName} jatuh tempo pada ${topOverdue.date}${extraCount}.`,
+          type: 'urgent',
+          category: 'deadline',
+          duration: 7500,
+          actionLabel: 'Buka Kalender',
+          onAction: () => switchDivision(divId, 'kalender')
+        });
+      }
+
+      // 2. Fire Toast for Due Today or Approaching Task(s)
+      const urgentUpcoming = [...dueTodayTasks, ...approachingTasks];
+      if (urgentUpcoming.length > 0) {
+        const topUpcoming = urgentUpcoming[0];
+        const info = getDeadlineInfo(topUpcoming.date, topUpcoming.status);
+        const extraCount = urgentUpcoming.length > 1 ? ` (+${urgentUpcoming.length - 1} agenda mendekati deadline)` : '';
+        showToast({
+          title:
+            info.state === 'today'
+              ? `⏰ Tenggat Hari Ini! (${currentDivName})`
+              : `⏳ Mendekati Deadline (${info.label})`,
+          message: `Agenda "${topUpcoming.title}" (PIC: ${topUpcoming.picName}) terjadwal pada ${topUpcoming.date}${extraCount}.`,
+          type: info.state === 'today' ? 'urgent' : 'warning',
+          category: 'deadline',
+          duration: 6800,
+          actionLabel: 'Cek To-Do List',
+          onAction: () => switchDivision(divId, 'kalender')
+        });
+      }
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [currentUser.divisi_id, isAuthenticated, divisiList, showToast, switchDivision]);
 
   useEffect(() => {
     const currentKey = `${currentUser.id}-${currentUser.divisi_id}`;

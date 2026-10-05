@@ -23,11 +23,12 @@ import {
   Settings,
   Printer,
   Eye,
-  EyeOff
+  EyeOff,
+  CalendarClock
 } from 'lucide-react';
 import { playPleasantClickSound } from '../../utils/soundEffects';
 
-export type ToastFilterOption = 'all' | 'stock' | 'finance' | 'order' | 'production' | 'logistic' | 'system';
+export type ToastFilterOption = 'all' | 'deadline' | 'stock' | 'finance' | 'order' | 'production' | 'logistic' | 'system';
 
 interface ToastItemProps {
   toast: ToastNotification;
@@ -149,6 +150,11 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
         bg: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30',
         icon: <Truck className="w-2.5 h-2.5 mr-0.5" />
       },
+      deadline: {
+        text: 'TENGGAT KALENDER',
+        bg: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30',
+        icon: <CalendarClock className="w-2.5 h-2.5 mr-0.5" />
+      },
       system: {
         text: 'SISTEM',
         bg: 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30',
@@ -258,6 +264,14 @@ const CATEGORIES_CONFIG: Array<{
     icon: Bell,
     color: 'text-indigo-500',
     activeClass: 'bg-indigo-600 text-white shadow-xs'
+  },
+  {
+    id: 'deadline',
+    label: 'Tenggat Waktu Kalender',
+    shortLabel: 'Deadline',
+    icon: CalendarClock,
+    color: 'text-rose-500',
+    activeClass: 'bg-rose-600 text-white shadow-xs'
   },
   {
     id: 'stock',
@@ -370,6 +384,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
   const counts = useMemo(() => {
     const res: Record<string, number> = {
       all: toasts.length,
+      deadline: 0,
       stock: 0,
       finance: 0,
       order: 0,
@@ -583,6 +598,12 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
                     <span className="text-[10px] font-bold">Simulasi Uji Notifikasi (Real-time Preview):</span>
                   </div>
                   <div className="flex items-center gap-1 flex-wrap">
+                    <button
+                      onClick={() => appCtx?.simulateToastNotification('deadline')}
+                      className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/80 dark:hover:bg-rose-900 text-rose-800 dark:text-rose-300 transition-colors cursor-pointer"
+                    >
+                      ⏰ Tes Deadline Kalender
+                    </button>
                     <button
                       onClick={() => appCtx?.simulateToastNotification('stock')}
                       className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/80 dark:hover:bg-amber-900 text-amber-800 dark:text-amber-300 transition-colors cursor-pointer"

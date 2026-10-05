@@ -1191,6 +1191,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           onAction: () => switchDivision(6, 'surat-jalan')
         });
         break;
+      case 'deadline':
+        showToast({
+          title: '🚨 Pengingat Deadline Kalender!',
+          message: 'Tugas "Verifikasi Data Anggota VIP & Pengurus Direktorat" (PIC: Budi Santoso) telah melewati tenggat waktu 2 hari.',
+          type: 'urgent',
+          category: 'deadline',
+          duration: 6500,
+          actionLabel: 'Buka Kalender',
+          onAction: () => switchDivision(currentUser.divisi_id, 'kalender')
+        });
+        break;
       case 'system':
       default:
         showToast({
