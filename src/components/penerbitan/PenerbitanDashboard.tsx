@@ -31,6 +31,7 @@ import { UnitEconomicsAnalysis } from './UnitEconomicsAnalysis';
 import { DonasiSponsorshipTab } from './DonasiSponsorshipTab';
 import { RoyaltiPenerbitanTab } from './RoyaltiPenerbitanTab';
 import { DivisionCalendarTodoView } from '../common/DivisionCalendarTodoView';
+import { DivisionQuickSearchBar } from '../common/DivisionQuickSearchBar';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { BarcodeScannerModal } from '../modals/BarcodeScannerModal';
 import { DataImportExportModal } from '../modals/DataImportExportModal';
@@ -262,6 +263,13 @@ export const PenerbitanDashboard: React.FC = () => {
             ? 'Kalender Kerja & To-Do List Direktorat Penerbitan'
             : 'Riwayat Pengajuan Anggaran Cetak'
         }
+      />
+
+      {/* Real-time Division Search Bar (Tasks, Documents & Data Entries) */}
+      <DivisionQuickSearchBar
+        divisionId={3}
+        value={searchBook}
+        onQueryChange={q => setSearchBook(q)}
       />
 
       {/* Header Bar */}

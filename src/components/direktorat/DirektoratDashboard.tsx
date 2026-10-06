@@ -36,6 +36,7 @@ import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
 import { ConfigurableDashboardGrid } from '../dashboard-layout/ConfigurableDashboardGrid';
 import { Pagination } from '../common/Pagination';
+import { DivisionQuickSearchBar } from '../common/DivisionQuickSearchBar';
 import { DirektoratCalendarTodoTab } from './DirektoratCalendarTodoTab';
 
 interface DirektoratDashboardProps {
@@ -315,6 +316,13 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
             ? 'Kalender Kerja 12 Bulan & To-Do List'
             : 'Daftar Pengguna & Tim Operasional'
         }
+      />
+
+      {/* Real-time Division Search Bar (Tasks, Documents & Data Entries) */}
+      <DivisionQuickSearchBar
+        divisionId={1}
+        value={searchIdentitas}
+        onQueryChange={q => setSearchIdentitas(q)}
       />
 
       {/* Sub navigation tabs */}

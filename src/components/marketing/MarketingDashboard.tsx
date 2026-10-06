@@ -52,6 +52,7 @@ import { BazaarEventsTab } from './BazaarEventsTab';
 import { PreOrderAndBundlingTab } from './PreOrderAndBundlingTab';
 import { MembershipLoyaltyTab } from './MembershipLoyaltyTab';
 import { DivisionCalendarTodoView } from '../common/DivisionCalendarTodoView';
+import { DivisionQuickSearchBar } from '../common/DivisionQuickSearchBar';
 import { computeMemberLoyaltyProfile } from '../../utils/membershipUtils';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
@@ -543,6 +544,13 @@ export const MarketingDashboard: React.FC = () => {
             ? 'Kalender Kerja & To-Do List Direktorat Marketing'
             : 'Integrasi & Notifikasi WhatsApp'
         }
+      />
+
+      {/* Real-time Division Search Bar (Tasks, Documents & Data Entries) */}
+      <DivisionQuickSearchBar
+        divisionId={4}
+        value={invoiceSearch}
+        onQueryChange={q => setInvoiceSearch(q)}
       />
 
       {/* Sub tabs */}

@@ -39,6 +39,7 @@ import { RupiahInput } from '../common/RupiahInput';
 import { BankReconciliationView } from './BankReconciliationView';
 import { FinancialReportsView } from './FinancialReportsView';
 import { DivisionCalendarTodoView } from '../common/DivisionCalendarTodoView';
+import { DivisionQuickSearchBar } from '../common/DivisionQuickSearchBar';
 
 interface FinanceDashboardProps {
   initialSubTab?: 'grafik' | 'mutasi' | 'persetujuan' | 'penjualan' | 'akun' | 'rekonsiliasi' | 'laporan' | 'kalender';
@@ -423,6 +424,13 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
             ? 'Kalender Kerja & To-Do List Direktorat Finance'
             : 'Laporan Keuangan Standar Yayasan (PSAK / SAK ETAP)'
         }
+      />
+
+      {/* Real-time Division Search Bar (Tasks, Documents & Data Entries) */}
+      <DivisionQuickSearchBar
+        divisionId={2}
+        value={searchQuery}
+        onQueryChange={q => setSearchQuery(q)}
       />
 
       {/* Top Stat Summary */}

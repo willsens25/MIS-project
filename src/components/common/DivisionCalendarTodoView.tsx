@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { jsPDF } from 'jspdf';
 import { useApp } from '../../context/AppContext';
 import { DivisionId } from '../../types';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Plus,
   CheckCircle2,
   Clock,
@@ -23,7 +25,10 @@ import {
   Building2,
   Layers,
   BellRing,
-  AlertTriangle
+  AlertTriangle,
+  FileDown,
+  Check,
+  List
 } from 'lucide-react';
 
 export interface TodoSubtask {
@@ -229,6 +234,157 @@ export const getDeadlineInfo = (dateStr: string, status: CalendarTodoEvent['stat
     diffDays,
     label: `${diffDays} hari lagi`
   };
+};
+
+export interface TaskCompletionProgressInfo {
+  percent: number;
+  doneSubtasks: number;
+  totalSubtasks: number;
+  barColor: string;
+  trackColor: string;
+  textColor: string;
+  badgeClass: string;
+  statusLabel: string;
+}
+
+export const getTaskCompletionProgress = (
+  evt: Pick<CalendarTodoEvent, 'status' | 'subtasks'>
+): TaskCompletionProgressInfo => {
+  const subtasks = evt.subtasks || [];
+  const totalSubtasks = subtasks.length;
+  const doneSubtasks = subtasks.filter(s => s.completed).length;
+
+  let percent = 0;
+  if (evt.status === 'Selesai') {
+    percent = 100;
+  } else if (totalSubtasks > 0) {
+    const ratio = Math.round((doneSubtasks / totalSubtasks) * 100);
+    if (evt.status === 'Sedang Berjalan' && ratio === 0) {
+      percent = 50;
+    } else {
+      percent = ratio;
+    }
+  } else {
+    percent = evt.status === 'Sedang Berjalan' ? 50 : 0;
+  }
+
+  if (percent >= 100 || evt.status === 'Selesai') {
+    return {
+      percent: 100,
+      doneSubtasks: totalSubtasks > 0 ? totalSubtasks : doneSubtasks,
+      totalSubtasks,
+      barColor: 'bg-emerald-500 dark:bg-emerald-400',
+      trackColor: 'bg-emerald-100 dark:bg-emerald-950/70',
+      textColor: 'text-emerald-700 dark:text-emerald-300',
+      badgeClass:
+        'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/90 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800',
+      statusLabel: 'Tuntas (100%)'
+    };
+  }
+
+  if (percent >= 60) {
+    return {
+      percent,
+      doneSubtasks,
+      totalSubtasks,
+      barColor: 'bg-indigo-600 dark:bg-indigo-400',
+      trackColor: 'bg-indigo-100 dark:bg-indigo-950/70',
+      textColor: 'text-indigo-700 dark:text-indigo-300',
+      badgeClass:
+        'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/90 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800',
+      statusLabel: `Sedang Berjalan (${percent}%)`
+    };
+  }
+
+  if (percent > 0 || evt.status === 'Sedang Berjalan') {
+    const activePct = percent > 0 ? percent : 50;
+    return {
+      percent: activePct,
+      doneSubtasks,
+      totalSubtasks,
+      barColor: 'bg-amber-500 dark:bg-amber-400',
+      trackColor: 'bg-amber-100 dark:bg-amber-950/70',
+      textColor: 'text-amber-700 dark:text-amber-300',
+      badgeClass:
+        'bg-amber-100 text-amber-800 dark:bg-amber-950/90 dark:text-amber-300 border-amber-300 dark:border-amber-800',
+      statusLabel: `Sedang Berjalan (${activePct}%)`
+    };
+  }
+
+  return {
+    percent: 0,
+    doneSubtasks,
+    totalSubtasks,
+    barColor: 'bg-slate-400 dark:bg-slate-600',
+    trackColor: 'bg-slate-200/80 dark:bg-slate-800',
+    textColor: 'text-slate-600 dark:text-slate-400',
+    badgeClass:
+      'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700',
+    statusLabel: 'Belum Mulai (0%)'
+  };
+};
+
+export const updateStoredCalendarEventStatus = (
+  evtId: string,
+  explicitStatus?: CalendarTodoEvent['status']
+): CalendarTodoEvent[] => {
+  const current = getStoredCalendarEvents();
+  const updated = current.map(evt => {
+    if (evt.id !== evtId) return evt;
+    const nextStatus: CalendarTodoEvent['status'] =
+      explicitStatus ||
+      (evt.status === 'Belum Mulai'
+        ? 'Sedang Berjalan'
+        : evt.status === 'Sedang Berjalan'
+        ? 'Selesai'
+        : 'Belum Mulai');
+    const updatedSubtasks =
+      nextStatus === 'Selesai'
+        ? evt.subtasks.map(s => ({ ...s, completed: true }))
+        : nextStatus === 'Belum Mulai'
+        ? evt.subtasks.map(s => ({ ...s, completed: false }))
+        : evt.subtasks;
+    return { ...evt, status: nextStatus, subtasks: updatedSubtasks };
+  });
+  try {
+    localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent('mis-calendar-events-updated'));
+  } catch {
+    // ignore
+  }
+  return updated;
+};
+
+export const toggleStoredCalendarSubtask = (
+  evtId: string,
+  subtaskId: string
+): CalendarTodoEvent[] => {
+  const current = getStoredCalendarEvents();
+  const updated = current.map(evt => {
+    if (evt.id !== evtId) return evt;
+    const updatedSubtasks = evt.subtasks.map(st =>
+      st.id === subtaskId ? { ...st, completed: !st.completed } : st
+    );
+    const allDone = updatedSubtasks.length > 0 && updatedSubtasks.every(s => s.completed);
+    const anyDone = updatedSubtasks.some(s => s.completed);
+    const autoStatus: CalendarTodoEvent['status'] = allDone
+      ? 'Selesai'
+      : anyDone
+      ? 'Sedang Berjalan'
+      : 'Belum Mulai';
+    return {
+      ...evt,
+      subtasks: updatedSubtasks,
+      status: autoStatus
+    };
+  });
+  try {
+    localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent('mis-calendar-events-updated'));
+  } catch {
+    // ignore
+  }
+  return updated;
 };
 
 export const getStoredCalendarEvents = (): CalendarTodoEvent[] => {
@@ -564,9 +720,26 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
 
   const currentYearActual = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState<number>(currentYearActual);
-  const [viewMode, setViewMode] = useState<'12-months' | 'single-month' | 'todo-list'>('12-months');
+  const [viewMode, setViewMode] = useState<'12-months' | 'single-month' | 'daily-planner' | 'todo-list'>('12-months');
+  const [layoutMode, setLayoutMode] = useState<'grid' | 'list'>(() => {
+    try {
+      const saved = localStorage.getItem('mis_calendar_layout_mode');
+      return saved === 'list' ? 'list' : 'grid';
+    } catch {
+      return 'grid';
+    }
+  });
+  const handleChangeLayoutMode = (nextMode: 'grid' | 'list') => {
+    setLayoutMode(nextMode);
+    try {
+      localStorage.setItem('mis_calendar_layout_mode', nextMode);
+    } catch {
+      // ignore storage errors
+    }
+  };
   const [focusedMonth, setFocusedMonth] = useState<number>(new Date().getMonth());
   const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null);
+  const [dailyHourFilter, setDailyHourFilter] = useState<'all-hours' | 'active-only'>('all-hours');
 
   // Scope toggle: 'current-division' (only this directorate/division) vs 'all-divisions' (integrated across all 6 directorates)
   const [scopeFilter, setScopeFilter] = useState<'current-division' | 'all-divisions'>('current-division');
@@ -595,6 +768,29 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
       // ignore storage errors
     }
   }, [events]);
+
+  useEffect(() => {
+    const handleExternalSync = () => {
+      const latest = getStoredCalendarEvents();
+      setEvents(prev => {
+        if (JSON.stringify(prev) === JSON.stringify(latest)) return prev;
+        return latest;
+      });
+    };
+    window.addEventListener('mis-calendar-events-updated', handleExternalSync);
+    return () => window.removeEventListener('mis-calendar-events-updated', handleExternalSync);
+  }, []);
+
+  useEffect(() => {
+    const handleJump = (e: Event) => {
+      const custom = e as CustomEvent<{ divisionId: number; subTab: string; keyword: string }>;
+      if (custom.detail?.subTab === 'kalender' && custom.detail?.keyword !== undefined) {
+        setSearchQuery(custom.detail.keyword);
+      }
+    };
+    window.addEventListener('mis-division-search-jump', handleJump);
+    return () => window.removeEventListener('mis-division-search-jump', handleJump);
+  }, []);
 
   // Manual trigger to test / fire deadline toast notifications for this division
   const handleTriggerDeadlineToastsNow = () => {
@@ -653,6 +849,566 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
 
   const divMeta = DIVISION_META[divisionId] || DIVISION_META[1];
   const currentDivObj = divisiList.find(d => d.id === divisionId);
+
+  // PDF Export States
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const [exportSuccess, setExportSuccess] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setIsExportMenuOpen(false);
+      }
+    };
+    if (isExportMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isExportMenuOpen]);
+
+  // Generate clean vector A4 Landscape PDF for Monthly or Annual Directorate Calendar Schedule
+  const handleExportCalendarPdf = (monthTarget: number | 'all' = focusedMonth) => {
+    setIsExportMenuOpen(false);
+
+    const doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    const pageW = doc.internal.pageSize.getWidth(); // 297
+    const pageH = doc.internal.pageSize.getHeight(); // 210
+    const margin = 12;
+
+    const divName =
+      scopeFilter === 'all-divisions'
+        ? 'Seluruh 6 Direktorat (Terpadu)'
+        : `Direktorat ${currentDivObj?.nama_divisi || 'Utama'} (${currentDivObj?.kode || 'DIR'})`;
+
+    const periodLabel =
+      monthTarget === 'all'
+        ? `Tahun Kalender ${selectedYear} (12 Bulan)`
+        : `Bulan ${INDONESIAN_MONTHS[monthTarget]} ${selectedYear}`;
+
+    // Filter events according to scope, year, and target month
+    const targetEvents = yearEvents
+      .filter(ev => {
+        if (monthTarget === 'all') return true;
+        const prefix = `${selectedYear}-${String(monthTarget + 1).padStart(2, '0')}`;
+        return ev.date.startsWith(prefix);
+      })
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    // Helper: Draw Official Page Header
+    const drawOfficialHeader = (pageTitleSuffix?: string) => {
+      // Top accent bar
+      doc.setFillColor(30, 41, 59); // slate-800
+      doc.rect(margin, 10, pageW - margin * 2, 18, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text(
+        'YAYASAN PELESTARIAN & PENGEMBANGAN LAMRIM NUSANTARA (LAMRIMNESIA)',
+        margin + 4,
+        17
+      );
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(203, 213, 225);
+      doc.text(
+        `JADWAL KALENDER KERJA & TO-DO LIST DIREKTORAT • ${divName.toUpperCase()}`,
+        margin + 4,
+        23.5
+      );
+
+      // Right side period badge in header
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(251, 191, 36); // amber-400
+      doc.text(
+        pageTitleSuffix ? `${periodLabel} — ${pageTitleSuffix}` : periodLabel,
+        pageW - margin - 4,
+        17.5,
+        { align: 'right' }
+      );
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(226, 232, 240);
+      const printedAt = new Date().toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      doc.text(`Dicetak: ${printedAt} WIB`, pageW - margin - 4, 23.5, { align: 'right' });
+    };
+
+    // Helper: Draw KPI Summary Strip
+    const drawSummaryStrip = (startY: number, list: CalendarTodoEvent[]) => {
+      const total = list.length;
+      const done = list.filter(e => e.status === 'Selesai').length;
+      const active = list.filter(e => e.status !== 'Selesai').length;
+      const overdue = list.filter(e => getDeadlineInfo(e.date, e.status).state === 'overdue').length;
+      const totalSub = list.reduce((acc, e) => acc + e.subtasks.length, 0);
+      const doneSub = list.reduce((acc, e) => acc + e.subtasks.filter(s => s.completed).length, 0);
+
+      const boxW = (pageW - margin * 2 - 12) / 5;
+      const metrics = [
+        { label: 'TOTAL AGENDA', val: `${total} Kegiatan`, bg: [241, 245, 249], text: [15, 23, 42] },
+        { label: 'AKTIF / BERJALAN', val: `${active} Tugas`, bg: [254, 243, 199], text: [146, 64, 14] },
+        { label: 'AGENDA SELESAI', val: `${done} Tuntas`, bg: [209, 250, 229], text: [6, 95, 70] },
+        { label: 'MELEWATI DEADLINE', val: `${overdue} Terlambat`, bg: [255, 228, 230], text: [159, 18, 57] },
+        { label: 'CHECKLIST SUB-TUGAS', val: `${doneSub}/${totalSub} Selesai`, bg: [237, 233, 254], text: [91, 33, 182] }
+      ];
+
+      metrics.forEach((m, i) => {
+        const x = margin + i * (boxW + 3);
+        doc.setFillColor(m.bg[0], m.bg[1], m.bg[2]);
+        doc.setDrawColor(203, 213, 225);
+        doc.roundedRect(x, startY, boxW, 12, 1.5, 1.5, 'FD');
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6.5);
+        doc.setTextColor(100, 116, 139);
+        doc.text(m.label, x + 3, startY + 4.5);
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9.5);
+        doc.setTextColor(m.text[0], m.text[1], m.text[2]);
+        doc.text(m.val, x + 3, startY + 9.8);
+      });
+
+      return startY + 15.5;
+    };
+
+    // Helper: Draw Visual Monthly Calendar Grid (when exporting a specific month)
+    const drawMonthlyVisualGrid = (monthIdx: number, startY: number): number => {
+      const firstDay = new Date(selectedYear, monthIdx, 1).getDay();
+      const daysInM = new Date(selectedYear, monthIdx + 1, 0).getDate();
+      const totalCells = Math.ceil((firstDay + daysInM) / 7) * 7;
+      const rows = totalCells / 7;
+
+      const gridW = pageW - margin * 2;
+      const colW = gridW / 7;
+      const headerH = 6.5;
+      const cellH = rows > 5 ? 19.5 : 23;
+
+      // Day headers (Minggu - Sabtu)
+      const dayNames = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU'];
+      dayNames.forEach((dName, c) => {
+        const cx = margin + c * colW;
+        doc.setFillColor(c === 0 ? 225 : 241, c === 0 ? 29 : 245, c === 0 ? 72 : 249);
+        doc.setDrawColor(203, 213, 225);
+        doc.rect(cx, startY, colW, headerH, 'FD');
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        if (c === 0) {
+          doc.setTextColor(255, 255, 255);
+        } else {
+          doc.setTextColor(51, 65, 85);
+        }
+        doc.text(dName, cx + colW / 2, startY + 4.5, { align: 'center' });
+      });
+
+      let curY = startY + headerH;
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < 7; c++) {
+          const cellIndex = r * 7 + c;
+          const dayNum = cellIndex - firstDay + 1;
+          const cx = margin + c * colW;
+
+          if (dayNum < 1 || dayNum > daysInM) {
+            doc.setFillColor(248, 250, 252);
+            doc.setDrawColor(226, 232, 240);
+            doc.rect(cx, curY, colW, cellH, 'FD');
+          } else {
+            const dateStr = `${selectedYear}-${String(monthIdx + 1).padStart(2, '0')}-${String(
+              dayNum
+            ).padStart(2, '0')}`;
+            const dayEvts = targetEvents.filter(e => e.date === dateStr);
+
+            if (dayEvts.length > 0) {
+              doc.setFillColor(238, 242, 255); // soft indigo tint for active event date
+            } else {
+              doc.setFillColor(255, 255, 255);
+            }
+            doc.setDrawColor(203, 213, 225);
+            doc.rect(cx, curY, colW, cellH, 'FD');
+
+            // Date number
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(8);
+            if (c === 0) {
+              doc.setTextColor(225, 29, 72);
+            } else {
+              doc.setTextColor(30, 41, 59);
+            }
+            doc.text(String(dayNum), cx + 2, curY + 4.2);
+
+            // Event count badge
+            if (dayEvts.length > 0) {
+              doc.setFontSize(6.2);
+              doc.setTextColor(79, 70, 229);
+              doc.text(`${dayEvts.length} agenda`, cx + colW - 2, curY + 4.2, { align: 'right' });
+            }
+
+            // Up to 2 event pills inside the cell
+            dayEvts.slice(0, 2).forEach((ev, idx) => {
+              const pillY = curY + 6 + idx * 6.2;
+              if (ev.status === 'Selesai') {
+                doc.setFillColor(209, 250, 229);
+                doc.setTextColor(6, 95, 70);
+              } else if (getDeadlineInfo(ev.date, ev.status).state === 'overdue') {
+                doc.setFillColor(254, 205, 211);
+                doc.setTextColor(159, 18, 57);
+              } else {
+                doc.setFillColor(224, 231, 255);
+                doc.setTextColor(55, 48, 163);
+              }
+              doc.roundedRect(cx + 1.2, pillY, colW - 2.4, 5.4, 1, 1, 'F');
+
+              doc.setFont('helvetica', 'bold');
+              doc.setFontSize(5.8);
+              const shortTitle =
+                ev.title.length > 22 ? `${ev.title.substring(0, 21)}...` : ev.title;
+              doc.text(shortTitle, cx + 2, pillY + 2.5);
+
+              doc.setFont('helvetica', 'normal');
+              doc.setFontSize(5.2);
+              doc.text(`PIC: ${ev.picName}`, cx + 2, pillY + 4.7);
+            });
+
+            if (dayEvts.length > 2) {
+              doc.setFont('helvetica', 'italic');
+              doc.setFontSize(5.5);
+              doc.setTextColor(100, 116, 139);
+              doc.text(`+${dayEvts.length - 2} lainnya`, cx + 2, curY + cellH - 1.2);
+            }
+          }
+        }
+        curY += cellH;
+      }
+
+      return curY + 4;
+    };
+
+    // Helper: Draw Detailed Schedule & To-Do List Table
+    const drawScheduleTable = (startY: number, list: CalendarTodoEvent[]) => {
+      let y = startY;
+      const tableW = pageW - margin * 2;
+      // Columns: No (8), Tanggal & Waktu (32), Agenda & Lokasi (72), Kategori & Divisi (36), PIC & Tim (42), Checklist Sub-Tugas (55), Status & Deadline (28) = 273mm
+      const cols = [
+        { header: 'NO', w: 8 },
+        { header: 'TANGGAL & WAKTU', w: 32 },
+        { header: 'AGENDA KEGIATAN & LOKASI', w: 70 },
+        { header: 'KATEGORI & PRIORITAS', w: 36 },
+        { header: 'PENANGGUNG JAWAB (PIC)', w: 42 },
+        { header: 'CHECKLIST TO-DO LIST', w: 57 },
+        { header: 'STATUS & TENGGAT', w: 28 }
+      ];
+
+      const drawTableHeader = (topY: number) => {
+        let curX = margin;
+        doc.setFillColor(30, 41, 59);
+        doc.rect(margin, topY, tableW, 7.5, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6.8);
+        doc.setTextColor(255, 255, 255);
+
+        cols.forEach(col => {
+          doc.text(col.header, curX + 2, topY + 5);
+          curX += col.w;
+        });
+        return topY + 7.5;
+      };
+
+      y = drawTableHeader(y);
+
+      if (list.length === 0) {
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(203, 213, 225);
+        doc.rect(margin, y, tableW, 14, 'FD');
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(8.5);
+        doc.setTextColor(100, 116, 139);
+        doc.text(
+          'Tidak ada jadwal kegiatan atau To-Do List terdaftar pada periode ini.',
+          pageW / 2,
+          y + 8.5,
+          { align: 'center' }
+        );
+        return y + 18;
+      }
+
+      list.forEach((ev, idx) => {
+        const dl = getDeadlineInfo(ev.date, ev.status);
+        const evtDivObj = divisiList.find(d => d.id === (ev.divisionId || ev.picDivisionId || 1));
+
+        // Prepare wrapped lines for dynamic row height
+        doc.setFontSize(7);
+        const titleLines = doc.splitTextToSize(ev.title, cols[2].w - 4) as string[];
+        const locText = ev.location ? `Lokasi: ${ev.location}` : '';
+        const subtaskLines: string[] =
+          ev.subtasks.length > 0
+            ? ev.subtasks.map(
+                s => `${s.completed ? '[v]' : '[ ]'} ${s.title}${s.picName ? ` (${s.picName.split(' ')[0]})` : ''}`
+              )
+            : ['- Belum ada sub-tugas'];
+
+        const wrappedSubtasks = doc.splitTextToSize(subtaskLines.join('\n'), cols[5].w - 4) as string[];
+        const maxLines = Math.max(titleLines.length + (locText ? 1 : 0), wrappedSubtasks.length, 2);
+        const rowH = Math.max(12, maxLines * 3.6 + 4.5);
+
+        // Page break if needed
+        if (y + rowH > pageH - 22) {
+          doc.addPage('a4', 'landscape');
+          drawOfficialHeader('Lanjutan Rincian Jadwal & To-Do List');
+          y = drawTableHeader(32);
+        }
+
+        // Row background
+        if (idx % 2 === 0) {
+          doc.setFillColor(255, 255, 255);
+        } else {
+          doc.setFillColor(248, 250, 252);
+        }
+        doc.setDrawColor(226, 232, 240);
+        doc.rect(margin, y, tableW, rowH, 'FD');
+
+        // Column vertical dividers
+        let cx = margin;
+        cols.forEach(c => {
+          doc.line(cx, y, cx, y + rowH);
+          cx += c.w;
+        });
+        doc.line(margin + tableW, y, margin + tableW, y + rowH);
+
+        let colX = margin;
+
+        // 1. NO
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(71, 85, 105);
+        doc.text(String(idx + 1), colX + 2.5, y + 5.5);
+        colX += cols[0].w;
+
+        // 2. TANGGAL & WAKTU
+        const [yr, mo, dy] = ev.date.split('-').map(Number);
+        const formattedDate = `${dy} ${INDONESIAN_MONTHS[(mo || 1) - 1]?.slice(0, 3)} ${yr}`;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(15, 23, 42);
+        doc.text(formattedDate, colX + 2, y + 5);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.5);
+        doc.setTextColor(100, 116, 139);
+        doc.text(ev.time || '09:00 WIB', colX + 2, y + 9);
+        colX += cols[1].w;
+
+        // 3. AGENDA & LOKASI
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(15, 23, 42);
+        doc.text(titleLines, colX + 2, y + 4.8);
+        if (locText) {
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(6.3);
+          doc.setTextColor(100, 116, 139);
+          doc.text(
+            doc.splitTextToSize(locText, cols[2].w - 4)[0],
+            colX + 2,
+            y + 4.8 + titleLines.length * 3.5
+          );
+        }
+        colX += cols[2].w;
+
+        // 4. KATEGORI & PRIORITAS
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6.8);
+        doc.setTextColor(67, 56, 202);
+        doc.text(ev.category, colX + 2, y + 5);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.3);
+        doc.setTextColor(71, 85, 105);
+        doc.text(
+          `Divisi: ${evtDivObj?.kode || 'DIR'} • Prio: ${ev.priority}`,
+          colX + 2,
+          y + 9
+        );
+        colX += cols[3].w;
+
+        // 5. PIC & CO-PIC
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.2);
+        doc.setTextColor(15, 23, 42);
+        doc.text(ev.picName, colX + 2, y + 5);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.2);
+        doc.setTextColor(100, 116, 139);
+        const coPicLabel =
+          ev.coPicNames && ev.coPicNames.length > 0
+            ? `Tim: ${ev.coPicNames.join(', ')}`
+            : ev.picRole || 'PIC Utama';
+        doc.text(
+          doc.splitTextToSize(coPicLabel, cols[4].w - 4).slice(0, 2),
+          colX + 2,
+          y + 8.8
+        );
+        colX += cols[4].w;
+
+        // 6. CHECKLIST TO-DO LIST
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.3);
+        doc.setTextColor(51, 65, 85);
+        doc.text(wrappedSubtasks, colX + 2, y + 4.6);
+        colX += cols[5].w;
+
+        // 7. STATUS & DEADLINE
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6.8);
+        if (ev.status === 'Selesai') {
+          doc.setTextColor(4, 120, 87);
+        } else if (dl.state === 'overdue') {
+          doc.setTextColor(190, 18, 60);
+        } else {
+          doc.setTextColor(180, 83, 9);
+        }
+        doc.text(ev.status.toUpperCase(), colX + 2, y + 5);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6.2);
+        doc.setTextColor(100, 116, 139);
+        doc.text(dl.label, colX + 2, y + 9);
+
+        y += rowH;
+      });
+
+      return y + 6;
+    };
+
+    // Page 1: Header + KPI Summary
+    drawOfficialHeader();
+    let currentY = drawSummaryStrip(31, targetEvents);
+
+    if (monthTarget !== 'all') {
+      // Draw visual calendar grid for the selected month on Page 1
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(30, 41, 59);
+      doc.text(
+        `MATRIKS KALENDER BULANAN — ${INDONESIAN_MONTHS[monthTarget].toUpperCase()} ${selectedYear}`,
+        margin,
+        currentY + 3.5
+      );
+      currentY = drawMonthlyVisualGrid(monthTarget, currentY + 5.5);
+
+      // Add Page 2 for Detailed To-Do List & Schedule Table + Signatures
+      doc.addPage('a4', 'landscape');
+      drawOfficialHeader('Rincian Tugas, PIC & Checklist To-Do List');
+      currentY = 33;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(30, 41, 59);
+      doc.text(
+        `TABEL RINCIAN JADWAL & TO-DO LIST (${INDONESIAN_MONTHS[monthTarget].toUpperCase()} ${selectedYear})`,
+        margin,
+        currentY
+      );
+      currentY = drawScheduleTable(currentY + 2.5, targetEvents);
+    } else {
+      // Full 12-Month Schedule Table
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(30, 41, 59);
+      doc.text(
+        `DAFTAR LENGKAP JADWAL KERJA & TO-DO LIST TAHUN ${selectedYear}`,
+        margin,
+        currentY + 3.5
+      );
+      currentY = drawScheduleTable(currentY + 5.5, targetEvents);
+    }
+
+    // Signature Block at the bottom of the final page
+    if (currentY > pageH - 36) {
+      doc.addPage('a4', 'landscape');
+      drawOfficialHeader('Lembar Pengesahan Jadwal Kerja Direktorat');
+      currentY = 38;
+    }
+
+    const sigY = Math.max(currentY + 4, pageH - 36);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(71, 85, 105);
+
+    doc.text('Disiapkan Oleh,', margin + 20, sigY, { align: 'center' });
+    doc.setFont('helvetica', 'bold');
+    doc.text(
+      `Koordinator ${currentDivObj?.nama_divisi || 'Direktorat'}`,
+      margin + 20,
+      sigY + 18,
+      { align: 'center' }
+    );
+    doc.line(margin + 2, sigY + 14, margin + 38, sigY + 14);
+
+    doc.setFont('helvetica', 'normal');
+    doc.text('Mengetahui & Menyetujui,', pageW - margin - 28, sigY, { align: 'center' });
+    doc.setFont('helvetica', 'bold');
+    doc.text('Direktur Utama Yayasan Lamrimnesia', pageW - margin - 28, sigY + 18, {
+      align: 'center'
+    });
+    doc.line(pageW - margin - 50, sigY + 14, pageW - margin - 6, sigY + 14);
+
+    // Add page numbers on all pages
+    const pageCount = doc.getNumberOfPages();
+    for (let p = 1; p <= pageCount; p++) {
+      doc.setPage(p);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(148, 163, 184);
+      doc.text(
+        `SAPA-ALL MIS Lamrimnesia • Dokumen Resmi Kalender & To-Do List Direktorat • Halaman ${p} dari ${pageCount}`,
+        pageW / 2,
+        pageH - 5,
+        { align: 'center' }
+      );
+    }
+
+    const safeDivCode = (currentDivObj?.kode || 'DIR').toLowerCase();
+    const safePeriod =
+      monthTarget === 'all'
+        ? `tahunan_${selectedYear}`
+        : `${INDONESIAN_MONTHS[monthTarget].toLowerCase()}_${selectedYear}`;
+    const filename = `jadwal_kalender_${safeDivCode}_${safePeriod}.pdf`;
+
+    doc.save(filename);
+
+    setExportSuccess(true);
+    setTimeout(() => setExportSuccess(false), 3000);
+
+    recordActivity(
+      'Ekspor Kalender PDF',
+      `Kalender ${currentDivObj?.nama_divisi || 'Direktorat'}`,
+      `Mengunduh dokumen PDF jadwal kalender (${periodLabel}) -> ${filename}`
+    );
+
+    showToast({
+      title: '📄 Kalender PDF Berhasil Diunduh!',
+      message: `Jadwal ${periodLabel} (${divName}) telah diunduh sebagai "${filename}".`,
+      type: 'success',
+      category: 'system',
+      duration: 5000
+    });
+  };
 
   // Combined list of Responsible Persons (PIC options) prioritizing current division members first
   const picOptions = useMemo(() => {
@@ -742,7 +1498,7 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
     subtasks: []
   });
 
-  const openCreateModal = (defaultDate?: string) => {
+  const openCreateModal = (defaultDate?: string, defaultTime?: string) => {
     setEditingEvent(null);
     const initialDate =
       defaultDate ||
@@ -756,7 +1512,7 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
       title: '',
       description: '',
       date: initialDate,
-      time: '09:00 - 11:30 WIB',
+      time: defaultTime || '09:00 - 11:30 WIB',
       location: divMeta.defaultLocation,
       category: divMeta.defaultCategory,
       priority: 'Tinggi',
@@ -929,17 +1685,24 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
     triggerToast(`Agenda "${evt.title}" telah dihapus.`);
   };
 
-  const handleToggleEventStatus = (evtId: string) => {
+  const handleToggleEventStatus = (evtId: string, explicitStatus?: CalendarTodoEvent['status']) => {
     setEvents(prev =>
       prev.map(evt => {
         if (evt.id !== evtId) return evt;
         const nextStatus: CalendarTodoEvent['status'] =
-          evt.status === 'Belum Mulai'
+          explicitStatus ||
+          (evt.status === 'Belum Mulai'
             ? 'Sedang Berjalan'
             : evt.status === 'Sedang Berjalan'
             ? 'Selesai'
-            : 'Belum Mulai';
-        return { ...evt, status: nextStatus };
+            : 'Belum Mulai');
+        const updatedSubtasks =
+          nextStatus === 'Selesai'
+            ? evt.subtasks.map(s => ({ ...s, completed: true }))
+            : nextStatus === 'Belum Mulai'
+            ? evt.subtasks.map(s => ({ ...s, completed: false }))
+            : evt.subtasks;
+        return { ...evt, status: nextStatus, subtasks: updatedSubtasks };
       })
     );
   };
@@ -957,7 +1720,7 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
           ? 'Selesai'
           : anyDone
           ? 'Sedang Berjalan'
-          : evt.status;
+          : 'Belum Mulai';
         return {
           ...evt,
           subtasks: updatedSubtasks,
@@ -1026,7 +1789,7 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
     return Array.from(set);
   }, [picOptions, events]);
 
-  // Summary statistics
+  // Summary statistics including overall average task completion percentage
   const stats = useMemo(() => {
     const total = yearEvents.length;
     const completed = yearEvents.filter(e => e.status === 'Selesai').length;
@@ -1034,7 +1797,23 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
     const pending = yearEvents.filter(e => e.status === 'Belum Mulai').length;
     const totalSubtasks = yearEvents.reduce((acc, e) => acc + e.subtasks.length, 0);
     const doneSubtasks = yearEvents.reduce((acc, e) => acc + e.subtasks.filter(s => s.completed).length, 0);
-    return { total, completed, inProgress, pending, totalSubtasks, doneSubtasks };
+    const avgProgressPct =
+      total > 0
+        ? Math.round(
+            yearEvents.reduce((acc, e) => acc + getTaskCompletionProgress(e).percent, 0) / total
+          )
+        : 0;
+    const subtaskPct = totalSubtasks > 0 ? Math.round((doneSubtasks / totalSubtasks) * 100) : 0;
+    return {
+      total,
+      completed,
+      inProgress,
+      pending,
+      totalSubtasks,
+      doneSubtasks,
+      avgProgressPct,
+      subtaskPct
+    };
   }, [yearEvents]);
 
   // Helper to build calendar grid for a specific month (0-11) and year
@@ -1059,6 +1838,64 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
       now.getDate()
     ).padStart(2, '0')}`;
   }, []);
+
+  // Active date for Daily Planner (defaults to selectedDateStr, or todayStr if in selectedYear, or first date with events)
+  const activeDailyDateStr = useMemo(() => {
+    if (selectedDateStr) return selectedDateStr;
+    if (todayStr.startsWith(String(selectedYear))) return todayStr;
+    if (yearEvents.length > 0) return yearEvents[0].date;
+    return `${selectedYear}-01-01`;
+  }, [selectedDateStr, todayStr, selectedYear, yearEvents]);
+
+  const openDailyPlannerForDate = (dateStr?: string) => {
+    const target = dateStr || activeDailyDateStr;
+    setSelectedDateStr(target);
+    const [yr, mo] = target.split('-').map(Number);
+    if (yr && yr !== selectedYear) setSelectedYear(yr);
+    if (mo && mo - 1 !== focusedMonth) setFocusedMonth(mo - 1);
+    setViewMode('daily-planner');
+  };
+
+  const shiftDailyDate = (offsetDays: number) => {
+    const [y, m, d] = activeDailyDateStr.split('-').map(Number);
+    const dt = new Date(y || selectedYear, (m || 1) - 1, (d || 1) + offsetDays);
+    const nextStr = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(
+      dt.getDate()
+    ).padStart(2, '0')}`;
+    setSelectedDateStr(nextStr);
+    if (dt.getFullYear() !== selectedYear) setSelectedYear(dt.getFullYear());
+    if (dt.getMonth() !== focusedMonth) setFocusedMonth(dt.getMonth());
+  };
+
+  const formatIndonesianFullDate = (dateStr: string) => {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const dt = new Date(y || selectedYear, (m || 1) - 1, d || 1);
+    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    return `${days[dt.getDay()]}, ${d} ${INDONESIAN_MONTHS[(m || 1) - 1]} ${y}`;
+  };
+
+  // Parse start and end hour from event.time string (e.g. "09:00 - 12:00 WIB")
+  const parseEventHourRange = (timeStr?: string) => {
+    if (!timeStr) {
+      return { startHour: 9, endHour: 11, durationHours: 2, label: '09:00 - 11:00 WIB' };
+    }
+    const matches = Array.from(timeStr.matchAll(/(\d{1,2})[:.](\d{2})/g));
+    if (matches.length >= 2) {
+      const sh = Math.min(23, Math.max(0, parseInt(matches[0][1], 10)));
+      const ehRaw = Math.min(23, Math.max(0, parseInt(matches[1][1], 10)));
+      const emRaw = parseInt(matches[1][2], 10);
+      // If end time has minutes (e.g. 11:30), include hour 11; if 12:00, last occupied hour slot is 11 unless sh === ehRaw
+      const lastOccupiedHour =
+        ehRaw > sh ? (emRaw > 0 ? ehRaw : Math.max(sh, ehRaw - 1)) : sh;
+      const durationHours = Math.max(1, ehRaw - sh + (emRaw >= 30 ? 0.5 : 0));
+      return { startHour: sh, endHour: lastOccupiedHour, durationHours, label: timeStr };
+    }
+    if (matches.length === 1) {
+      const sh = Math.min(23, Math.max(0, parseInt(matches[0][1], 10)));
+      return { startHour: sh, endHour: sh + 1, durationHours: 1, label: timeStr };
+    }
+    return { startHour: 9, endHour: 10, durationHours: 2, label: timeStr };
+  };
 
   // Events to display in the To-Do detail panel
   const displayedTodoEvents = useMemo(() => {
@@ -1216,6 +2053,19 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
               </button>
               <button
                 type="button"
+                onClick={() => openDailyPlannerForDate(selectedDateStr || undefined)}
+                className={`flex items-center space-x-1 px-2.5 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
+                  viewMode === 'daily-planner'
+                    ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+                title="Buka Daily Planner (Tampilan Harian Jam per Jam)"
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>Harian (Daily Planner)</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setViewMode('todo-list')}
                 className={`flex items-center space-x-1 px-2.5 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
                   viewMode === 'todo-list'
@@ -1225,6 +2075,39 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
               >
                 <ListTodo className="w-3.5 h-3.5" />
                 <span>To-Do List</span>
+              </button>
+            </div>
+
+            {/* Grid vs List Layout Toggle (Visual Grid vs Compact List) */}
+            <div
+              className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs"
+              title="Pilih tampilan Visual (Grid) atau tampilan Ringkas (List)"
+            >
+              <button
+                type="button"
+                onClick={() => handleChangeLayoutMode('grid')}
+                className={`flex items-center space-x-1 px-2.5 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                  layoutMode === 'grid'
+                    ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+                title="Tampilan Grid (Visual & Kartu Lengkap)"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>Grid</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleChangeLayoutMode('list')}
+                className={`flex items-center space-x-1 px-2.5 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                  layoutMode === 'list'
+                    ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+                title="Tampilan List (Ringkas & Padat)"
+              >
+                <List className="w-3.5 h-3.5" />
+                <span>List</span>
               </button>
             </div>
 
@@ -1238,6 +2121,113 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
               <BellRing className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 animate-pulse" />
               <span>Cek Pengingat Deadline</span>
             </button>
+
+            {/* Ekspor Kalender PDF Split Button + Month Selector Dropdown */}
+            <div ref={exportMenuRef} className="relative flex items-center">
+              <button
+                type="button"
+                onClick={() =>
+                  handleExportCalendarPdf(viewMode === 'single-month' ? focusedMonth : focusedMonth)
+                }
+                className={`flex items-center space-x-1.5 pl-3 pr-2.5 py-2 rounded-l-xl text-xs font-bold border-y border-l transition-all cursor-pointer shadow-2xs ${
+                  exportSuccess
+                    ? 'bg-emerald-600 text-white border-emerald-600'
+                    : 'bg-rose-600 hover:bg-rose-700 text-white border-rose-600'
+                }`}
+                title={`Unduh jadwal kalender bulanan (${INDONESIAN_MONTHS[focusedMonth]} ${selectedYear}) dalam format PDF resmi`}
+              >
+                {exportSuccess ? (
+                  <Check className="w-3.5 h-3.5 text-white animate-bounce" />
+                ) : (
+                  <FileDown className="w-3.5 h-3.5" />
+                )}
+                <span>{exportSuccess ? 'PDF Terunduh!' : 'Ekspor Kalender'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsExportMenuOpen(prev => !prev)}
+                className={`px-2 py-2 rounded-r-xl text-xs font-bold border transition-all cursor-pointer ${
+                  exportSuccess
+                    ? 'bg-emerald-700 text-white border-emerald-600'
+                    : 'bg-rose-700 hover:bg-rose-800 text-white border-rose-600'
+                }`}
+                title="Pilih bulan spesifik atau ekspor jadwal 12 bulan penuh (PDF)"
+                aria-label="Pilih periode ekspor kalender PDF"
+              >
+                <ChevronDown
+                  className={`w-3.5 h-3.5 transition-transform ${isExportMenuOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {isExportMenuOpen && (
+                <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-2.5 z-50 space-y-2">
+                  <div className="px-2 py-1 border-b border-slate-100 dark:border-slate-800">
+                    <p className="text-[11px] font-extrabold text-slate-900 dark:text-white">
+                      Ekspor Jadwal Kalender (PDF)
+                    </p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                      Format A4 Landscape resmi dengan matriks kalender, PIC & checklist.
+                    </p>
+                  </div>
+
+                  {/* Quick Current/Focused Month Export */}
+                  <button
+                    type="button"
+                    onClick={() => handleExportCalendarPdf(focusedMonth)}
+                    className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/80 text-rose-700 dark:text-rose-300 text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <FileDown className="w-3.5 h-3.5" />
+                      <span>Bulan {INDONESIAN_MONTHS[focusedMonth]} {selectedYear}</span>
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-200/70 dark:bg-rose-800 text-rose-900 dark:text-rose-100 font-mono">
+                      PDF
+                    </span>
+                  </button>
+
+                  {/* 12 Months Grid Selector for Monthly PDF */}
+                  <div className="px-1 pt-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
+                      Pilih Jadwal Bulanan ({selectedYear}):
+                    </p>
+                    <div className="grid grid-cols-3 gap-1">
+                      {INDONESIAN_MONTHS.map((mName, mIdx) => (
+                        <button
+                          key={mName}
+                          type="button"
+                          onClick={() => {
+                            setFocusedMonth(mIdx);
+                            handleExportCalendarPdf(mIdx);
+                          }}
+                          className={`px-2 py-1.5 rounded-lg text-[10.5px] font-bold transition-all cursor-pointer text-center ${
+                            focusedMonth === mIdx
+                              ? 'bg-indigo-600 text-white shadow-2xs'
+                              : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          {mName.slice(0, 3)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Full Year 12-Month Export */}
+                  <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => handleExportCalendarPdf('all')}
+                      className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <LayoutGrid className="w-3.5 h-3.5 text-indigo-500" />
+                        <span>Rekap Tahunan (12 Bulan)</span>
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-500">{selectedYear}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Create Event & To-Do Button */}
             <button
@@ -1301,6 +2291,57 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
             <div className="w-9 h-9 rounded-xl bg-violet-100 dark:bg-violet-900/60 text-violet-600 dark:text-violet-300 flex items-center justify-center">
               <CheckSquare className="w-4 h-4" />
             </div>
+          </div>
+        </div>
+
+        {/* Overall Completion Progress Bar Banner */}
+        <div className="mt-3 p-3.5 rounded-xl bg-slate-50/90 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/70 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-extrabold text-slate-800 dark:text-slate-100">
+                Rata-rata Progres Penyelesaian Tugas ({selectedYear}):
+              </span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-xs font-extrabold border ${
+                  stats.avgProgressPct >= 100
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300'
+                    : stats.avgProgressPct >= 50
+                    ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border-indigo-300'
+                    : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300'
+                }`}
+              >
+                {stats.avgProgressPct}% Tercapai
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold">
+              <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                Selesai: {stats.completed} ({stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0}%)
+              </span>
+              <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                Berjalan: {stats.inProgress}
+              </span>
+              <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
+                <span className="w-2 h-2 rounded-full bg-slate-400" />
+                Belum Mulai: {stats.pending}
+              </span>
+              <span className="text-violet-600 dark:text-violet-400">
+                • Sub-Tugas: {stats.subtaskPct}% ({stats.doneSubtasks}/{stats.totalSubtasks})
+              </span>
+            </div>
+          </div>
+          <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${
+                stats.avgProgressPct >= 100
+                  ? 'bg-emerald-500'
+                  : stats.avgProgressPct >= 60
+                  ? 'bg-indigo-600'
+                  : 'bg-amber-500'
+              }`}
+              style={{ width: `${stats.avgProgressPct}%` }}
+            />
           </div>
         </div>
       </div>
@@ -1401,7 +2442,7 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
           <div className="flex flex-wrap items-center justify-between gap-2 px-1">
             <div className="flex items-center space-x-2 text-xs text-slate-600 dark:text-slate-400">
               <span className="font-bold text-slate-800 dark:text-slate-200">
-                Visualisasi Kalender 12 Bulan ({selectedYear})
+                Visualisasi Kalender 12 Bulan ({selectedYear}) — Mode {layoutMode === 'grid' ? 'Grid Visual' : 'List Ringkas'}
               </span>
               <span>•</span>
               <span>Klik tanggal untuk memfilter To-Do, atau klik tombol + untuk Create Event baru.</span>
@@ -1416,7 +2457,146 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {layoutMode === 'list' ? (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl divide-y divide-slate-100 dark:divide-slate-800 shadow-2xs overflow-hidden">
+              {INDONESIAN_MONTHS.map((monthName, monthIdx) => {
+                const monthPrefix = `${selectedYear}-${String(monthIdx + 1).padStart(2, '0')}`;
+                const monthEvents = yearEvents.filter(e => e.date.startsWith(monthPrefix));
+                const monthAvgPct =
+                  monthEvents.length > 0
+                    ? Math.round(
+                        monthEvents.reduce((acc, e) => acc + getTaskCompletionProgress(e).percent, 0) /
+                          monthEvents.length
+                      )
+                    : 0;
+
+                return (
+                  <div
+                    key={monthName}
+                    className="p-3.5 sm:px-5 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors flex flex-col lg:flex-row lg:items-center justify-between gap-3"
+                  >
+                    {/* Left: Month Title & Aggregate Progress */}
+                    <div className="flex items-center justify-between lg:justify-start gap-3 lg:w-64 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFocusedMonth(monthIdx);
+                          setViewMode('single-month');
+                        }}
+                        className="flex items-center gap-2.5 text-left group cursor-pointer"
+                      >
+                        <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 font-extrabold text-xs flex items-center justify-center border border-indigo-200/60 dark:border-indigo-800/60">
+                          {String(monthIdx + 1).padStart(2, '0')}
+                        </div>
+                        <div>
+                          <p className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                            {monthName} {selectedYear}
+                          </p>
+                          <p className="text-[10.5px] text-slate-500 dark:text-slate-400">
+                            {monthEvents.length} agenda terjadwal
+                          </p>
+                        </div>
+                      </button>
+
+                      {monthEvents.length > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-14 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${
+                                monthAvgPct >= 100
+                                  ? 'bg-emerald-500'
+                                  : monthAvgPct >= 50
+                                  ? 'bg-indigo-600'
+                                  : 'bg-amber-500'
+                              }`}
+                              style={{ width: `${monthAvgPct}%` }}
+                            />
+                          </div>
+                          <span className="text-[10px] font-extrabold text-slate-700 dark:text-slate-300">
+                            {monthAvgPct}%
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Middle: Compact Horizontal List of Tasks */}
+                    <div className="flex-1 min-w-0">
+                      {monthEvents.length === 0 ? (
+                        <span className="text-[11px] text-slate-400 italic">Belum ada jadwal pada bulan ini</span>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {monthEvents.map(ev => {
+                            const st = CATEGORY_STYLES[ev.category];
+                            const prog = getTaskCompletionProgress(ev);
+                            const dayNum = ev.date.split('-')[2];
+                            return (
+                              <div
+                                key={ev.id}
+                                onClick={() => openEditModal(ev)}
+                                className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-xl border text-[11px] cursor-pointer transition-all hover:brightness-95 max-w-full ${st.bg} ${st.border}`}
+                              >
+                                <span className={`font-mono font-extrabold ${st.text} shrink-0`}>
+                                  Tgl {dayNum}
+                                </span>
+                                <span
+                                  className={`font-bold truncate max-w-[180px] sm:max-w-[240px] ${
+                                    ev.status === 'Selesai'
+                                      ? 'line-through opacity-60'
+                                      : 'text-slate-900 dark:text-white'
+                                  }`}
+                                >
+                                  {ev.title}
+                                </span>
+                                <span className="text-[10px] text-slate-500 dark:text-slate-400 shrink-0 hidden sm:inline">
+                                  • PIC: {ev.picName.split(' ')[0]}
+                                </span>
+                                <span
+                                  className={`px-1.5 py-0.2 rounded text-[9.5px] font-extrabold border shrink-0 ${prog.badgeClass}`}
+                                >
+                                  {prog.percent}%
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right: Quick Month Actions */}
+                    <div className="flex items-center justify-end gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFocusedMonth(monthIdx);
+                          setViewMode('single-month');
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10.5px] font-bold cursor-pointer"
+                      >
+                        Detail Bulan
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleExportCalendarPdf(monthIdx)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                        title={`Unduh PDF ${monthName}`}
+                      >
+                        <FileDown className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openCreateModal(`${monthPrefix}-01`)}
+                        className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                        title={`Create Event di bulan ${monthName}`}
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {INDONESIAN_MONTHS.map((monthName, monthIdx) => {
               const cells = buildMonthDays(selectedYear, monthIdx);
               const monthPrefix = `${selectedYear}-${String(monthIdx + 1).padStart(2, '0')}`;
@@ -1449,6 +2629,14 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                             {monthEvents.length} tugas
                           </span>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => handleExportCalendarPdf(monthIdx)}
+                          className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                          title={`Ekspor jadwal bulan ${monthName} ${selectedYear} ke PDF`}
+                        >
+                          <FileDown className="w-3.5 h-3.5" />
+                        </button>
                         <button
                           type="button"
                           onClick={() => openCreateModal(`${monthPrefix}-01`)}
@@ -1534,41 +2722,99 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                     </div>
                   </div>
 
-                  {/* Monthly To-Do List Preview inside each Month Card */}
+                      {/* Monthly To-Do List Preview inside each Month Card with Instant Task Progress Bars */}
                   <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80">
                     {monthEvents.length === 0 ? (
                       <p className="text-[10.5px] text-slate-400 dark:text-slate-500 italic text-center py-1">
                         Belum ada agenda bulanan
                       </p>
                     ) : (
-                      <div className="space-y-1.5 max-h-28 overflow-y-auto pr-0.5">
+                      <div className="space-y-2 max-h-40 overflow-y-auto pr-0.5">
+                        {/* Monthly Aggregate Progress Bar */}
+                        {(() => {
+                          const monthAvgPct = Math.round(
+                            monthEvents.reduce((acc, e) => acc + getTaskCompletionProgress(e).percent, 0) /
+                              monthEvents.length
+                          );
+                          return (
+                            <div className="px-1 pb-1">
+                              <div className="flex items-center justify-between text-[10px] mb-1">
+                                <span className="font-bold text-slate-500 dark:text-slate-400">
+                                  Progres Bulan {monthName}
+                                </span>
+                                <span
+                                  className={`font-extrabold ${
+                                    monthAvgPct >= 100
+                                      ? 'text-emerald-600 dark:text-emerald-400'
+                                      : monthAvgPct >= 50
+                                      ? 'text-indigo-600 dark:text-indigo-400'
+                                      : 'text-amber-600 dark:text-amber-400'
+                                  }`}
+                                >
+                                  {monthAvgPct}%
+                                </span>
+                              </div>
+                              <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-300 ${
+                                    monthAvgPct >= 100
+                                      ? 'bg-emerald-500'
+                                      : monthAvgPct >= 50
+                                      ? 'bg-indigo-600'
+                                      : 'bg-amber-500'
+                                  }`}
+                                  style={{ width: `${monthAvgPct}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })()}
+
                         {monthEvents.slice(0, 3).map(ev => {
                           const st = CATEGORY_STYLES[ev.category];
                           const dayNum = ev.date.split('-')[2];
+                          const prog = getTaskCompletionProgress(ev);
                           return (
                             <div
                               key={ev.id}
                               onClick={() => openEditModal(ev)}
-                              className={`px-2 py-1 rounded-lg border text-[10.5px] cursor-pointer transition-all hover:brightness-95 flex items-center justify-between gap-1.5 ${st.bg} ${st.border}`}
+                              className={`px-2 py-1.5 rounded-lg border text-[10.5px] cursor-pointer transition-all hover:brightness-95 space-y-1 ${st.bg} ${st.border}`}
                             >
-                              <div className="flex items-center space-x-1.5 min-w-0">
-                                <span className={`font-extrabold ${st.text} shrink-0`}>{dayNum}:</span>
+                              <div className="flex items-center justify-between gap-1.5">
+                                <div className="flex items-center space-x-1.5 min-w-0">
+                                  <span className={`font-extrabold ${st.text} shrink-0`}>{dayNum}:</span>
+                                  <span
+                                    className={`font-semibold truncate ${
+                                      ev.status === 'Selesai'
+                                        ? 'line-through opacity-65'
+                                        : 'text-slate-800 dark:text-slate-100'
+                                    }`}
+                                  >
+                                    {ev.title}
+                                  </span>
+                                </div>
                                 <span
-                                  className={`font-semibold truncate ${
-                                    ev.status === 'Selesai'
-                                      ? 'line-through opacity-65'
-                                      : 'text-slate-800 dark:text-slate-100'
-                                  }`}
+                                  className={`px-1.5 py-0.2 rounded text-[9px] font-extrabold border shrink-0 ${prog.badgeClass}`}
+                                  title={`Progres: ${prog.statusLabel}`}
                                 >
-                                  {ev.title}
+                                  {prog.percent}%
                                 </span>
                               </div>
-                              <span
-                                className="px-1.5 py-0.2 rounded bg-white/80 dark:bg-slate-900/80 text-[9.5px] font-bold text-slate-600 dark:text-slate-300 shrink-0 max-w-[85px] truncate"
-                                title={`PIC: ${ev.picName}`}
-                              >
-                                👤 {ev.picName.split(' ')[0]}
-                              </span>
+                              {/* Per-task instant progress bar in 12-month card */}
+                              <div className="flex items-center gap-1.5">
+                                <div className="flex-1 h-1.5 bg-white/80 dark:bg-slate-900/70 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full transition-all duration-300 ${prog.barColor}`}
+                                    style={{ width: `${prog.percent}%` }}
+                                  />
+                                </div>
+                                <span
+                                  className="text-[9px] font-semibold text-slate-600 dark:text-slate-300 shrink-0 max-w-[75px] truncate"
+                                  title={`PIC: ${ev.picName}`}
+                                >
+                                  👤 {ev.picName.split(' ')[0]}
+                                </span>
+                              </div>
                             </div>
                           );
                         })}
@@ -1590,7 +2836,8 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                 </div>
               );
             })}
-          </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1616,6 +2863,15 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
+              <button
+                type="button"
+                onClick={() => handleExportCalendarPdf(focusedMonth)}
+                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/80 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/70 text-xs font-bold transition-colors cursor-pointer"
+                title={`Ekspor jadwal bulan ${INDONESIAN_MONTHS[focusedMonth]} ${selectedYear} ke PDF`}
+              >
+                <FileDown className="w-3.5 h-3.5" />
+                <span>Unduh PDF {INDONESIAN_MONTHS[focusedMonth]}</span>
+              </button>
             </div>
 
             {/* Quick Month Pills */}
@@ -1637,7 +2893,145 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
             </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-2 text-center">
+          {layoutMode === 'list' ? (
+            <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+              {(() => {
+                const monthDays = buildMonthDays(selectedYear, focusedMonth).filter(
+                  c => c.day !== null && c.dateStr !== null
+                );
+                return monthDays.map(cell => {
+                  const dateStr = cell.dateStr!;
+                  const dayEvts = eventsByDateMap[dateStr] || [];
+                  const isSelected = selectedDateStr === dateStr;
+                  const isToday = todayStr === dateStr;
+
+                  return (
+                    <div
+                      key={dateStr}
+                      onClick={() => setSelectedDateStr(isSelected ? null : dateStr)}
+                      className={`p-3 sm:px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'bg-indigo-50/70 dark:bg-indigo-950/30'
+                          : isToday
+                          ? 'bg-amber-50/40 dark:bg-amber-950/20'
+                          : dayEvts.length > 0
+                          ? 'bg-white dark:bg-slate-900 hover:bg-slate-50/80 dark:hover:bg-slate-800/50'
+                          : 'bg-slate-50/40 dark:bg-slate-900/40 hover:bg-slate-100/60 dark:hover:bg-slate-800/30 opacity-75'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 sm:w-56 shrink-0">
+                        <span
+                          className={`w-8 h-8 rounded-xl text-xs font-extrabold flex items-center justify-center shrink-0 ${
+                            isToday
+                              ? 'bg-amber-500 text-white'
+                              : isSelected
+                              ? 'bg-indigo-600 text-white'
+                              : dayEvts.length > 0
+                              ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300'
+                              : 'bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                          }`}
+                        >
+                          {cell.day}
+                        </span>
+                        <div>
+                          <p className="text-xs font-bold text-slate-900 dark:text-white">
+                            {formatIndonesianFullDate(dateStr)}
+                          </p>
+                          <p className="text-[10px] text-slate-500">
+                            {dayEvts.length > 0 ? `${dayEvts.length} tugas terjadwal` : 'Tidak ada tugas'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        {dayEvts.length === 0 ? (
+                          <span className="text-[11px] text-slate-400 italic">Slot tanggal kosong</span>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {dayEvts.map(ev => {
+                              const st = CATEGORY_STYLES[ev.category];
+                              const prog = getTaskCompletionProgress(ev);
+                              return (
+                                <div
+                                  key={ev.id}
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    openEditModal(ev);
+                                  }}
+                                  className={`p-2 rounded-xl border text-xs flex flex-wrap items-center justify-between gap-2 ${st.bg} ${st.border} hover:brightness-95`}
+                                >
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    {ev.time && (
+                                      <span className="px-1.5 py-0.5 rounded bg-white/80 dark:bg-slate-900/80 text-[10px] font-mono font-bold text-slate-700 dark:text-slate-300 shrink-0">
+                                        {ev.time}
+                                      </span>
+                                    )}
+                                    <span
+                                      className={`font-extrabold truncate ${
+                                        ev.status === 'Selesai'
+                                          ? 'line-through text-slate-400'
+                                          : st.text
+                                      }`}
+                                    >
+                                      {ev.title}
+                                    </span>
+                                    <span className="text-[10.5px] text-slate-600 dark:text-slate-300 shrink-0">
+                                      • PIC: <strong>{ev.picName}</strong>
+                                    </span>
+                                  </div>
+
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <div className="w-20 h-1.5 bg-white/80 dark:bg-slate-900/70 rounded-full overflow-hidden">
+                                      <div
+                                        className={`h-full rounded-full transition-all duration-300 ${prog.barColor}`}
+                                        style={{ width: `${prog.percent}%` }}
+                                      />
+                                    </div>
+                                    <span
+                                      className={`px-1.5 py-0.2 rounded text-[10px] font-extrabold border ${prog.badgeClass}`}
+                                    >
+                                      {prog.percent}%
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-end gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={e => {
+                            e.stopPropagation();
+                            openDailyPlannerForDate(dateStr);
+                          }}
+                          className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-indigo-50 dark:bg-slate-800 text-slate-600 hover:text-indigo-600 dark:text-slate-300 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                          title="Buka Daily Planner tanggal ini"
+                        >
+                          <Clock className="w-3 h-3" />
+                          <span>Jam</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={e => {
+                            e.stopPropagation();
+                            openCreateModal(dateStr);
+                          }}
+                          className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 cursor-pointer"
+                          title="Tambah Event pada tanggal ini"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          ) : (
+            <div className="grid grid-cols-7 gap-2 text-center">
             {SHORT_DAYS.map((d, i) => (
               <div
                 key={d}
@@ -1687,22 +3081,36 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                     >
                       {cell.day}
                     </span>
-                    <button
-                      type="button"
-                      onClick={e => {
-                        e.stopPropagation();
-                        openCreateModal(cell.dateStr!);
-                      }}
-                      className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800"
-                      title="Create Event pada tanggal ini"
-                    >
-                      <Plus className="w-3 h-3" />
-                    </button>
+                    <div className="flex items-center gap-0.5">
+                      <button
+                        type="button"
+                        onClick={e => {
+                          e.stopPropagation();
+                          openDailyPlannerForDate(cell.dateStr!);
+                        }}
+                        className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800"
+                        title="Buka Daily Planner (Jam per Jam) tanggal ini"
+                      >
+                        <Clock className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={e => {
+                          e.stopPropagation();
+                          openCreateModal(cell.dateStr!);
+                        }}
+                        className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800"
+                        title="Create Event pada tanggal ini"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="space-y-1 mt-1.5">
+                  <div className="space-y-1.5 mt-1.5">
                     {dayEvts.map(ev => {
                       const st = CATEGORY_STYLES[ev.category];
+                      const prog = getTaskCompletionProgress(ev);
                       return (
                         <div
                           key={ev.id}
@@ -1710,10 +3118,21 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                             e.stopPropagation();
                             openEditModal(ev);
                           }}
-                          className={`p-1.5 rounded-lg border text-[10px] ${st.bg} ${st.border} hover:brightness-95`}
+                          className={`p-1.5 rounded-lg border text-[10px] space-y-1 ${st.bg} ${st.border} hover:brightness-95`}
                         >
-                          <p className={`font-bold truncate ${st.text}`}>{ev.title}</p>
-                          <p className="text-[9.5px] text-slate-600 dark:text-slate-300 truncate mt-0.5">
+                          <div className="flex items-center justify-between gap-1">
+                            <p className={`font-bold truncate ${st.text}`}>{ev.title}</p>
+                            <span className={`text-[9px] font-extrabold shrink-0 ${prog.textColor}`}>
+                              {prog.percent}%
+                            </span>
+                          </div>
+                          <div className="w-full h-1.5 bg-white/80 dark:bg-slate-900/70 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-300 ${prog.barColor}`}
+                              style={{ width: `${prog.percent}%` }}
+                            />
+                          </div>
+                          <p className="text-[9.5px] text-slate-600 dark:text-slate-300 truncate">
                             👤 PIC: {ev.picName}
                           </p>
                         </div>
@@ -1723,9 +3142,570 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                 </div>
               );
             })}
-          </div>
+            </div>
+          )}
         </div>
       )}
+
+      {/* VIEW 3: DAILY PLANNER (VIEW HARIAN - DETAIL JAM PER JAM) */}
+      {viewMode === 'daily-planner' &&
+        (() => {
+          const dayEvents = (eventsByDateMap[activeDailyDateStr] || []).slice().sort((a, b) => {
+            const ha = parseEventHourRange(a.time).startHour;
+            const hb = parseEventHourRange(b.time).startHour;
+            return ha - hb;
+          });
+
+          const totalDayTasks = dayEvents.length;
+          const doneDayTasks = dayEvents.filter(e => e.status === 'Selesai').length;
+          const totalScheduledHours = dayEvents.reduce(
+            (acc, e) => acc + parseEventHourRange(e.time).durationHours,
+            0
+          );
+          const avgDayProgress =
+            totalDayTasks > 0
+              ? Math.round(
+                  dayEvents.reduce((acc, e) => acc + getTaskCompletionProgress(e).percent, 0) /
+                    totalDayTasks
+                )
+              : 0;
+          const totalDaySubtasks = dayEvents.reduce((acc, e) => acc + e.subtasks.length, 0);
+          const doneDaySubtasks = dayEvents.reduce(
+            (acc, e) => acc + e.subtasks.filter(s => s.completed).length,
+            0
+          );
+
+          // Dates in this year that have events, for quick 1-click jumping
+          const activeDatesList = Object.keys(eventsByDateMap).sort();
+
+          // Standard Daily Planner hours (06:00 to 21:00 WIB), plus any earlier/later hour if an event exists there
+          const baseHours = Array.from({ length: 16 }, (_, i) => i + 6); // 6..21
+          const currentHourNow = new Date().getHours();
+          const isSelectedToday = activeDailyDateStr === todayStr;
+
+          const getPeriodLabel = (hr: number) => {
+            if (hr < 11) return { text: 'Pagi', cls: 'bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300' };
+            if (hr < 15) return { text: 'Siang', cls: 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300' };
+            if (hr < 18) return { text: 'Sore', cls: 'bg-orange-50 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300' };
+            return { text: 'Malam', cls: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300' };
+          };
+
+          const hoursToRender = baseHours.filter(hr => {
+            if (dailyHourFilter === 'all-hours') return true;
+            return dayEvents.some(ev => {
+              const r = parseEventHourRange(ev.time);
+              return hr >= r.startHour && hr <= r.endHour;
+            });
+          });
+
+          return (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-5">
+              {/* Top Daily Planner Navigation Header */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-4 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                    <Clock className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">
+                        Daily Planner: {formatIndonesianFullDate(activeDailyDateStr)}
+                      </h3>
+                      {isSelectedToday && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500 text-slate-950">
+                          HARI INI
+                        </span>
+                      )}
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
+                        {totalDayTasks} Tugas Terjadwal
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Jadwal operasional jam per jam (06:00 – 21:00 WIB) beserta PIC dan persentase progres tugas.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Day Controls: Prev Day, Date Input, Next Day, Today, Hour Filter */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                    <button
+                      type="button"
+                      onClick={() => shiftDailyDate(-1)}
+                      className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                      title="Hari Sebelumnya"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <input
+                      type="date"
+                      value={activeDailyDateStr}
+                      onChange={e => {
+                        if (e.target.value) openDailyPlannerForDate(e.target.value);
+                      }}
+                      aria-label="Pilih Tanggal Daily Planner"
+                      className="px-2.5 py-1 bg-transparent text-xs font-extrabold text-indigo-700 dark:text-indigo-300 focus:outline-none cursor-pointer"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => shiftDailyDate(1)}
+                      className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                      title="Hari Berikutnya"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => openDailyPlannerForDate(todayStr)}
+                    className="px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Hari Ini
+                  </button>
+
+                  {/* Filter All Hours vs Active Hours */}
+                  <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setDailyHourFilter('all-hours')}
+                      className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                        dailyHourFilter === 'all-hours'
+                          ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs'
+                          : 'text-slate-600 dark:text-slate-400'
+                      }`}
+                    >
+                      Semua Jam (06:00–21:00)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDailyHourFilter('active-only')}
+                      className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                        dailyHourFilter === 'active-only'
+                          ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs'
+                          : 'text-slate-600 dark:text-slate-400'
+                      }`}
+                    >
+                      Hanya Jam Terisi
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => openCreateModal(activeDailyDateStr, '09:00 - 11:00 WIB')}
+                    className="flex items-center space-x-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Tambah Jadwal Jam</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Jump Strip: Dates with Active Tasks in Selected Year */}
+              {activeDatesList.length > 0 && (
+                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 shrink-0">
+                    Tanggal Berisi Agenda ({activeDatesList.length}):
+                  </span>
+                  {activeDatesList.map(dStr => {
+                    const evtsOnDate = eventsByDateMap[dStr] || [];
+                    const avgPct =
+                      evtsOnDate.length > 0
+                        ? Math.round(
+                            evtsOnDate.reduce(
+                              (acc, e) => acc + getTaskCompletionProgress(e).percent,
+                              0
+                            ) / evtsOnDate.length
+                          )
+                        : 0;
+                    const isCurrent = dStr === activeDailyDateStr;
+                    const [, mo, dy] = dStr.split('-').map(Number);
+
+                    return (
+                      <button
+                        key={dStr}
+                        type="button"
+                        onClick={() => openDailyPlannerForDate(dStr)}
+                        className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
+                          isCurrent
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                            : 'bg-slate-50 hover:bg-indigo-50 dark:bg-slate-800/80 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                        }`}
+                      >
+                        <span>
+                          {dy} {INDONESIAN_MONTHS[(mo || 1) - 1]?.slice(0, 3)}
+                        </span>
+                        <span
+                          className={`px-1.5 py-0.2 rounded-full text-[9.5px] font-extrabold ${
+                            isCurrent
+                              ? 'bg-white/20 text-white'
+                              : 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300'
+                          }`}
+                        >
+                          {evtsOnDate.length} tugas • {avgPct}%
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Daily Summary KPI Cards & Daily Progress Bar */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                    Total Tugas Hari Ini
+                  </p>
+                  <p className="text-base font-extrabold text-slate-900 dark:text-white mt-0.5">
+                    {totalDayTasks} Agenda ({doneDayTasks} Selesai)
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/60 dark:border-indigo-800/50">
+                  <p className="text-[11px] text-indigo-700 dark:text-indigo-300 font-medium">
+                    Alokasi Jam Produktif
+                  </p>
+                  <p className="text-base font-extrabold text-indigo-900 dark:text-indigo-200 mt-0.5">
+                    {totalScheduledHours} Jam Terjadwal
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-violet-50/70 dark:bg-violet-950/30 border border-violet-200/60 dark:border-violet-800/50">
+                  <p className="text-[11px] text-violet-700 dark:text-violet-300 font-medium">
+                    Sub-Tugas Harian
+                  </p>
+                  <p className="text-base font-extrabold text-violet-900 dark:text-violet-200 mt-0.5">
+                    {doneDaySubtasks}/{totalDaySubtasks} Checklist
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/50 space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-emerald-700 dark:text-emerald-300 font-bold">
+                      Progres Harian
+                    </span>
+                    <span className="font-extrabold text-emerald-800 dark:text-emerald-200">
+                      {avgDayProgress}%
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-emerald-200/70 dark:bg-emerald-950 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                      style={{ width: `${avgDayProgress}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Hour-by-Hour Timeline Schedule Grid */}
+              {hoursToRender.length === 0 ? (
+                <div className="text-center py-10 px-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-slate-700 space-y-2.5">
+                  <Clock className="w-8 h-8 text-slate-400 mx-auto" />
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                    Belum Ada Tugas Terjadwal pada Tanggal {activeDailyDateStr}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Tampilkan semua jam kerja atau klik tombol di bawah untuk membuat jadwal baru pada tanggal ini.
+                  </p>
+                  <div className="flex items-center justify-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setDailyHourFilter('all-hours')}
+                      className="px-3.5 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold cursor-pointer"
+                    >
+                      Tampilkan Semua Jam (06:00–21:00)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openCreateModal(activeDailyDateStr, '09:00 - 11:00 WIB')}
+                      className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer"
+                    >
+                      + Buat Tugas di Tanggal Ini
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-200/80 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+                  {hoursToRender.map(hour => {
+                    const hourLabel = `${String(hour).padStart(2, '0')}:00`;
+                    const nextHourLabel = `${String(hour + 1).padStart(2, '0')}:00`;
+                    const defaultSlotTime = `${hourLabel} - ${nextHourLabel} WIB`;
+                    const period = getPeriodLabel(hour);
+                    const isCurrentHour = isSelectedToday && currentHourNow === hour;
+
+                    // Tasks starting in this hour vs continuing through this hour
+                    const startingEvents = dayEvents.filter(
+                      ev => parseEventHourRange(ev.time).startHour === hour
+                    );
+                    const continuingEvents = dayEvents.filter(ev => {
+                      const r = parseEventHourRange(ev.time);
+                      return hour > r.startHour && hour <= r.endHour;
+                    });
+                    const hasActivity = startingEvents.length > 0 || continuingEvents.length > 0;
+
+                    return (
+                      <div
+                        key={hour}
+                        className={`grid grid-cols-1 md:grid-cols-12 transition-colors ${
+                          isCurrentHour
+                            ? 'bg-amber-50/50 dark:bg-amber-950/20'
+                            : hasActivity
+                            ? 'bg-indigo-50/20 dark:bg-indigo-950/10'
+                            : 'bg-white dark:bg-slate-900 hover:bg-slate-50/80 dark:hover:bg-slate-800/40'
+                        }`}
+                      >
+                        {/* Left Hour Column */}
+                        <div className="md:col-span-2 p-3 sm:p-3.5 border-b md:border-b-0 md:border-r border-slate-200/70 dark:border-slate-800 flex md:flex-col items-center md:items-start justify-between gap-1.5">
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-sm font-extrabold text-slate-900 dark:text-white">
+                                {hourLabel} WIB
+                              </span>
+                              <span className={`px-1.5 py-0.2 rounded text-[9.5px] font-bold ${period.cls}`}>
+                                {period.text}
+                              </span>
+                            </div>
+                            {isCurrentHour && (
+                              <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded bg-rose-600 text-white text-[9px] font-extrabold animate-pulse">
+                                ● JAM SEKARANG
+                              </span>
+                            )}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => openCreateModal(activeDailyDateStr, defaultSlotTime)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100/70 dark:hover:bg-indigo-950/60 transition-colors cursor-pointer"
+                            title={`Jadwalkan tugas baru pada jam ${defaultSlotTime}`}
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>+ Tugas {hourLabel}</span>
+                          </button>
+                        </div>
+
+                        {/* Right Hour Tasks Content Column */}
+                        <div className="md:col-span-10 p-3 sm:p-3.5 space-y-2.5">
+                          {/* Tasks starting at this hour */}
+                          {startingEvents.map(ev => {
+                            const catStyle = CATEGORY_STYLES[ev.category];
+                            const prog = getTaskCompletionProgress(ev);
+                            const range = parseEventHourRange(ev.time);
+                            const dl = getDeadlineInfo(ev.date, ev.status);
+                            const evtDivInfo = divisiList.find(
+                              d => d.id === (ev.divisionId || ev.picDivisionId)
+                            );
+
+                            return (
+                              <div
+                                key={ev.id}
+                                className={`p-3.5 rounded-xl border transition-all space-y-2.5 ${catStyle.bg} ${catStyle.border} shadow-2xs`}
+                              >
+                                <div className="flex flex-wrap items-start justify-between gap-2">
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    <span className="px-2 py-0.5 rounded-md bg-slate-900 text-white dark:bg-slate-800 font-mono text-[10.5px] font-extrabold">
+                                      ⏰ {ev.time || defaultSlotTime} ({range.durationHours} jam)
+                                    </span>
+                                    {evtDivInfo && (
+                                      <span className="px-2 py-0.5 rounded-md bg-indigo-600 text-white text-[10px] font-extrabold">
+                                        {evtDivInfo.kode}
+                                      </span>
+                                    )}
+                                    <span
+                                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${catStyle.bg} ${catStyle.text} ${catStyle.border}`}
+                                    >
+                                      {ev.category}
+                                    </span>
+                                    <span
+                                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${PRIORITY_BADGE[ev.priority]}`}
+                                    >
+                                      Prioritas {ev.priority}
+                                    </span>
+                                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-white/80 dark:bg-slate-900/80 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                      {dl.label}
+                                    </span>
+                                  </div>
+
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => openEditModal(ev)}
+                                      className="p-1.5 rounded-lg bg-white/80 dark:bg-slate-900/80 text-slate-500 hover:text-indigo-600 transition-colors cursor-pointer"
+                                      title="Edit Tugas"
+                                    >
+                                      <Edit className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteEvent(ev)}
+                                      className="p-1.5 rounded-lg bg-white/80 dark:bg-slate-900/80 text-slate-500 hover:text-rose-600 transition-colors cursor-pointer"
+                                      title="Hapus Tugas"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                  <div>
+                                    <h4
+                                      className={`text-sm font-extrabold ${
+                                        ev.status === 'Selesai'
+                                          ? 'line-through text-slate-400'
+                                          : 'text-slate-900 dark:text-white'
+                                      }`}
+                                    >
+                                      {ev.title}
+                                    </h4>
+                                    {ev.description && (
+                                      <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+                                        {ev.description}
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  <div className="flex flex-wrap items-center gap-2 text-xs shrink-0">
+                                    <span className="px-2.5 py-1 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-700 font-bold text-slate-800 dark:text-slate-200">
+                                      👤 PIC: {ev.picName}
+                                    </span>
+                                    {ev.location && (
+                                      <span className="px-2.5 py-1 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                                        <MapPin className="w-3 h-3 text-indigo-500" />
+                                        <span>{ev.location}</span>
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Instant Progress Bar & Status Controls inside Hourly Planner */}
+                                <div className="p-2.5 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-slate-200/70 dark:border-slate-800 space-y-2">
+                                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                                    <span className="font-bold text-slate-700 dark:text-slate-200">
+                                      Progres Tugas Jam Ini ({prog.statusLabel})
+                                    </span>
+                                    <div className="flex items-center gap-1">
+                                      {(
+                                        [
+                                          { label: '0% Belum', val: 'Belum Mulai' as const },
+                                          { label: '50% Berjalan', val: 'Sedang Berjalan' as const },
+                                          { label: '100% Selesai', val: 'Selesai' as const }
+                                        ]
+                                      ).map(opt => (
+                                        <button
+                                          key={opt.val}
+                                          type="button"
+                                          onClick={() => handleToggleEventStatus(ev.id, opt.val)}
+                                          className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors cursor-pointer ${
+                                            ev.status === opt.val
+                                              ? opt.val === 'Selesai'
+                                                ? 'bg-emerald-600 text-white border-emerald-600'
+                                                : opt.val === 'Sedang Berjalan'
+                                                ? 'bg-amber-500 text-slate-950 border-amber-500'
+                                                : 'bg-slate-700 text-white border-slate-700'
+                                              : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                                          }`}
+                                        >
+                                          {opt.label}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full transition-all duration-300 ${prog.barColor}`}
+                                      style={{ width: `${prog.percent}%` }}
+                                    />
+                                  </div>
+
+                                  {ev.subtasks.length > 0 && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                                      {ev.subtasks.map(st => (
+                                        <label
+                                          key={st.id}
+                                          className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/70 hover:bg-indigo-50/50 cursor-pointer text-[11px]"
+                                        >
+                                          <div className="flex items-center gap-2 min-w-0">
+                                            <input
+                                              type="checkbox"
+                                              checked={st.completed}
+                                              onChange={() => handleToggleSubtask(ev.id, st.id)}
+                                              className="rounded text-indigo-600 cursor-pointer"
+                                            />
+                                            <span
+                                              className={`truncate ${
+                                                st.completed
+                                                  ? 'line-through text-slate-400'
+                                                  : 'font-medium text-slate-800 dark:text-slate-200'
+                                              }`}
+                                            >
+                                              {st.title}
+                                            </span>
+                                          </div>
+                                          <span className="text-[9.5px] font-bold text-slate-400 ml-1.5 shrink-0">
+                                            {st.completed ? '100%' : '0%'}
+                                          </span>
+                                        </label>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {/* Multi-hour continuation blocks */}
+                          {continuingEvents.map(ev => {
+                            const catStyle = CATEGORY_STYLES[ev.category];
+                            const prog = getTaskCompletionProgress(ev);
+                            return (
+                              <div
+                                key={`cont-${ev.id}-${hour}`}
+                                onClick={() => openEditModal(ev)}
+                                className={`px-3 py-2 rounded-xl border border-dashed ${catStyle.bg} ${catStyle.border} flex flex-wrap items-center justify-between gap-2 text-xs cursor-pointer hover:brightness-95 transition-all`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className={`font-extrabold ${catStyle.text}`}>
+                                    ↳ Sedang Berlangsung ({ev.time}):
+                                  </span>
+                                  <span className="font-bold text-slate-800 dark:text-slate-100 truncate">
+                                    {ev.title}
+                                  </span>
+                                  <span className="text-[11px] text-slate-500">• PIC: {ev.picName}</span>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <div className="w-20 h-1.5 bg-white/80 dark:bg-slate-900 rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full ${prog.barColor}`}
+                                      style={{ width: `${prog.percent}%` }}
+                                    />
+                                  </div>
+                                  <span className={`text-[10px] font-extrabold ${prog.textColor}`}>
+                                    {prog.percent}%
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {/* Empty Hour Slot */}
+                          {!hasActivity && (
+                            <div
+                              onClick={() => openCreateModal(activeDailyDateStr, defaultSlotTime)}
+                              className="py-1.5 px-2.5 rounded-xl border border-dashed border-transparent hover:border-indigo-300 dark:hover:border-indigo-800 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20 text-[11px] text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 flex items-center justify-between cursor-pointer transition-all"
+                            >
+                              <span>Slot waktu luang ({defaultSlotTime})</span>
+                              <span className="font-semibold">+ Klik untuk menjadwalkan tugas</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
       {/* MONTHLY TO-DO LIST & PIC ASSIGNMENT BOARD */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4">
@@ -1753,15 +3733,56 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            {selectedDateStr && (
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Inline Grid vs List Toggle on To-Do List Board */}
+            <div
+              className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs"
+              title="Ubah tampilan daftar To-Do antara Grid (Visual) atau List (Ringkas)"
+            >
               <button
                 type="button"
-                onClick={() => setSelectedDateStr(null)}
-                className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold cursor-pointer"
+                onClick={() => handleChangeLayoutMode('grid')}
+                className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  layoutMode === 'grid'
+                    ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                }`}
               >
-                Tampilkan Semua Tanggal ({selectedYear})
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>Grid</span>
               </button>
+              <button
+                type="button"
+                onClick={() => handleChangeLayoutMode('list')}
+                className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  layoutMode === 'list'
+                    ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
+                }`}
+              >
+                <List className="w-3.5 h-3.5" />
+                <span>List</span>
+              </button>
+            </div>
+
+            {selectedDateStr && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => openDailyPlannerForDate(selectedDateStr)}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-xl text-xs font-bold cursor-pointer"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Buka Daily Planner ({selectedDateStr})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedDateStr(null)}
+                  className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold cursor-pointer"
+                >
+                  Tampilkan Semua Tanggal ({selectedYear})
+                </button>
+              </>
             )}
             <button
               type="button"
@@ -1796,14 +3817,187 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
               <span>Create Event Pertama</span>
             </button>
           </div>
+        ) : layoutMode === 'list' ? (
+          <div className="divide-y divide-slate-200/70 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
+            {displayedTodoEvents.map(evt => {
+              const catStyle = CATEGORY_STYLES[evt.category];
+              const prog = getTaskCompletionProgress(evt);
+              const doneCount = prog.doneSubtasks;
+              const totalCount = prog.totalSubtasks;
+              const progressPct = prog.percent;
+              const evtDivInfo = divisiList.find(d => d.id === (evt.divisionId || evt.picDivisionId));
+              const dl = getDeadlineInfo(evt.date, evt.status);
+
+              return (
+                <div
+                  key={evt.id}
+                  className={`p-3.5 sm:px-4 transition-colors flex flex-col xl:flex-row xl:items-center justify-between gap-3 ${
+                    evt.status === 'Selesai'
+                      ? 'bg-slate-50/70 dark:bg-slate-900/40'
+                      : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/40'
+                  }`}
+                >
+                  {/* Left: Date, Badges, Title & PIC */}
+                  <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleEventStatus(evt.id)}
+                      className={`mt-0.5 sm:mt-0 w-7 h-7 rounded-lg flex items-center justify-center border shrink-0 cursor-pointer transition-colors ${
+                        evt.status === 'Selesai'
+                          ? 'bg-emerald-600 text-white border-emerald-600'
+                          : evt.status === 'Sedang Berjalan'
+                          ? 'bg-amber-500 text-slate-950 border-amber-500'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-300 dark:border-slate-700'
+                      }`}
+                      title={`Status: ${evt.status} (Klik untuk ubah)`}
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                    </button>
+
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {evtDivInfo && (
+                          <span className="px-1.5 py-0.2 rounded text-[9.5px] font-mono font-extrabold bg-slate-900 text-white dark:bg-slate-700">
+                            {evtDivInfo.kode}
+                          </span>
+                        )}
+                        <span className="text-[11px] font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                          {evt.date}
+                        </span>
+                        {evt.time && (
+                          <span className="text-[10.5px] text-slate-500 dark:text-slate-400">
+                            • {evt.time}
+                          </span>
+                        )}
+                        <span
+                          className={`px-2 py-0.2 rounded-full text-[9.5px] font-bold border ${catStyle.bg} ${catStyle.text} ${catStyle.border}`}
+                        >
+                          {evt.category}
+                        </span>
+                        <span
+                          className={`px-1.5 py-0.2 rounded-full text-[9.5px] font-bold border ${PRIORITY_BADGE[evt.priority]}`}
+                        >
+                          {evt.priority}
+                        </span>
+                        {dl.state === 'overdue' && (
+                          <span className="px-1.5 py-0.2 rounded-full text-[9.5px] font-extrabold bg-rose-600 text-white">
+                            {dl.label}
+                          </span>
+                        )}
+                        {dl.state === 'today' && (
+                          <span className="px-1.5 py-0.2 rounded-full text-[9.5px] font-extrabold bg-amber-500 text-slate-950">
+                            {dl.label}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <h4
+                          className={`font-extrabold text-xs sm:text-sm truncate ${
+                            evt.status === 'Selesai'
+                              ? 'line-through text-slate-400 dark:text-slate-500'
+                              : 'text-slate-900 dark:text-white'
+                          }`}
+                        >
+                          {evt.title}
+                        </h4>
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                          👤 PIC: <strong className="text-slate-700 dark:text-slate-200">{evt.picName}</strong>
+                        </span>
+                        {totalCount > 0 && (
+                          <span className="text-[10.5px] font-semibold text-violet-600 dark:text-violet-400">
+                            • Checklist: {doneCount}/{totalCount}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right: Compact Progress Bar, Quick Status Pills & Actions */}
+                  <div className="flex flex-wrap items-center justify-between xl:justify-end gap-3 pt-2 xl:pt-0 border-t xl:border-t-0 border-slate-100 dark:border-slate-800/80 shrink-0">
+                    {/* Instant Progress Bar */}
+                    <div className="flex items-center gap-2 min-w-[150px]">
+                      <div className="w-24 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${prog.barColor}`}
+                          style={{ width: `${progressPct}%` }}
+                        />
+                      </div>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${prog.badgeClass}`}
+                      >
+                        {progressPct}%
+                      </span>
+                    </div>
+
+                    {/* Quick Status Selector */}
+                    <div className="flex items-center gap-1">
+                      {(
+                        [
+                          { label: '0%', val: 'Belum Mulai' as const },
+                          { label: '50%', val: 'Sedang Berjalan' as const },
+                          { label: '100%', val: 'Selesai' as const }
+                        ]
+                      ).map(opt => (
+                        <button
+                          key={opt.val}
+                          type="button"
+                          onClick={() => handleToggleEventStatus(evt.id, opt.val)}
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-all cursor-pointer ${
+                            evt.status === opt.val
+                              ? opt.val === 'Selesai'
+                                ? 'bg-emerald-600 text-white border-emerald-600'
+                                : opt.val === 'Sedang Berjalan'
+                                ? 'bg-amber-500 text-slate-950 border-amber-500'
+                                : 'bg-slate-700 text-white border-slate-700'
+                              : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Action Icons */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => openDailyPlannerForDate(evt.date)}
+                        className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-slate-800 cursor-pointer"
+                        title="Lihat di Daily Planner (Jam per Jam)"
+                      >
+                        <Clock className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(evt)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                        title="Edit Tugas"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteEvent(evt)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
+                        title="Hapus Tugas"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {displayedTodoEvents.map(evt => {
               const catStyle = CATEGORY_STYLES[evt.category];
-              const doneCount = evt.subtasks.filter(s => s.completed).length;
-              const totalCount = evt.subtasks.length;
-              const progressPct =
-                totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : evt.status === 'Selesai' ? 100 : 0;
+              const prog = getTaskCompletionProgress(evt);
+              const doneCount = prog.doneSubtasks;
+              const totalCount = prog.totalSubtasks;
+              const progressPct = prog.percent;
               const evtDivInfo = divisiList.find(d => d.id === (evt.divisionId || evt.picDivisionId));
 
               return (
@@ -1921,23 +4115,34 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                     </div>
 
                     {/* Date, Time & Location Meta */}
-                    <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400">
-                      <span className="flex items-center space-x-1 font-semibold text-indigo-600 dark:text-indigo-400">
-                        <CalendarIcon className="w-3.5 h-3.5" />
-                        <span>{evt.date}</span>
-                      </span>
-                      {evt.time && (
-                        <span className="flex items-center space-x-1">
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>{evt.time}</span>
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="flex items-center space-x-1 font-semibold text-indigo-600 dark:text-indigo-400">
+                          <CalendarIcon className="w-3.5 h-3.5" />
+                          <span>{evt.date}</span>
                         </span>
-                      )}
-                      {evt.location && (
-                        <span className="flex items-center space-x-1">
-                          <MapPin className="w-3.5 h-3.5" />
-                          <span>{evt.location}</span>
-                        </span>
-                      )}
+                        {evt.time && (
+                          <span className="flex items-center space-x-1">
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>{evt.time}</span>
+                          </span>
+                        )}
+                        {evt.location && (
+                          <span className="flex items-center space-x-1">
+                            <MapPin className="w-3.5 h-3.5" />
+                            <span>{evt.location}</span>
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => openDailyPlannerForDate(evt.date)}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/70 dark:border-indigo-800/70 text-[10px] font-bold transition-colors cursor-pointer"
+                        title="Lihat detail jam per jam di Daily Planner untuk tanggal ini"
+                      >
+                        <Clock className="w-3 h-3" />
+                        <span>View Harian (Jam)</span>
+                      </button>
                     </div>
 
                     {/* Person-In-Charge (PIC) Assignment Box */}
@@ -1987,27 +4192,76 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                       )}
                     </div>
 
-                    {/* Interactive Subtasks / To-Do Checklist */}
-                    {evt.subtasks.length > 0 && (
-                      <div className="space-y-1.5 pt-1">
-                        <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-bold text-slate-700 dark:text-slate-300">
-                            Rincian Tugas To-Do ({doneCount}/{totalCount})
+                    {/* Always-Visible Instant Task Progress Bar & Interactive Status Controls */}
+                    <div className="p-3 rounded-xl bg-slate-50/90 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/70 space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-slate-700 dark:text-slate-200">
+                            Progres Penyelesaian Tugas
                           </span>
-                          <span className="font-bold text-indigo-600 dark:text-indigo-400">{progressPct}%</span>
+                          {totalCount > 0 && (
+                            <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                              ({doneCount}/{totalCount} sub-tugas selesai)
+                            </span>
+                          )}
                         </div>
-                        <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-indigo-600 dark:bg-indigo-500 transition-all duration-300"
-                            style={{ width: `${progressPct}%` }}
-                          />
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[11px] font-extrabold border ${prog.badgeClass}`}
+                          >
+                            {progressPct}%
+                          </span>
                         </div>
+                      </div>
 
-                        <div className="space-y-1 pt-1">
+                      {/* Visual Progress Bar */}
+                      <div className="w-full h-2.5 bg-slate-200/90 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${prog.barColor}`}
+                          style={{ width: `${progressPct}%` }}
+                        />
+                      </div>
+
+                      {/* Quick Completion Status Selector Buttons */}
+                      <div className="flex flex-wrap items-center justify-between gap-1.5 pt-0.5">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                          Status: <strong className={prog.textColor}>{prog.statusLabel}</strong>
+                        </span>
+                        <div className="flex items-center gap-1">
+                          {(
+                            [
+                              { label: '0% Belum', val: 'Belum Mulai' as const },
+                              { label: '50% Berjalan', val: 'Sedang Berjalan' as const },
+                              { label: '100% Selesai', val: 'Selesai' as const }
+                            ]
+                          ).map(opt => (
+                            <button
+                              key={opt.val}
+                              type="button"
+                              onClick={() => handleToggleEventStatus(evt.id, opt.val)}
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-all cursor-pointer ${
+                                evt.status === opt.val
+                                  ? opt.val === 'Selesai'
+                                    ? 'bg-emerald-600 text-white border-emerald-600'
+                                    : opt.val === 'Sedang Berjalan'
+                                    ? 'bg-amber-500 text-slate-950 border-amber-500'
+                                    : 'bg-slate-700 text-white border-slate-700'
+                                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Interactive Subtasks / To-Do Checklist */}
+                      {evt.subtasks.length > 0 && (
+                        <div className="space-y-1 pt-1.5 border-t border-slate-200/60 dark:border-slate-700/60">
                           {evt.subtasks.map(st => (
                             <label
                               key={st.id}
-                              className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors text-xs"
+                              className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-900/90 hover:bg-indigo-50/50 dark:hover:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 cursor-pointer transition-colors text-xs"
                             >
                               <div className="flex items-center space-x-2 min-w-0">
                                 <input
@@ -2026,16 +4280,27 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                                   {st.title}
                                 </span>
                               </div>
-                              {st.picName && (
-                                <span className="text-[10px] px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200/70 dark:border-slate-700 shrink-0 ml-2">
-                                  👤 {st.picName}
+                              <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                <span
+                                  className={`text-[9.5px] font-extrabold px-1.5 py-0.5 rounded ${
+                                    st.completed
+                                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                                      : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                                  }`}
+                                >
+                                  {st.completed ? '100%' : '0%'}
                                 </span>
-                              )}
+                                {st.picName && (
+                                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200/70 dark:border-slate-700">
+                                    👤 {st.picName}
+                                  </span>
+                                )}
+                              </div>
                             </label>
                           ))}
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               );

@@ -35,6 +35,7 @@ import { ExportCsvButton } from '../common/ExportCsvButton';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
 import { exportDataToCsv, getCsvDateStamp } from '../../utils/exportCsv';
 import { DivisionCalendarTodoView } from '../common/DivisionCalendarTodoView';
+import { DivisionQuickSearchBar } from '../common/DivisionQuickSearchBar';
 
 export const LogistikDashboard: React.FC = () => {
   const {
@@ -457,6 +458,13 @@ export const LogistikDashboard: React.FC = () => {
             ? 'Kalender Kerja & To-Do List Direktorat Logistik'
             : 'Riwayat Logistik & Distribusi Keluar'
         }
+      />
+
+      {/* Real-time Division Search Bar (Tasks, Documents & Data Entries) */}
+      <DivisionQuickSearchBar
+        divisionId={6}
+        value={logSearch}
+        onQueryChange={q => setLogSearch(q)}
       />
 
       {/* Sub tabs */}

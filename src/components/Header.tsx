@@ -53,13 +53,17 @@ import {
   Eye,
   EyeOff,
   ShieldAlert,
-  MonitorPlay
+  MonitorPlay,
+  PanelLeft
 } from 'lucide-react';
 
 interface HeaderProps {
   onOpenAI: () => void;
   onOpenPersetujuan: () => void;
   onSimulateAutoLogout?: () => void;
+  onToggleLeftSidebar?: () => void;
+  onOpenMobileSidebar?: () => void;
+  isLeftSidebarCollapsed?: boolean;
   activeTab?: string;
   setActiveTab?: (tab: string) => void;
 }
@@ -68,6 +72,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAI,
   onOpenPersetujuan,
   onSimulateAutoLogout,
+  onToggleLeftSidebar,
+  onOpenMobileSidebar,
+  isLeftSidebarCollapsed,
 }) => {
   const {
     currentUser,
@@ -163,11 +170,37 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="print:hidden sticky top-0 z-40 bg-white/95 dark:bg-[#1A1D21]/95 backdrop-blur-md text-slate-800 dark:text-white border-b border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
           
-          {/* Logo & Brand */}
+          {/* Left Sidebar Trigger, Logo & Active Category Indicator */}
           <div className="flex items-center space-x-3">
+            {/* Mobile Left Sidebar Drawer Button */}
+            {onOpenMobileSidebar && (
+              <button
+                type="button"
+                onClick={onOpenMobileSidebar}
+                className="lg:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-indigo-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer"
+                title="Buka Menu Sidebar Kiri (Kategori)"
+                aria-label="Buka Menu Sidebar Kiri"
+              >
+                <PanelLeft className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              </button>
+            )}
+
+            {/* Desktop Left Sidebar Collapse/Expand Toggle */}
+            {onToggleLeftSidebar && (
+              <button
+                type="button"
+                onClick={onToggleLeftSidebar}
+                className="hidden lg:flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/90 hover:bg-indigo-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                title={isLeftSidebarCollapsed ? 'Tampilkan Menu Sidebar Kiri' : 'Sembunyikan / Kecilkan Sidebar Kiri'}
+              >
+                <PanelLeft className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <span className="hidden xl:inline">Menu Kategori</span>
+              </button>
+            )}
+
             <div className="flex items-center">
               <img
                 src="/img/logo-lamrimnesia.png"
@@ -177,39 +210,25 @@ export const Header: React.FC<HeaderProps> = ({
               />
             </div>
 
-            {/* Division Switcher Bar with Animated Sliding Pill */}
-            <div className="hidden lg:flex items-center space-x-1 bg-slate-100 dark:bg-slate-900/90 p-1 rounded-xl border border-slate-200 dark:border-slate-800 relative">
-              {divisiList.map((div) => {
-                const isActive = currentUser.divisi_id === div.id;
-                return (
-                  <motion.button
-                    key={div.id}
-                    id={`btn-divisi-${div.kode.toLowerCase()}`}
-                    onClick={() => switchDivision(div.id)}
-                    whileHover={{ scale: 1.04 }}
-                    whileTap={{ scale: 0.96 }}
-                    className={`relative flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors z-10 cursor-pointer ${
-                      isActive
-                        ? 'text-white font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                    title={div.deskripsi}
-                  >
-                    {isActive && (
-                      <motion.div
-                        layoutId="active-division-pill"
-                        className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-lg shadow-sm -z-10"
-                        transition={{ type: 'spring', stiffness: 450, damping: 30 }}
-                      />
-                    )}
-                    {getDivisionIcon(div.id)}
-                    <span>{div.kode}</span>
-                    {div.id === 2 && pendingPengajuansCount > 0 && (
-                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                    )}
-                  </motion.button>
-                );
-              })}
+            {/* Active Category & Division Context Pill */}
+            <div className="hidden md:flex items-center space-x-2 pl-2 border-l border-slate-200 dark:border-slate-800">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 border border-indigo-200/70 dark:border-indigo-800/70">
+                {currentUser.divisi_id === 1 || currentUser.divisi_id === 2
+                  ? 'Tata Kelola & Keuangan'
+                  : currentUser.divisi_id === 3 || currentUser.divisi_id === 5
+                  ? 'Redaksi & Pabrikasi'
+                  : 'Niaga, Distribusi & Gudang'}
+              </span>
+              <span className="text-slate-300 dark:text-slate-700">/</span>
+              <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700">
+                {getDivisionIcon(currentUser.divisi_id)}
+                <span>
+                  {divisiList.find(d => d.id === currentUser.divisi_id)?.nama_divisi || 'Direktorat'}
+                </span>
+                {currentUser.divisi_id === 2 && pendingPengajuansCount > 0 && (
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                )}
+              </span>
             </div>
           </div>
 

@@ -1,7 +1,11 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
-import { getStoredCalendarEvents, getDeadlineInfo } from './common/DivisionCalendarTodoView';
+import {
+  getStoredCalendarEvents,
+  getDeadlineInfo,
+  getTaskCompletionProgress
+} from './common/DivisionCalendarTodoView';
 import {
   Bell,
   AlertTriangle,
@@ -28,6 +32,8 @@ export interface AlertItem {
   type: 'urgent' | 'warning' | 'info' | 'success';
   category: string;
   isRead: boolean;
+  progressPct?: number;
+  progressBarColor?: string;
   actionLabel?: string;
   onAction?: () => void;
 }
@@ -112,6 +118,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
 
     divCalendarEvents.forEach(ev => {
       const dl = getDeadlineInfo(ev.date, ev.status);
+      const prog = getTaskCompletionProgress(ev);
       if (dl.state === 'overdue' || dl.state === 'today' || dl.state === 'approaching') {
         items.push({
           id: `cal-dl-${ev.id}-${ev.date}`,
@@ -121,11 +128,13 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
               : dl.state === 'today'
               ? `⏰ Deadline Hari Ini: ${ev.title}`
               : `⏳ Mendekati Deadline (${dl.label}): ${ev.title}`,
-          description: `PIC: ${ev.picName} • Tenggat: ${ev.date} • Status: ${ev.status}. Klik untuk membuka Kalender & To-Do List.`,
+          description: `PIC: ${ev.picName} • Tenggat: ${ev.date} • Progres: ${prog.percent}% (${ev.status}). Klik untuk membuka Kalender & To-Do List.`,
           time: dl.label,
           type: dl.state === 'overdue' || dl.state === 'today' ? 'urgent' : 'warning',
           category: 'Tenggat Kalender',
           isRead: false,
+          progressPct: prog.percent,
+          progressBarColor: prog.barColor,
           actionLabel: 'Buka Kalender',
           onAction: () => {
             switchDivision(divId, 'kalender');
@@ -663,6 +672,27 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
                       <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed mb-2 line-clamp-2">
                         {alert.description}
                       </p>
+
+                      {alert.progressPct !== undefined && (
+                        <div className="mb-2 space-y-1">
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className="font-semibold text-slate-500 dark:text-slate-400">
+                              Progres Tugas
+                            </span>
+                            <span className="font-extrabold text-indigo-600 dark:text-indigo-400">
+                              {alert.progressPct}%
+                            </span>
+                          </div>
+                          <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-300 ${
+                                alert.progressBarColor || 'bg-indigo-600'
+                              }`}
+                              style={{ width: `${alert.progressPct}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
 
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-1 text-[10px] text-slate-400 dark:text-slate-500">

@@ -22,6 +22,7 @@ import {
   Plus,
   Sparkles,
   LayoutGrid,
+  List,
   Database,
   Save
 } from 'lucide-react';
@@ -86,6 +87,23 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
 
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [viewDisplayMode, setViewDisplayMode] = useState<'grid' | 'list'>(() => {
+    try {
+      const saved = localStorage.getItem('mis_exec_dashboard_view_mode');
+      return saved === 'list' ? 'list' : 'grid';
+    } catch {
+      return 'grid';
+    }
+  });
+
+  const handleToggleViewDisplayMode = (mode: 'grid' | 'list') => {
+    setViewDisplayMode(mode);
+    try {
+      localStorage.setItem('mis_exec_dashboard_view_mode', mode);
+    } catch {
+      // ignore
+    }
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -529,6 +547,187 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
     }
   };
 
+  // Render compact horizontal list row for each card when in List View
+  const renderCardListRow = (card: DashboardCardConfig, idx: number) => {
+    const getRowData = () => {
+      switch (card.id) {
+        case 'card-finance-saldo':
+          return {
+            title: 'Saldo Bersih Kas',
+            subtitle: `Masuk +Rp ${totalKasMasuk.toLocaleString('id-ID')} • Keluar -Rp ${totalKasKeluar.toLocaleString('id-ID')}`,
+            primaryValue: `Rp ${saldoKasBersih.toLocaleString('id-ID')}`,
+            badge: 'Kas & Rekening Bank',
+            dotClass: 'bg-emerald-500',
+            iconBg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+            icon: <CreditCard className="w-4 h-4" />,
+            actionLabel: 'Buka Keuangan',
+            onAction: () => switchDivision(2, 'mutasi')
+          };
+        case 'card-keanggotaan-umat':
+          return {
+            title: 'Total Anggota Umat',
+            subtitle: `${identitasList.filter(i => i.is_dharma_patriot).length} Dharma Patriot • ${identitasList.filter(i => i.jenis_umat === 'Sangha').length} Anggota Sangha`,
+            primaryValue: `${identitasList.length} Jiwa`,
+            badge: 'Master Anggota',
+            dotClass: 'bg-indigo-500',
+            iconBg: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
+            icon: <Users className="w-4 h-4" />,
+            actionLabel: 'Data Umat',
+            onAction: () => {
+              if (onOpenIdentitasTab) onOpenIdentitasTab();
+              else switchDivision(1, 'identitas');
+            }
+          };
+        case 'card-marketing-invoices':
+          return {
+            title: 'Invoice & Penjualan',
+            subtitle: `Omset Rp ${totalOmsetPenjualan.toLocaleString('id-ID')} • ${orders.filter(o => o.status === 'Pending').length} Pending`,
+            primaryValue: `${totalInvoiceLunas}/${orders.length} Lunas`,
+            badge: 'Marketing',
+            dotClass: 'bg-cyan-500',
+            iconBg: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20',
+            icon: <ShoppingBag className="w-4 h-4" />,
+            actionLabel: 'Buka Marketing',
+            onAction: () => switchDivision(4, 'invoices')
+          };
+        case 'card-logistik-stok':
+          return {
+            title: 'Total Stok Gudang',
+            subtitle: `${books.length} judul buku aktif di Gudang Pusat`,
+            primaryValue: `${totalBukuStok.toLocaleString('id-ID')} Eks`,
+            badge: 'Logistik',
+            dotClass: 'bg-amber-500',
+            iconBg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+            icon: <Layers className="w-4 h-4" />,
+            actionLabel: 'Buka Logistik',
+            onAction: () => switchDivision(6, 'stok')
+          };
+        case 'card-finance-persetujuan':
+          return {
+            title: 'Persetujuan Cetak',
+            subtitle: `Total Biaya Rp ${totalDanaDiajukan.toLocaleString('id-ID')} • ${pengajuans.filter(p => p.status === 'approved').length} Disetujui`,
+            primaryValue: `${pendingPengajuans.length} Pending`,
+            badge: 'Verifikasi SPK',
+            dotClass: 'bg-rose-500',
+            iconBg: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+            icon: <CheckCircle2 className="w-4 h-4" />,
+            actionLabel: 'Verifikasi SPK',
+            onAction: () => switchDivision(2, 'persetujuan')
+          };
+        case 'card-logistik-antrean':
+          return {
+            title: 'Antrean Packing & Kirim',
+            subtitle: `${penyalurans.filter(p => p.status === 'dikirim').length} selesai dikirim via ekspedisi logistik`,
+            primaryValue: `${antreanPackingCount} Paket`,
+            badge: 'Ekspedisi',
+            dotClass: 'bg-blue-500',
+            iconBg: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+            icon: <Truck className="w-4 h-4" />,
+            actionLabel: 'Antrean Kirim',
+            onAction: () => switchDivision(6, 'antrean')
+          };
+        case 'card-marketing-agen':
+          return {
+            title: 'Jaringan Agen & Mitra',
+            subtitle: `${salesChannels?.length || 4} Saluran Penjualan Aktif • ${promos?.length || 0} Kode Promo`,
+            primaryValue: `${totalAgenAktif} Agen Purna`,
+            badge: 'Saluran Distribusi',
+            dotClass: 'bg-purple-500',
+            iconBg: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
+            icon: <Store className="w-4 h-4" />,
+            actionLabel: 'Kelola Saluran',
+            onAction: () => switchDivision(4, 'channels')
+          };
+        case 'card-produksi-status':
+          return {
+            title: 'Aktivitas Produksi Cetak',
+            subtitle: `${productionLogs.length} gelombang cetak bersama Mitra Percetakan`,
+            primaryValue: `${totalEksemplarCetak.toLocaleString('id-ID')} Eks`,
+            badge: 'Produksi',
+            dotClass: 'bg-violet-500',
+            iconBg: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20',
+            icon: <Factory className="w-4 h-4" />,
+            actionLabel: 'Buka Produksi',
+            onAction: () => switchDivision(5, 'overview')
+          };
+        case 'card-penerbitan-katalog':
+          return {
+            title: 'Katalog Penerbitan',
+            subtitle: `Nilai Aset Rp ${totalNilaiInventaris.toLocaleString('id-ID')} • Hak Cipta Lamrim`,
+            primaryValue: `${books.length} Judul Terbit`,
+            badge: 'Penerbitan',
+            dotClass: 'bg-indigo-500',
+            iconBg: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
+            icon: <BookOpen className="w-4 h-4" />,
+            actionLabel: 'Katalog Buku',
+            onAction: () => switchDivision(3, 'buku')
+          };
+        case 'card-annual-report':
+        default:
+          return {
+            title: 'Laporan Tahunan Resmi',
+            subtitle: 'Konsolidasi 6 divisi terpadu untuk Dewan Pembina',
+            primaryValue: 'Tervalidasi Yayasan',
+            badge: 'Annual Report',
+            dotClass: 'bg-amber-500',
+            iconBg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+            icon: <Award className="w-4 h-4" />,
+            actionLabel: 'Buka Report',
+            onAction: () => {
+              if (onOpenAnnualReport) onOpenAnnualReport();
+            }
+          };
+      }
+    };
+
+    const info = getRowData();
+
+    return (
+      <div
+        key={card.id}
+        className="px-4 py-3 hover:bg-slate-50/90 dark:hover:bg-slate-800/50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
+      >
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <span className="text-[10px] font-mono font-bold text-slate-400 w-5 shrink-0">
+            #{idx + 1}
+          </span>
+          <div
+            className={`w-8 h-8 rounded-xl flex items-center justify-center border shrink-0 ${info.iconBg}`}
+          >
+            {info.icon}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate">
+                {info.title}
+              </h4>
+              <span className="px-2 py-0.2 rounded-full text-[9.5px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                {info.badge}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+              {info.subtitle}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between sm:justify-end gap-4 pl-10 sm:pl-0 shrink-0">
+          <span className="text-sm sm:text-base font-extrabold font-mono text-slate-900 dark:text-white">
+            {info.primaryValue}
+          </span>
+          <button
+            type="button"
+            onClick={info.onAction}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 text-xs font-bold transition-colors cursor-pointer"
+          >
+            <span>{info.actionLabel}</span>
+            <ArrowUpRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   // Determine grid column classes
   const getGridColsClass = () => {
     switch (columns) {
@@ -578,7 +777,40 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center space-x-2 self-end sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2 self-end sm:self-auto">
+          {/* Grid vs List View Toggle for Dashboard Cards */}
+          <div
+            className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs"
+            title="Pilih tampilan metrik Dashboard: Grid (Visual) atau List (Ringkas)"
+          >
+            <button
+              type="button"
+              onClick={() => handleToggleViewDisplayMode('grid')}
+              className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                viewDisplayMode === 'grid'
+                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+              title="Tampilan Grid (Kartu Visual)"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Grid</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleToggleViewDisplayMode('list')}
+              className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                viewDisplayMode === 'list'
+                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+              title="Tampilan List (Baris Ringkas)"
+            >
+              <List className="w-3.5 h-3.5" />
+              <span>List</span>
+            </button>
+          </div>
+
           {/* Quick inline Drag & Drop mode toggle */}
           <button
             type="button"
@@ -681,12 +913,17 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
         )}
       </AnimatePresence>
 
-      {/* Cards Grid */}
-      <motion.div
-        layout
-        transition={{ layout: { type: 'spring', damping: 28, stiffness: 320 } }}
-        className={`grid ${getGridColsClass()} ${density === 'compact' ? 'gap-3' : 'gap-4'}`}
-      >
+      {/* Cards Grid vs Compact List View */}
+      {viewDisplayMode === 'list' && !isConfigMode ? (
+        <div className="bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-800 rounded-2xl divide-y divide-slate-100 dark:divide-slate-800 shadow-xs overflow-hidden">
+          {visibleCards.map((card, idx) => renderCardListRow(card, idx))}
+        </div>
+      ) : (
+        <motion.div
+          layout
+          transition={{ layout: { type: 'spring', damping: 28, stiffness: 320 } }}
+          className={`grid ${getGridColsClass()} ${density === 'compact' ? 'gap-3' : 'gap-4'}`}
+        >
         <AnimatePresence mode="popLayout">
           {visibleCards.map((card, index) => {
             return (
@@ -738,6 +975,7 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
           )}
         </AnimatePresence>
       </motion.div>
+      )}
 
       {/* Notice if any cards are currently hidden */}
       {cards.some((c) => !c.visible) && (

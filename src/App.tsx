@@ -4,6 +4,7 @@ import { Volume2, VolumeX, Check, Sparkles, Loader2, Settings, Sliders, Tv, Eye,
 import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/Header';
 import { BreadcrumbNav } from './components/navigation/BreadcrumbNav';
+import { LeftSidebarNav } from './components/navigation/LeftSidebarNav';
 import { TopGreetingBanner } from './components/navigation/TopGreetingBanner';
 import { DirektoratDashboard } from './components/direktorat/DirektoratDashboard';
 import { FinanceDashboard } from './components/finance/FinanceDashboard';
@@ -196,6 +197,26 @@ const AppContent: React.FC = () => {
   } = useApp();
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isUserSettingsOpen, setIsUserSettingsOpen] = useState(false);
+  const [isLeftSidebarCollapsed, setIsLeftSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('mis_left_sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  const handleToggleLeftSidebar = () => {
+    setIsLeftSidebarCollapsed(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('mis_left_sidebar_collapsed', String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
   const [aiInitialPrompt, setAiInitialPrompt] = useState<string>('');
   const [showDivisionReportModal, setShowDivisionReportModal] = useState(false);
   const [showAnnualReportModal, setShowAnnualReportModal] = useState(false);
@@ -507,40 +528,56 @@ const AppContent: React.FC = () => {
         onOpenAI={() => setIsAiModalOpen(true)}
         onOpenPersetujuan={handleOpenPersetujuan}
         onSimulateAutoLogout={simulateTimeoutWarning}
+        onToggleLeftSidebar={handleToggleLeftSidebar}
+        onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)}
+        isLeftSidebarCollapsed={isLeftSidebarCollapsed}
       />
 
-      {/* Breadcrumb Navigation Bar */}
-      <BreadcrumbNav />
+      {/* Main Workspace with Categorized Left Sidebar & Content Area */}
+      <div className="flex-1 flex min-w-0">
+        <LeftSidebarNav
+          isCollapsed={isLeftSidebarCollapsed}
+          onToggleCollapse={handleToggleLeftSidebar}
+          isMobileOpen={isMobileSidebarOpen}
+          onCloseMobile={() => setIsMobileSidebarOpen(false)}
+          onOpenAI={() => setIsAiModalOpen(true)}
+        />
 
-      {/* Main Content Area with Division Switch Transition */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
-        {/* Top Division Welcome Greeting Banner (Time-aware, spacious & clear) */}
-        <TopGreetingBanner onOpenAI={() => setIsAiModalOpen(true)} />
+        <div className="flex-1 min-w-0 flex flex-col">
+          {/* Breadcrumb Navigation Bar */}
+          <BreadcrumbNav />
 
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentUser.divisi_id}
-            id="printable-area"
-            initial={{ opacity: 0, y: 12, scale: 0.99 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -12, scale: 0.99 }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
-            className="w-full printable-dashboard"
-          >
-            {currentUser.divisi_id === 1 && <DirektoratDashboard />}
-            {currentUser.divisi_id === 2 && <FinanceDashboard />}
-            {currentUser.divisi_id === 3 && <PenerbitanDashboard />}
-            {currentUser.divisi_id === 4 && <MarketingDashboard />}
-            {currentUser.divisi_id === 5 && <ProduksiDashboard />}
-            {currentUser.divisi_id === 6 && <LogistikDashboard />}
-          </motion.div>
-        </AnimatePresence>
-      </main>
+          {/* Main Content Area with Division Switch Transition */}
+          <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+            {/* Top Division Welcome Greeting Banner (Time-aware, spacious & clear) */}
+            <TopGreetingBanner onOpenAI={() => setIsAiModalOpen(true)} />
 
-      {/* Footer */}
-      <footer className="border-t border-slate-200 dark:border-slate-800 py-4 px-6 text-center text-xs text-slate-500 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm print:hidden">
-        <p>© {new Date().getFullYear()} Yayasan Pelestarian & Pengembangan Lamrim Nusantara (Lamrimnesia). SAPA-ALL MIS Project.</p>
-      </footer>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentUser.divisi_id}
+                id="printable-area"
+                initial={{ opacity: 0, y: 12, scale: 0.99 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -12, scale: 0.99 }}
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+                className="w-full printable-dashboard"
+              >
+                {currentUser.divisi_id === 1 && <DirektoratDashboard />}
+                {currentUser.divisi_id === 2 && <FinanceDashboard />}
+                {currentUser.divisi_id === 3 && <PenerbitanDashboard />}
+                {currentUser.divisi_id === 4 && <MarketingDashboard />}
+                {currentUser.divisi_id === 5 && <ProduksiDashboard />}
+                {currentUser.divisi_id === 6 && <LogistikDashboard />}
+              </motion.div>
+            </AnimatePresence>
+          </main>
+
+          {/* Footer */}
+          <footer className="border-t border-slate-200 dark:border-slate-800 py-4 px-6 text-center text-xs text-slate-500 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm print:hidden">
+            <p>© {new Date().getFullYear()} Yayasan Pelestarian & Pengembangan Lamrim Nusantara (Lamrimnesia). SAPA-ALL MIS Project.</p>
+          </footer>
+        </div>
+      </div>
 
       {/* Global AI Assistant Modal */}
       <AIAssistantModal

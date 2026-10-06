@@ -15,6 +15,7 @@ import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
 import { DivisionCalendarTodoView } from '../common/DivisionCalendarTodoView';
+import { DivisionQuickSearchBar } from '../common/DivisionQuickSearchBar';
 
 export const ProduksiDashboard: React.FC = () => {
   const {
@@ -34,7 +35,20 @@ export const ProduksiDashboard: React.FC = () => {
   const [selectedBookId, setSelectedBookId] = useState<number>(books[0]?.id || 1);
   const [qtyProduksi, setQtyProduksi] = useState<number>(100);
   const [selectedLogIds, setSelectedLogIds] = useState<number[]>([]);
+  const [produksiSearch, setProduksiSearch] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const filteredProductionLogs = productionLogs.filter(log => {
+    if (!produksiSearch.trim()) return true;
+    const q = produksiSearch.toLowerCase();
+    const book = books.find(b => b.id === log.buku_id) || log.book;
+    const title = book?.judul || `Buku ID #${log.buku_id}`;
+    return (
+      title.toLowerCase().includes(q) ||
+      log.tanggal_produksi.toLowerCase().includes(q) ||
+      String(log.qty_produksi).includes(q)
+    );
+  });
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -90,6 +104,13 @@ export const ProduksiDashboard: React.FC = () => {
             ? 'Kalender Kerja & To-Do List Direktorat Produksi'
             : 'Riwayat Batch Log Produksi Percetakan'
         }
+      />
+
+      {/* Real-time Division Search Bar (Tasks, Documents & Data Entries) */}
+      <DivisionQuickSearchBar
+        divisionId={5}
+        value={produksiSearch}
+        onQueryChange={q => setProduksiSearch(q)}
       />
 
       {/* Top Banner & Stats */}
@@ -285,7 +306,7 @@ export const ProduksiDashboard: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {productionLogs.map((log) => {
+                {filteredProductionLogs.map((log) => {
                   const book = books.find(b => b.id === log.buku_id) || log.book;
                   return (
                     <tr
