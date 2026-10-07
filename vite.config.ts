@@ -9,7 +9,8 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'motion/react'],
+    include: ['react', 'react-dom', 'motion/react', 'react-grid-layout'],
+    force: true,
   },
   server: {
     port: 3000,

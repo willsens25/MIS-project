@@ -16,6 +16,7 @@ import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
 import { DivisionCalendarTodoView } from '../common/DivisionCalendarTodoView';
 import { DivisionQuickSearchBar } from '../common/DivisionQuickSearchBar';
+import { DivisionWidgetGrid } from '../dashboard-layout/DivisionWidgetGrid';
 
 export const ProduksiDashboard: React.FC = () => {
   const {
@@ -111,6 +112,12 @@ export const ProduksiDashboard: React.FC = () => {
         divisionId={5}
         value={produksiSearch}
         onQueryChange={q => setProduksiSearch(q)}
+      />
+
+      {/* React Grid Layout Draggable, Resizable & Hideable Division Widgets */}
+      <DivisionWidgetGrid
+        divisionId={5}
+        onNavigateSubTab={tab => setActiveSubTab(tab as any)}
       />
 
       {/* Top Banner & Stats */}

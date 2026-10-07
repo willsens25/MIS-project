@@ -28,8 +28,12 @@ import {
   AlertTriangle,
   FileDown,
   Check,
-  List
+  List,
+  GripVertical,
+  ArrowUpDown,
+  BarChart3
 } from 'lucide-react';
+import { ProductivityStatsView } from '../charts/ProductivityStatsView';
 
 export interface TodoSubtask {
   id: string;
@@ -720,7 +724,9 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
 
   const currentYearActual = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState<number>(currentYearActual);
-  const [viewMode, setViewMode] = useState<'12-months' | 'single-month' | 'daily-planner' | 'todo-list'>('12-months');
+  const [viewMode, setViewMode] = useState<
+    '12-months' | 'single-month' | 'daily-planner' | 'todo-list' | 'productivity-stats'
+  >('12-months');
   const [layoutMode, setLayoutMode] = useState<'grid' | 'list'>(() => {
     try {
       const saved = localStorage.getItem('mis_calendar_layout_mode');
@@ -740,6 +746,8 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
   const [focusedMonth, setFocusedMonth] = useState<number>(new Date().getMonth());
   const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null);
   const [dailyHourFilter, setDailyHourFilter] = useState<'all-hours' | 'active-only'>('all-hours');
+  const [draggedDailyEventId, setDraggedDailyEventId] = useState<string | null>(null);
+  const [dragOverDailyHour, setDragOverDailyHour] = useState<number | null>(null);
 
   // Scope toggle: 'current-division' (only this directorate/division) vs 'all-divisions' (integrated across all 6 directorates)
   const [scopeFilter, setScopeFilter] = useState<'current-division' | 'all-divisions'>('current-division');
@@ -1897,6 +1905,111 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
     return { startHour: 9, endHour: 10, durationHours: 2, label: timeStr };
   };
 
+  // Build shifted time string when moving a task to a new start hour while preserving its duration & minutes
+  const buildShiftedTimeForHour = (timeStr: string | undefined, targetStartHour: number) => {
+    const clampedStart = Math.min(22, Math.max(0, targetStartHour));
+    const pad2 = (n: number) => String(n).padStart(2, '0');
+    if (!timeStr) {
+      return `${pad2(clampedStart)}:00 - ${pad2(Math.min(23, clampedStart + 2))}:00 WIB`;
+    }
+    const matches = Array.from(timeStr.matchAll(/(\d{1,2})[:.](\d{2})/g));
+    if (matches.length >= 2) {
+      const sh = parseInt(matches[0][1], 10);
+      const sm = parseInt(matches[0][2], 10);
+      const eh = parseInt(matches[1][1], 10);
+      const em = parseInt(matches[1][2], 10);
+      const startTotalMins = sh * 60 + sm;
+      const endTotalMins = eh * 60 + em;
+      const diffMins = Math.max(60, endTotalMins - startTotalMins);
+
+      const newStartTotalMins = clampedStart * 60 + sm;
+      const newEndTotalMins = Math.min(23 * 60 + 59, newStartTotalMins + diffMins);
+      const newEndH = Math.floor(newEndTotalMins / 60);
+      const newEndM = newEndTotalMins % 60;
+
+      return `${pad2(clampedStart)}:${pad2(sm)} - ${pad2(newEndH)}:${pad2(newEndM)} WIB`;
+    }
+    return `${pad2(clampedStart)}:00 - ${pad2(Math.min(23, clampedStart + 1))}:00 WIB`;
+  };
+
+  // Move an event to a specific hourly slot (used by HTML5 Drag-and-Drop and quick hour buttons)
+  const handleMoveDailyEventToHour = (
+    eventId: string,
+    targetHour: number,
+    targetOrderBeforeEventId?: string
+  ) => {
+    const targetEvt = events.find(e => e.id === eventId);
+    if (!targetEvt) return;
+
+    const currentRange = parseEventHourRange(targetEvt.time);
+    const newTimeStr = buildShiftedTimeForHour(targetEvt.time, targetHour);
+
+    setEvents(prev => {
+      const updated = prev.map(item =>
+        item.id === eventId
+          ? {
+              ...item,
+              date: activeDailyDateStr,
+              time: newTimeStr
+            }
+          : item
+      );
+
+      if (targetOrderBeforeEventId && targetOrderBeforeEventId !== eventId) {
+        const fromIdx = updated.findIndex(i => i.id === eventId);
+        const toIdx = updated.findIndex(i => i.id === targetOrderBeforeEventId);
+        if (fromIdx !== -1 && toIdx !== -1) {
+          const [movedItem] = updated.splice(fromIdx, 1);
+          updated.splice(toIdx, 0, movedItem);
+        }
+      }
+      return updated;
+    });
+
+    if (currentRange.startHour !== targetHour || targetOrderBeforeEventId) {
+      recordActivity(
+        'Jadwal Ulang Jam Tugas (Drag & Drop)',
+        `Daily Planner ${currentDivObj?.nama_divisi || 'Direktorat'}`,
+        `Memindahkan tugas "${targetEvt.title}" ke slot jam ${newTimeStr} (${activeDailyDateStr})`
+      );
+      triggerToast(`Tugas "${targetEvt.title}" dipindahkan ke jam ${newTimeStr}!`);
+    }
+  };
+
+  const handleDailyTaskDragStart = (e: React.DragEvent<HTMLDivElement>, eventId: string) => {
+    setDraggedDailyEventId(eventId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', eventId);
+  };
+
+  const handleDailyTaskDragEnd = () => {
+    setDraggedDailyEventId(null);
+    setDragOverDailyHour(null);
+  };
+
+  const handleDailySlotDragOver = (e: React.DragEvent<HTMLDivElement>, hour: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverDailyHour !== hour) {
+      setDragOverDailyHour(hour);
+    }
+  };
+
+  const handleDailySlotDrop = (
+    e: React.DragEvent<HTMLDivElement>,
+    targetHour: number,
+    targetBeforeEventId?: string
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const droppedId = e.dataTransfer.getData('text/plain') || draggedDailyEventId;
+    if (droppedId) {
+      handleMoveDailyEventToHour(droppedId, targetHour, targetBeforeEventId);
+    }
+    setDraggedDailyEventId(null);
+    setDragOverDailyHour(null);
+  };
+
   // Events to display in the To-Do detail panel
   const displayedTodoEvents = useMemo(() => {
     if (selectedDateStr) {
@@ -2075,6 +2188,19 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
               >
                 <ListTodo className="w-3.5 h-3.5" />
                 <span>To-Do List</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('productivity-stats')}
+                className={`flex items-center space-x-1 px-2.5 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
+                  viewMode === 'productivity-stats'
+                    ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+                title="Statistik Produktivitas: Tren Penyelesaian Tugas, Rata-rata Waktu per Divisi, & Jam Aktif User"
+              >
+                <BarChart3 className="w-3.5 h-3.5" />
+                <span>Productivity Stats</span>
               </button>
             </div>
 
@@ -3397,6 +3523,21 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                 </div>
               </div>
 
+              {/* Drag & Drop Instruction Banner */}
+              <div className="px-3.5 py-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/70 dark:border-indigo-800/50 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2 text-indigo-900 dark:text-indigo-200">
+                  <GripVertical className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  <span>
+                    <strong>Fitur Drag & Drop Jam Kerja Aktif:</strong> Tarik (drag) kartu tugas dan lepaskan (drop) ke slot jam mana pun (06:00 – 21:00 WIB) untuk menjadwalkan ulang jam pelaksanaan secara otomatis.
+                  </span>
+                </div>
+                {draggedDailyEventId && (
+                  <span className="px-2.5 py-0.5 rounded-full bg-indigo-600 text-white text-[10.5px] font-extrabold animate-pulse">
+                    Lepaskan pada slot jam tujuan...
+                  </span>
+                )}
+              </div>
+
               {/* Hour-by-Hour Timeline Schedule Grid */}
               {hoursToRender.length === 0 ? (
                 <div className="text-center py-10 px-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-slate-700 space-y-2.5">
@@ -3442,12 +3583,20 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                       return hour > r.startHour && hour <= r.endHour;
                     });
                     const hasActivity = startingEvents.length > 0 || continuingEvents.length > 0;
+                    const isDragTargetHour = dragOverDailyHour === hour && draggedDailyEventId !== null;
+                    const draggedEventObj = draggedDailyEventId
+                      ? events.find(item => item.id === draggedDailyEventId)
+                      : null;
 
                     return (
                       <div
                         key={hour}
-                        className={`grid grid-cols-1 md:grid-cols-12 transition-colors ${
-                          isCurrentHour
+                        onDragOver={e => handleDailySlotDragOver(e, hour)}
+                        onDrop={e => handleDailySlotDrop(e, hour)}
+                        className={`grid grid-cols-1 md:grid-cols-12 transition-all ${
+                          isDragTargetHour
+                            ? 'bg-indigo-100/70 dark:bg-indigo-950/50 ring-2 ring-inset ring-indigo-500'
+                            : isCurrentHour
                             ? 'bg-amber-50/50 dark:bg-amber-950/20'
                             : hasActivity
                             ? 'bg-indigo-50/20 dark:bg-indigo-950/10'
@@ -3485,6 +3634,24 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
 
                         {/* Right Hour Tasks Content Column */}
                         <div className="md:col-span-10 p-3 sm:p-3.5 space-y-2.5">
+                          {/* Drop Target Preview Indicator when dragging a task over this hour */}
+                          {isDragTargetHour && draggedEventObj && (
+                            <div className="p-2.5 rounded-xl border-2 border-dashed border-indigo-500 bg-indigo-50/90 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-200 text-xs font-bold flex items-center justify-between gap-2 animate-in fade-in duration-150">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <ArrowUpDown className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                                <span className="truncate">
+                                  Lepaskan untuk memindahkan <strong>&ldquo;{draggedEventObj.title}&rdquo;</strong> ke slot jam{' '}
+                                  <strong className="font-mono underline">
+                                    {buildShiftedTimeForHour(draggedEventObj.time, hour)}
+                                  </strong>
+                                </span>
+                              </div>
+                              <span className="px-2 py-0.5 rounded bg-indigo-600 text-white text-[10px] font-mono font-extrabold shrink-0">
+                                {hourLabel} WIB
+                              </span>
+                            </div>
+                          )}
+
                           {/* Tasks starting at this hour */}
                           {startingEvents.map(ev => {
                             const catStyle = CATEGORY_STYLES[ev.category];
@@ -3494,14 +3661,31 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                             const evtDivInfo = divisiList.find(
                               d => d.id === (ev.divisionId || ev.picDivisionId)
                             );
+                            const isBeingDragged = draggedDailyEventId === ev.id;
 
                             return (
                               <div
                                 key={ev.id}
-                                className={`p-3.5 rounded-xl border transition-all space-y-2.5 ${catStyle.bg} ${catStyle.border} shadow-2xs`}
+                                draggable
+                                onDragStart={e => handleDailyTaskDragStart(e, ev.id)}
+                                onDragEnd={handleDailyTaskDragEnd}
+                                onDragOver={e => handleDailySlotDragOver(e, hour)}
+                                onDrop={e => handleDailySlotDrop(e, hour, ev.id)}
+                                className={`p-3.5 rounded-xl border transition-all space-y-2.5 cursor-grab active:cursor-grabbing ${catStyle.bg} ${catStyle.border} shadow-2xs ${
+                                  isBeingDragged
+                                    ? 'opacity-45 scale-[0.99] ring-2 ring-indigo-500 border-dashed'
+                                    : 'hover:shadow-md'
+                                }`}
                               >
                                 <div className="flex flex-wrap items-start justify-between gap-2">
                                   <div className="flex flex-wrap items-center gap-1.5">
+                                    <span
+                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/90 dark:bg-slate-900/90 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 text-[10px] font-bold cursor-grab active:cursor-grabbing"
+                                      title="Tahan & geser (Drag & Drop) ke slot jam lain untuk mengubah jadwal jam"
+                                    >
+                                      <GripVertical className="w-3.5 h-3.5 text-indigo-500" />
+                                      <span className="hidden sm:inline">Geser Jam</span>
+                                    </span>
                                     <span className="px-2 py-0.5 rounded-md bg-slate-900 text-white dark:bg-slate-800 font-mono text-[10.5px] font-extrabold">
                                       ⏰ {ev.time || defaultSlotTime} ({range.durationHours} jam)
                                     </span>
@@ -3526,6 +3710,29 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                                   </div>
 
                                   <div className="flex items-center gap-1">
+                                    {/* Quick 1-Hour Earlier / Later Shift Buttons */}
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleMoveDailyEventToHour(ev.id, Math.max(6, range.startHour - 1))
+                                      }
+                                      disabled={range.startHour <= 6}
+                                      className="px-1.5 py-1 rounded-lg bg-white/80 dark:bg-slate-900/80 text-slate-600 dark:text-slate-300 hover:text-indigo-600 disabled:opacity-40 text-[10px] font-bold transition-colors cursor-pointer"
+                                      title="Majukan 1 jam lebih awal (-1 Jam)"
+                                    >
+                                      -1j
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleMoveDailyEventToHour(ev.id, Math.min(21, range.startHour + 1))
+                                      }
+                                      disabled={range.startHour >= 21}
+                                      className="px-1.5 py-1 rounded-lg bg-white/80 dark:bg-slate-900/80 text-slate-600 dark:text-slate-300 hover:text-indigo-600 disabled:opacity-40 text-[10px] font-bold transition-colors cursor-pointer"
+                                      title="Mundurkan 1 jam lebih akhir (+1 Jam)"
+                                    >
+                                      +1j
+                                    </button>
                                     <button
                                       type="button"
                                       onClick={() => openEditModal(ev)}
@@ -3660,8 +3867,12 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                             return (
                               <div
                                 key={`cont-${ev.id}-${hour}`}
+                                draggable
+                                onDragStart={e => handleDailyTaskDragStart(e, ev.id)}
+                                onDragEnd={handleDailyTaskDragEnd}
                                 onClick={() => openEditModal(ev)}
-                                className={`px-3 py-2 rounded-xl border border-dashed ${catStyle.bg} ${catStyle.border} flex flex-wrap items-center justify-between gap-2 text-xs cursor-pointer hover:brightness-95 transition-all`}
+                                className={`px-3 py-2 rounded-xl border border-dashed ${catStyle.bg} ${catStyle.border} flex flex-wrap items-center justify-between gap-2 text-xs cursor-grab active:cursor-grabbing hover:brightness-95 transition-all`}
+                                title="Tarik untuk memindahkan jadwal tugas ini ke jam lain"
                               >
                                 <div className="flex items-center gap-2 min-w-0">
                                   <span className={`font-extrabold ${catStyle.text}`}>
@@ -3706,6 +3917,15 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
             </div>
           );
         })()}
+
+      {/* PRODUCTIVITY STATS VIEW (RECHARTS VISUALIZATION) */}
+      {viewMode === 'productivity-stats' && (
+        <ProductivityStatsView
+          divisionId={divisionId}
+          externalEvents={events}
+          defaultScope={scopeFilter === 'current-division' ? 'current' : 'all'}
+        />
+      )}
 
       {/* MONTHLY TO-DO LIST & PIC ASSIGNMENT BOARD */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4">

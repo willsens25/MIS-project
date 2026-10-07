@@ -32,6 +32,7 @@ import { DonasiSponsorshipTab } from './DonasiSponsorshipTab';
 import { RoyaltiPenerbitanTab } from './RoyaltiPenerbitanTab';
 import { DivisionCalendarTodoView } from '../common/DivisionCalendarTodoView';
 import { DivisionQuickSearchBar } from '../common/DivisionQuickSearchBar';
+import { DivisionWidgetGrid } from '../dashboard-layout/DivisionWidgetGrid';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { BarcodeScannerModal } from '../modals/BarcodeScannerModal';
 import { DataImportExportModal } from '../modals/DataImportExportModal';
@@ -270,6 +271,12 @@ export const PenerbitanDashboard: React.FC = () => {
         divisionId={3}
         value={searchBook}
         onQueryChange={q => setSearchBook(q)}
+      />
+
+      {/* React Grid Layout Draggable, Resizable & Hideable Division Widgets */}
+      <DivisionWidgetGrid
+        divisionId={3}
+        onNavigateSubTab={tab => setActiveSubTab(tab as any)}
       />
 
       {/* Header Bar */}

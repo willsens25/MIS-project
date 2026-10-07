@@ -41,7 +41,9 @@ import {
   Bot,
   Tv,
   Sparkles,
-  Layers
+  Layers,
+  Keyboard,
+  BarChart3
 } from 'lucide-react';
 
 export interface SidebarSubMenuItem {
@@ -79,6 +81,7 @@ interface LeftSidebarNavProps {
   isMobileOpen: boolean;
   onCloseMobile: () => void;
   onOpenAI?: () => void;
+  onOpenHotkeyMap?: () => void;
 }
 
 export const LeftSidebarNav: React.FC<LeftSidebarNavProps> = ({
@@ -86,7 +89,8 @@ export const LeftSidebarNav: React.FC<LeftSidebarNavProps> = ({
   onToggleCollapse,
   isMobileOpen,
   onCloseMobile,
-  onOpenAI
+  onOpenAI,
+  onOpenHotkeyMap
 }) => {
   const {
     currentUser,
@@ -168,6 +172,12 @@ export const LeftSidebarNav: React.FC<LeftSidebarNavProps> = ({
                 icon: Calendar,
                 badge: urgentCalendarCounts[1] > 0 ? urgentCalendarCounts[1] : undefined,
                 badgeColor: 'bg-rose-500 text-white'
+              },
+              {
+                id: 'productivity-stats',
+                label: 'Productivity Stats',
+                shortLabel: 'Stats',
+                icon: BarChart3
               },
               { id: 'users', label: 'Manajemen Staf & Akun', shortLabel: 'Staf', icon: UserCog }
             ]
@@ -979,6 +989,46 @@ export const LeftSidebarNav: React.FC<LeftSidebarNavProps> = ({
               </motion.button>
             )}
           </motion.div>
+
+          {onOpenHotkeyMap && (
+            <motion.button
+              layout
+              type="button"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => {
+                onOpenHotkeyMap();
+                onCloseMobile();
+              }}
+              title="Buka Global Hotkey Map (? / Alt+H)"
+              className={`w-full flex items-center ${
+                effectiveCollapsed ? 'justify-center p-2' : 'justify-between px-3 py-1.5'
+              } rounded-xl text-[11px] font-bold bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800/80 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/80 transition-colors cursor-pointer overflow-hidden`}
+            >
+              <span className="flex items-center space-x-2 min-w-0">
+                <Keyboard className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                <AnimatePresence initial={false} mode="popLayout">
+                  {!effectiveCollapsed && (
+                    <motion.span
+                      key="shortcut-hotkey-text"
+                      initial={{ opacity: 0, x: -6 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -6 }}
+                      transition={{ duration: 0.2, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                      className="truncate"
+                    >
+                      Pintasan Keyboard
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </span>
+              {!effectiveCollapsed && (
+                <kbd className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shrink-0">
+                  ? / Alt+H
+                </kbd>
+              )}
+            </motion.button>
+          )}
         </motion.div>
       </div>
     );

@@ -40,6 +40,7 @@ import { BankReconciliationView } from './BankReconciliationView';
 import { FinancialReportsView } from './FinancialReportsView';
 import { DivisionCalendarTodoView } from '../common/DivisionCalendarTodoView';
 import { DivisionQuickSearchBar } from '../common/DivisionQuickSearchBar';
+import { DivisionWidgetGrid } from '../dashboard-layout/DivisionWidgetGrid';
 
 interface FinanceDashboardProps {
   initialSubTab?: 'grafik' | 'mutasi' | 'persetujuan' | 'penjualan' | 'akun' | 'rekonsiliasi' | 'laporan' | 'kalender';
@@ -431,6 +432,12 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
         divisionId={2}
         value={searchQuery}
         onQueryChange={q => setSearchQuery(q)}
+      />
+
+      {/* React Grid Layout Draggable, Resizable & Hideable Division Widgets */}
+      <DivisionWidgetGrid
+        divisionId={2}
+        onNavigateSubTab={tab => setActiveSubTab(tab as any)}
       />
 
       {/* Top Stat Summary */}

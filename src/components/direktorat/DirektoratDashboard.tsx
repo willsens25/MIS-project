@@ -24,23 +24,26 @@ import {
   Award,
   Briefcase,
   Calendar,
+  BarChart3,
   X
 } from 'lucide-react';
 import { IdentitasModal } from '../modals/IdentitasModal';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { DirektoratCharts } from '../charts/DirektoratCharts';
+import { ProductivityStatsView } from '../charts/ProductivityStatsView';
 import { AnnualReportModal } from '../modals/AnnualReportModal';
 import { DataImportExportModal } from '../modals/DataImportExportModal';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
 import { ConfigurableDashboardGrid } from '../dashboard-layout/ConfigurableDashboardGrid';
+import { DivisionWidgetGrid } from '../dashboard-layout/DivisionWidgetGrid';
 import { Pagination } from '../common/Pagination';
 import { DivisionQuickSearchBar } from '../common/DivisionQuickSearchBar';
 import { DirektoratCalendarTodoTab } from './DirektoratCalendarTodoTab';
 
 interface DirektoratDashboardProps {
-  initialSubTab?: 'overview' | 'identitas' | 'users' | 'kalender';
+  initialSubTab?: 'overview' | 'identitas' | 'users' | 'kalender' | 'productivity-stats';
 }
 
 export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initialSubTab }) => {
@@ -63,10 +66,11 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
     setCurrentSubTab
   } = useApp();
 
-  const activeSubTab = (['overview', 'identitas', 'users', 'kalender'].includes(currentSubTab)
+  const activeSubTab = (['overview', 'identitas', 'users', 'kalender', 'productivity-stats'].includes(currentSubTab)
     ? currentSubTab
-    : 'overview') as 'overview' | 'identitas' | 'users' | 'kalender';
-  const setActiveSubTab = (tab: 'overview' | 'identitas' | 'users' | 'kalender') => setCurrentSubTab(tab);
+    : 'overview') as 'overview' | 'identitas' | 'users' | 'kalender' | 'productivity-stats';
+  const setActiveSubTab = (tab: 'overview' | 'identitas' | 'users' | 'kalender' | 'productivity-stats') =>
+    setCurrentSubTab(tab);
 
   useEffect(() => {
     if (initialSubTab) {
@@ -314,6 +318,8 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
             ? 'Database Master Anggota & Identitas'
             : activeSubTab === 'kalender'
             ? 'Kalender Kerja 12 Bulan & To-Do List'
+            : activeSubTab === 'productivity-stats'
+            ? 'Productivity Stats & Analitik Jam Kerja Tim'
             : 'Daftar Pengguna & Tim Operasional'
         }
       />
@@ -323,6 +329,12 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
         divisionId={1}
         value={searchIdentitas}
         onQueryChange={q => setSearchIdentitas(q)}
+      />
+
+      {/* React Grid Layout Draggable, Resizable & Hideable Division Widgets */}
+      <DivisionWidgetGrid
+        divisionId={1}
+        onNavigateSubTab={tab => setActiveSubTab(tab as any)}
       />
 
       {/* Sub navigation tabs */}
@@ -362,6 +374,18 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
           >
             <Calendar className="w-3.5 h-3.5" />
             <span>Kalender & To-Do List</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('productivity-stats')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeSubTab === 'productivity-stats'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span>Productivity Stats</span>
           </button>
 
           <button
@@ -493,6 +517,9 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
             books={books}
             pengajuans={pengajuans}
           />
+
+          {/* Team & Task Productivity Stats Visualizations (Recharts) */}
+          <ProductivityStatsView divisionId={1} defaultScope="all" />
 
           {/* Quick Division Highlights */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -877,6 +904,11 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
 
       {/* KALENDER & TO-DO LIST 12 BULAN SUB TAB */}
       {activeSubTab === 'kalender' && <DirektoratCalendarTodoTab />}
+
+      {/* PRODUCTIVITY STATS SUB TAB */}
+      {activeSubTab === 'productivity-stats' && (
+        <ProductivityStatsView divisionId={1} defaultScope="all" />
+      )}
 
       {/* MANAJEMEN USER SUB TAB */}
       {activeSubTab === 'users' && (

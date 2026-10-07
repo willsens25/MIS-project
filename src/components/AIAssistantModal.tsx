@@ -2,8 +2,42 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../context/AppContext';
 import { MascotAvatar } from './MascotAvatar';
-import { Send, X, Loader2, Lightbulb, Sparkles, Mic, MicOff, Volume2, VolumeX, Radio } from 'lucide-react';
+import {
+  Send,
+  X,
+  Loader2,
+  Lightbulb,
+  Sparkles,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX,
+  Radio,
+  History,
+  RotateCcw,
+  Trash2
+} from 'lucide-react';
 import { useWebSpeech } from '../hooks/useWebSpeech';
+
+const RECENT_QUERIES_STORAGE_KEY = 'mis_ai_recent_queries_v1';
+const MAX_RECENT_QUERIES = 5;
+
+const loadStoredRecentQueries = (): string[] => {
+  try {
+    const raw = localStorage.getItem(RECENT_QUERIES_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+          .slice(0, MAX_RECENT_QUERIES);
+      }
+    }
+  } catch {
+    // ignore storage errors
+  }
+  return [];
+};
 
 interface AIAssistantModalProps {
   isOpen: boolean;
@@ -159,6 +193,47 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({ isOpen, onCl
   const [isLoading, setIsLoading] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const [autoSendVoice, setAutoSendVoice] = useState(true);
+  const [recentQueries, setRecentQueries] = useState<string[]>(() => loadStoredRecentQueries());
+
+  const saveRecentQueries = useCallback((nextQueries: string[]) => {
+    const trimmedList = nextQueries.slice(0, MAX_RECENT_QUERIES);
+    setRecentQueries(trimmedList);
+    try {
+      localStorage.setItem(RECENT_QUERIES_STORAGE_KEY, JSON.stringify(trimmedList));
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
+
+  const recordRecentQuery = useCallback(
+    (queryText: string) => {
+      const clean = queryText.trim();
+      if (!clean) return;
+      setRecentQueries(prev => {
+        const deduplicated = prev.filter(q => q.toLowerCase() !== clean.toLowerCase());
+        const updated = [clean, ...deduplicated].slice(0, MAX_RECENT_QUERIES);
+        try {
+          localStorage.setItem(RECENT_QUERIES_STORAGE_KEY, JSON.stringify(updated));
+        } catch {
+          // ignore
+        }
+        return updated;
+      });
+    },
+    []
+  );
+
+  const handleRemoveRecentQuery = useCallback(
+    (queryToRemove: string) => {
+      const updated = recentQueries.filter(q => q !== queryToRemove);
+      saveRecentQueries(updated);
+    },
+    [recentQueries, saveRecentQueries]
+  );
+
+  const handleClearRecentQueries = useCallback(() => {
+    saveRecentQueries([]);
+  }, [saveRecentQueries]);
 
   // Reference to handleSend so speech callback can invoke the latest version
   const handleSendRef = useRef<((customPrompt?: string) => Promise<void>) | undefined>(undefined);
@@ -222,8 +297,11 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({ isOpen, onCl
     // If currently listening, stop recognition
     if (isListening) stopListening();
 
-    const textToSend = customPrompt || prompt;
-    if (!textToSend.trim() || isLoading) return;
+    const textToSend = (customPrompt || prompt).trim();
+    if (!textToSend || isLoading) return;
+
+    // Store in the last 5 Recent Queries history
+    recordRecentQuery(textToSend);
 
     const userMessage = { role: 'user' as const, content: textToSend };
     // Pre-insert user message and empty assistant message for instant streaming display
@@ -621,6 +699,59 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
 
               <div ref={chatBottomRef} />
             </div>
+
+            {/* Recent Queries Section (Last 5 User Prompts with 1-Click Re-execution) */}
+            {recentQueries.length > 0 && (
+              <div className="px-4 py-2 bg-slate-50 dark:bg-slate-900/95 border-t border-slate-200 dark:border-slate-800 space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    <History className="w-3 h-3 text-[#0a9396] dark:text-teal-400 shrink-0" />
+                    <span>Recent Queries ({recentQueries.length}/{MAX_RECENT_QUERIES} Terakhir)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleClearRecentQueries}
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                    title="Hapus semua riwayat kueri terakhir"
+                  >
+                    <Trash2 className="w-2.5 h-2.5" />
+                    <span>Bersihkan</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+                  {recentQueries.map((rq, idx) => (
+                    <div
+                      key={`${rq}-${idx}`}
+                      className="inline-flex items-center bg-teal-50/70 dark:bg-teal-950/40 hover:bg-teal-100/80 dark:hover:bg-teal-900/50 border border-teal-200/80 dark:border-teal-800/70 rounded-full pl-2.5 pr-1 py-0.5 shrink-0 transition-colors max-w-[260px] group"
+                    >
+                      <button
+                        type="button"
+                        disabled={isLoading}
+                        onClick={() => handleSend(rq)}
+                        className="flex items-center gap-1.5 text-[11px] font-medium text-teal-900 dark:text-teal-200 truncate cursor-pointer disabled:opacity-50"
+                        title={`Klik untuk menjalankan ulang: "${rq}"`}
+                      >
+                        <RotateCcw className="w-2.5 h-2.5 text-[#0a9396] dark:text-teal-400 shrink-0 group-hover:-rotate-45 transition-transform" />
+                        <span className="truncate">{rq}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={e => {
+                          e.stopPropagation();
+                          handleRemoveRecentQuery(rq);
+                        }}
+                        className="ml-1 p-0.5 rounded-full text-teal-600/60 dark:text-teal-400/60 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-white/70 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+                        title="Hapus pertanyaan ini dari riwayat"
+                        aria-label={`Hapus kueri ${rq}`}
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Quick Suggestion Chips */}
             <div className="px-4 py-2 bg-slate-100/90 dark:bg-slate-900/90 border-t border-slate-200 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto text-[11px] no-scrollbar">

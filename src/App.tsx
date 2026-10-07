@@ -19,6 +19,7 @@ import { SessionTimeoutModal } from './components/modals/SessionTimeoutModal';
 import { DivisionReportModal } from './components/modals/DivisionReportModal';
 import { AnnualReportModal } from './components/modals/AnnualReportModal';
 import { ExecutivePresentationModal } from './components/modals/ExecutivePresentationModal';
+import { GlobalHotkeyMapModal } from './components/modals/GlobalHotkeyMapModal';
 import { ToastContainer } from './components/common/ToastContainer';
 import { UserSettingsModal } from './components/profile/UserSettingsModal';
 import { NightShiftFloatingWidget } from './components/theme/NightShiftFloatingWidget';
@@ -190,6 +191,9 @@ const AppContent: React.FC = () => {
     isPresentationOpen,
     setIsPresentationOpen,
     openPresentationMode,
+    setCurrentSubTab,
+    toggleTheme,
+    toggleNightShift,
     toasts,
     dismissToast,
     clearAllToasts,
@@ -197,6 +201,7 @@ const AppContent: React.FC = () => {
   } = useApp();
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isUserSettingsOpen, setIsUserSettingsOpen] = useState(false);
+  const [isHotkeyMapOpen, setIsHotkeyMapOpen] = useState(false);
   const [isLeftSidebarCollapsed, setIsLeftSidebarCollapsed] = useState<boolean>(() => {
     try {
       return localStorage.getItem('mis_left_sidebar_collapsed') === 'true';
@@ -435,24 +440,95 @@ const AppContent: React.FC = () => {
     }
   }, [aiAppState]);
 
-  // Global Hotkey for Privacy Mode (Alt + P) and Presentation Mode (Alt + Shift + P)
+  // Global Hotkey Map & Keyboard Shortcuts Listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement ||
+        (e.target as HTMLElement)?.isContentEditable
+      ) {
         return;
       }
-      if (e.altKey && (e.key === 'p' || e.key === 'P')) {
+
+      // '?' or Alt + H -> Toggle Global Hotkey Map Modal
+      if (
+        (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey) ||
+        (e.altKey && (e.key === 'h' || e.key === 'H'))
+      ) {
+        e.preventDefault();
+        setIsHotkeyMapOpen(prev => !prev);
+        return;
+      }
+
+      if (!e.altKey) return;
+
+      const lowerKey = e.key.toLowerCase();
+
+      // Alt + P (Privacy Mode) or Alt + Shift + P (Presentation Mode)
+      if (lowerKey === 'p') {
         e.preventDefault();
         if (e.shiftKey) {
           setIsPresentationOpen(true);
         } else {
           togglePrivacyMode();
         }
+        return;
+      }
+
+      // Alt + C -> Open Calendar & To-Do List in current division
+      if (lowerKey === 'c' && !e.shiftKey) {
+        e.preventDefault();
+        setCurrentSubTab('kalender');
+        return;
+      }
+
+      // Alt + B -> Toggle Left Sidebar Collapse/Expand
+      if (lowerKey === 'b' && !e.shiftKey) {
+        e.preventDefault();
+        handleToggleLeftSidebar();
+        return;
+      }
+
+      // Alt + T -> Toggle Light/Dark Theme
+      if (lowerKey === 't' && !e.shiftKey) {
+        e.preventDefault();
+        toggleTheme();
+        return;
+      }
+
+      // Alt + N -> Toggle Night Shift Eye Comfort
+      if (lowerKey === 'n' && !e.shiftKey) {
+        e.preventDefault();
+        toggleNightShift();
+        return;
+      }
+
+      // Alt + A -> Open AI Assistant
+      if (lowerKey === 'a' && !e.shiftKey) {
+        e.preventDefault();
+        setIsAiModalOpen(true);
+        return;
+      }
+
+      // Alt + 1..6 -> Switch between the 6 Directorates
+      if (['1', '2', '3', '4', '5', '6'].includes(e.key) && !e.shiftKey) {
+        e.preventDefault();
+        const targetDiv = parseInt(e.key, 10) as DivisionId;
+        switchDivision(targetDiv);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [togglePrivacyMode, setIsPresentationOpen]);
+  }, [
+    togglePrivacyMode,
+    setIsPresentationOpen,
+    setCurrentSubTab,
+    toggleTheme,
+    toggleNightShift,
+    switchDivision
+  ]);
 
   const contextInfo = getDivisionContextInfo(currentUser.divisi_id, currentSubTab);
 
@@ -531,6 +607,7 @@ const AppContent: React.FC = () => {
         onToggleLeftSidebar={handleToggleLeftSidebar}
         onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)}
         isLeftSidebarCollapsed={isLeftSidebarCollapsed}
+        onOpenHotkeyMap={() => setIsHotkeyMapOpen(true)}
       />
 
       {/* Main Workspace with Categorized Left Sidebar & Content Area */}
@@ -541,6 +618,7 @@ const AppContent: React.FC = () => {
           isMobileOpen={isMobileSidebarOpen}
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
           onOpenAI={() => setIsAiModalOpen(true)}
+          onOpenHotkeyMap={() => setIsHotkeyMapOpen(true)}
         />
 
         <div className="flex-1 min-w-0 flex flex-col">
@@ -1027,6 +1105,14 @@ const AppContent: React.FC = () => {
       <ExecutivePresentationModal
         isOpen={isPresentationOpen}
         onClose={() => setIsPresentationOpen(false)}
+      />
+
+      {/* Global Hotkey Map Modal */}
+      <GlobalHotkeyMapModal
+        isOpen={isHotkeyMapOpen}
+        onClose={() => setIsHotkeyMapOpen(false)}
+        onToggleLeftSidebar={handleToggleLeftSidebar}
+        onOpenAI={() => setIsAiModalOpen(true)}
       />
 
       {/* Floating Privacy Mode Indicator Banner when screen is mirrored to projector */}

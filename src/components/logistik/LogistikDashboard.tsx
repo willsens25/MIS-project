@@ -36,6 +36,7 @@ import { DownloadPdfButton } from '../common/DownloadPdfButton';
 import { exportDataToCsv, getCsvDateStamp } from '../../utils/exportCsv';
 import { DivisionCalendarTodoView } from '../common/DivisionCalendarTodoView';
 import { DivisionQuickSearchBar } from '../common/DivisionQuickSearchBar';
+import { DivisionWidgetGrid } from '../dashboard-layout/DivisionWidgetGrid';
 
 export const LogistikDashboard: React.FC = () => {
   const {
@@ -465,6 +466,12 @@ export const LogistikDashboard: React.FC = () => {
         divisionId={6}
         value={logSearch}
         onQueryChange={q => setLogSearch(q)}
+      />
+
+      {/* React Grid Layout Draggable, Resizable & Hideable Division Widgets */}
+      <DivisionWidgetGrid
+        divisionId={6}
+        onNavigateSubTab={tab => setActiveSubTab(tab as any)}
       />
 
       {/* Sub tabs */}

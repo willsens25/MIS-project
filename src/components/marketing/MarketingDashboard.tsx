@@ -53,6 +53,7 @@ import { PreOrderAndBundlingTab } from './PreOrderAndBundlingTab';
 import { MembershipLoyaltyTab } from './MembershipLoyaltyTab';
 import { DivisionCalendarTodoView } from '../common/DivisionCalendarTodoView';
 import { DivisionQuickSearchBar } from '../common/DivisionQuickSearchBar';
+import { DivisionWidgetGrid } from '../dashboard-layout/DivisionWidgetGrid';
 import { computeMemberLoyaltyProfile } from '../../utils/membershipUtils';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
@@ -551,6 +552,12 @@ export const MarketingDashboard: React.FC = () => {
         divisionId={4}
         value={invoiceSearch}
         onQueryChange={q => setInvoiceSearch(q)}
+      />
+
+      {/* React Grid Layout Draggable, Resizable & Hideable Division Widgets */}
+      <DivisionWidgetGrid
+        divisionId={4}
+        onNavigateSubTab={tab => setActiveSubTab(tab as any)}
       />
 
       {/* Sub tabs */}
