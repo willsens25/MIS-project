@@ -31,10 +31,18 @@ import {
   Users,
   Sparkles,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  FileText,
+  Loader2,
+  Download,
+  Database
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { DivisionId } from '../../types';
+import {
+  exportRglDashboardToPdf,
+  RglWidgetSnapshotItem
+} from '../../utils/exportPdf';
 import {
   getStoredCalendarEvents,
   getTaskCompletionProgress,
@@ -282,11 +290,16 @@ const DIVISION_WIDGET_DEFINITIONS: Record<DivisionId, DivisionWidgetItem[]> = {
   ]
 };
 
-interface StoredDivisionGridState {
+export interface StoredDivisionGridState {
   layouts: ResponsiveLayouts;
   hiddenIds: string[];
   isCollapsed?: boolean;
+  updatedAt?: string;
 }
+
+export const RGL_MASTER_STORAGE_KEY = 'mis_rgl_dashboard_layouts_v1';
+export const getDivisionRglStorageKey = (divisionId: DivisionId) =>
+  `mis_rgl_division_widgets_v1_div_${divisionId}`;
 
 const buildDefaultLayoutsForDivision = (divisionId: DivisionId): ResponsiveLayouts => {
   const defs = DIVISION_WIDGET_DEFINITIONS[divisionId] || DIVISION_WIDGET_DEFINITIONS[1];
@@ -334,6 +347,142 @@ const buildDefaultLayoutsForDivision = (divisionId: DivisionId): ResponsiveLayou
   return { lg: lgLayout, md: mdLayout, sm: smLayout };
 };
 
+/**
+ * Merges incoming layouts from React Grid Layout with existing stored layouts,
+ * preserving coordinates of hidden widgets and enforcing minW/minH constraints.
+ */
+const mergeResponsiveLayouts = (
+  existingLayouts: ResponsiveLayouts,
+  incomingLayouts: ResponsiveLayouts,
+  divisionId: DivisionId
+): ResponsiveLayouts => {
+  const defaults = buildDefaultLayoutsForDivision(divisionId);
+  const defs = DIVISION_WIDGET_DEFINITIONS[divisionId] || DIVISION_WIDGET_DEFINITIONS[1];
+  const breakpoints: Array<'lg' | 'md' | 'sm'> = ['lg', 'md', 'sm'];
+  const result: ResponsiveLayouts = {};
+
+  breakpoints.forEach(bp => {
+    const defaultList = defaults[bp] || [];
+    const existingList = existingLayouts[bp] || defaultList;
+    const incomingList = incomingLayouts[bp] || [];
+
+    result[bp] = defs.map(def => {
+      const incomingItem = incomingList.find(item => item.i === def.id);
+      const existingItem = existingList.find(item => item.i === def.id);
+      const fallbackItem = defaultList.find(item => item.i === def.id) || {
+        i: def.id,
+        x: 0,
+        y: 0,
+        w: def.defaultW,
+        h: def.defaultH
+      };
+
+      const source = incomingItem || existingItem || fallbackItem;
+      return {
+        i: def.id,
+        x: typeof source.x === 'number' && Number.isFinite(source.x) ? source.x : fallbackItem.x,
+        y: typeof source.y === 'number' && Number.isFinite(source.y) ? source.y : fallbackItem.y,
+        w: typeof source.w === 'number' && Number.isFinite(source.w) ? source.w : fallbackItem.w,
+        h: typeof source.h === 'number' && Number.isFinite(source.h) ? source.h : fallbackItem.h,
+        minW: def.minW || 3,
+        minH: def.minH || 2
+      };
+    });
+  });
+
+  return result;
+};
+
+/**
+ * Deeply checks whether any widget's position (x, y) or size (w, h) changed across breakpoints.
+ */
+const hasRglLayoutsChanged = (prev: ResponsiveLayouts, next: ResponsiveLayouts): boolean => {
+  const breakpoints: Array<'lg' | 'md' | 'sm'> = ['lg', 'md', 'sm'];
+  for (const bp of breakpoints) {
+    const prevList = prev[bp] || [];
+    const nextList = next[bp] || [];
+    if (prevList.length !== nextList.length) return true;
+
+    for (const nextItem of nextList) {
+      const prevItem = prevList.find(p => p.i === nextItem.i);
+      if (!prevItem) return true;
+      if (
+        prevItem.x !== nextItem.x ||
+        prevItem.y !== nextItem.y ||
+        prevItem.w !== nextItem.w ||
+        prevItem.h !== nextItem.h
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
+/**
+ * Loads and validates a division's RGL widget configuration from localStorage upon mount.
+ */
+const loadPersistedDivisionGridState = (divisionId: DivisionId): StoredDivisionGridState => {
+  const storageKey = getDivisionRglStorageKey(divisionId);
+  const defaultLayouts = buildDefaultLayoutsForDivision(divisionId);
+  const validWidgetIds = new Set(
+    (DIVISION_WIDGET_DEFINITIONS[divisionId] || DIVISION_WIDGET_DEFINITIONS[1]).map(d => d.id)
+  );
+
+  try {
+    // 1. Check division-specific storage key first, then master storage key
+    let raw = localStorage.getItem(storageKey);
+    if (!raw) {
+      const masterRaw = localStorage.getItem(RGL_MASTER_STORAGE_KEY);
+      if (masterRaw) {
+        const masterParsed = JSON.parse(masterRaw);
+        if (masterParsed && masterParsed[divisionId]) {
+          raw = JSON.stringify(masterParsed[divisionId]);
+        }
+      }
+    }
+
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.layouts && typeof parsed.layouts === 'object') {
+        const hydratedLayouts = mergeResponsiveLayouts(defaultLayouts, parsed.layouts, divisionId);
+        const validHiddenIds = Array.isArray(parsed.hiddenIds)
+          ? parsed.hiddenIds.filter((id: string) => validWidgetIds.has(id))
+          : [];
+
+        return {
+          layouts: hydratedLayouts,
+          hiddenIds: validHiddenIds,
+          isCollapsed: Boolean(parsed.isCollapsed),
+          updatedAt: parsed.updatedAt || new Date().toISOString()
+        };
+      }
+    }
+  } catch {
+    // Ignore storage read errors and fall back to defaults
+  }
+
+  const initial: StoredDivisionGridState = {
+    layouts: defaultLayouts,
+    hiddenIds: [],
+    isCollapsed: false,
+    updatedAt: new Date().toISOString()
+  };
+
+  // Seed initial state into localStorage on first mount
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(initial));
+    const masterRaw = localStorage.getItem(RGL_MASTER_STORAGE_KEY);
+    const masterObj = masterRaw ? JSON.parse(masterRaw) : {};
+    masterObj[divisionId] = initial;
+    localStorage.setItem(RGL_MASTER_STORAGE_KEY, JSON.stringify(masterObj));
+  } catch {
+    // ignore
+  }
+
+  return initial;
+};
+
 interface DivisionWidgetGridProps {
   divisionId: DivisionId;
   onNavigateSubTab?: (subTab: string) => void;
@@ -359,44 +508,46 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
     penyalurans,
     logisticLogs,
     promos,
+    currentUser,
     setCurrentSubTab
   } = useApp();
 
-  const storageKey = `mis_rgl_division_widgets_v1_div_${divisionId}`;
+  const storageKey = getDivisionRglStorageKey(divisionId);
   const defs = useMemo(
     () => DIVISION_WIDGET_DEFINITIONS[divisionId] || DIVISION_WIDGET_DEFINITIONS[1],
     [divisionId]
   );
 
   const loadInitialState = useCallback((): StoredDivisionGridState => {
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed && parsed.layouts && Array.isArray(parsed.hiddenIds)) {
-          return parsed;
-        }
-      }
-    } catch {
-      // ignore storage errors
-    }
-    return {
-      layouts: buildDefaultLayoutsForDivision(divisionId),
-      hiddenIds: [],
-      isCollapsed: false
-    };
-  }, [storageKey, divisionId]);
+    return loadPersistedDivisionGridState(divisionId);
+  }, [divisionId]);
 
   const [gridState, setGridState] = useState<StoredDivisionGridState>(() => loadInitialState());
+  const [layoutResetKey, setLayoutResetKey] = useState<number>(0);
   const [isEditMode, setIsEditMode] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [pdfExportStatus, setPdfExportStatus] = useState<string>('');
+  const [pdfExportMenuOpen, setPdfExportMenuOpen] = useState(false);
   const [calendarEvents, setCalendarEvents] = useState(() => getStoredCalendarEvents());
   const { width: containerWidth, containerRef } = useContainerWidth({ initialWidth: 1120 });
 
+  // Hydrate saved RGL state upon mount and when divisionId changes
   useEffect(() => {
     setGridState(loadInitialState());
     setIsEditMode(false);
   }, [divisionId, loadInitialState]);
+
+  // Listen for cross-tab localStorage updates so RGL state stays in sync
+  useEffect(() => {
+    const handleStorageSync = (e: StorageEvent) => {
+      if (e.key === storageKey || e.key === RGL_MASTER_STORAGE_KEY) {
+        setGridState(loadPersistedDivisionGridState(divisionId));
+      }
+    };
+    window.addEventListener('storage', handleStorageSync);
+    return () => window.removeEventListener('storage', handleStorageSync);
+  }, [divisionId, storageKey]);
 
   useEffect(() => {
     const syncCal = () => setCalendarEvents(getStoredCalendarEvents());
@@ -406,14 +557,22 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
 
   const persistState = useCallback(
     (nextState: StoredDivisionGridState) => {
-      setGridState(nextState);
+      const stampedState: StoredDivisionGridState = {
+        ...nextState,
+        updatedAt: new Date().toISOString()
+      };
+      setGridState(stampedState);
       try {
-        localStorage.setItem(storageKey, JSON.stringify(nextState));
+        localStorage.setItem(storageKey, JSON.stringify(stampedState));
+        const masterRaw = localStorage.getItem(RGL_MASTER_STORAGE_KEY);
+        const masterObj = masterRaw ? JSON.parse(masterRaw) : {};
+        masterObj[divisionId] = stampedState;
+        localStorage.setItem(RGL_MASTER_STORAGE_KEY, JSON.stringify(masterObj));
       } catch {
-        // ignore
+        // ignore quota errors
       }
     },
-    [storageKey]
+    [storageKey, divisionId]
   );
 
   const triggerToast = (msg: string) => {
@@ -421,13 +580,65 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
     setTimeout(() => setToastMsg(null), 2600);
   };
 
-  const handleLayoutChange = (_currentLayout: Layout, allLayouts: ResponsiveLayouts) => {
-    if (!isEditMode) return;
-    persistState({
-      ...gridState,
-      layouts: allLayouts
-    });
-  };
+  /**
+   * Automatically persists any detected change in widget positions (x, y) or sizes (w, h)
+   * to localStorage whenever React Grid Layout emits a layout update.
+   */
+  const handleLayoutChange = useCallback(
+    (_currentLayout: Layout, allLayouts: ResponsiveLayouts) => {
+      setGridState(prev => {
+        const mergedLayouts = mergeResponsiveLayouts(prev.layouts, allLayouts, divisionId);
+        if (!hasRglLayoutsChanged(prev.layouts, mergedLayouts)) {
+          return prev;
+        }
+        const nextState: StoredDivisionGridState = {
+          ...prev,
+          layouts: mergedLayouts,
+          updatedAt: new Date().toISOString()
+        };
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(nextState));
+          const masterRaw = localStorage.getItem(RGL_MASTER_STORAGE_KEY);
+          const masterObj = masterRaw ? JSON.parse(masterRaw) : {};
+          masterObj[divisionId] = nextState;
+          localStorage.setItem(RGL_MASTER_STORAGE_KEY, JSON.stringify(masterObj));
+        } catch {
+          // ignore
+        }
+        return nextState;
+      });
+    },
+    [divisionId, storageKey]
+  );
+
+  const handleDragOrResizeStop = useCallback(
+    (currentLayout: Layout) => {
+      setGridState(prev => {
+        const mergedLayouts = mergeResponsiveLayouts(
+          prev.layouts,
+          { ...prev.layouts, lg: currentLayout },
+          divisionId
+        );
+        const nextState: StoredDivisionGridState = {
+          ...prev,
+          layouts: mergedLayouts,
+          updatedAt: new Date().toISOString()
+        };
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(nextState));
+          const masterRaw = localStorage.getItem(RGL_MASTER_STORAGE_KEY);
+          const masterObj = masterRaw ? JSON.parse(masterRaw) : {};
+          masterObj[divisionId] = nextState;
+          localStorage.setItem(RGL_MASTER_STORAGE_KEY, JSON.stringify(masterObj));
+        } catch {
+          // ignore
+        }
+        return nextState;
+      });
+      triggerToast('Posisi & ukuran widget disimpan ke LocalStorage!');
+    },
+    [divisionId, storageKey]
+  );
 
   const handleToggleWidgetVisibility = (widgetId: string, title: string) => {
     const isCurrentlyHidden = gridState.hiddenIds.includes(widgetId);
@@ -465,15 +676,41 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
     triggerToast('Ukuran widget berhasil diperbarui!');
   };
 
-  const handleResetDefault = () => {
-    const fresh: StoredDivisionGridState = {
+  const isLayoutCustomized = useMemo(() => {
+    const defaultLayouts = buildDefaultLayoutsForDivision(divisionId);
+    return (
+      gridState.hiddenIds.length > 0 ||
+      hasRglLayoutsChanged(defaultLayouts, gridState.layouts)
+    );
+  }, [divisionId, gridState.hiddenIds, gridState.layouts]);
+
+  const handleResetDefault = useCallback(() => {
+    try {
+      // Clear saved React Grid Layout configuration from localStorage
+      localStorage.removeItem(storageKey);
+      const masterRaw = localStorage.getItem(RGL_MASTER_STORAGE_KEY);
+      if (masterRaw) {
+        const masterObj = JSON.parse(masterRaw);
+        if (masterObj && typeof masterObj === 'object') {
+          delete masterObj[divisionId];
+          localStorage.setItem(RGL_MASTER_STORAGE_KEY, JSON.stringify(masterObj));
+        }
+      }
+    } catch {
+      // ignore storage errors
+    }
+
+    const defaultState: StoredDivisionGridState = {
       layouts: buildDefaultLayoutsForDivision(divisionId),
       hiddenIds: [],
-      isCollapsed: false
+      isCollapsed: false,
+      updatedAt: undefined
     };
-    persistState(fresh);
-    triggerToast('Tata letak & ukuran widget dikembalikan ke standar!');
-  };
+
+    setGridState(defaultState);
+    setLayoutResetKey(prev => prev + 1);
+    triggerToast('Konfigurasi LocalStorage dihapus & posisi widget dikembalikan ke Default!');
+  }, [divisionId, storageKey]);
 
   const navigateToTab = (tabId: string) => {
     if (onNavigateSubTab) {
@@ -486,6 +723,78 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
   const currentDivObj = divisiList.find(d => d.id === divisionId);
   const visibleDefs = defs.filter(d => !gridState.hiddenIds.includes(d.id));
   const hiddenDefs = defs.filter(d => gridState.hiddenIds.includes(d.id));
+
+  const handleExportRglPdf = async (
+    includeFullDashboard: boolean = true,
+    orientation: 'landscape' | 'portrait' = 'landscape'
+  ) => {
+    if (isExportingPdf) return;
+    setPdfExportMenuOpen(false);
+
+    // Ensure panel is expanded before capturing
+    if (gridState.isCollapsed) {
+      persistState({ ...gridState, isCollapsed: false });
+      await new Promise(resolve => setTimeout(resolve, 120));
+    }
+
+    setIsExportingPdf(true);
+    setPdfExportStatus('Menyiapkan PDF...');
+
+    try {
+      const lgLayout = gridState.layouts.lg || buildDefaultLayoutsForDivision(divisionId).lg || [];
+      const widgetsSnapshot: RglWidgetSnapshotItem[] = defs.map((def, index) => {
+        const layoutItem = lgLayout.find(l => l.i === def.id);
+        return {
+          id: def.id,
+          title: def.title,
+          subtitle: def.subtitle,
+          x: layoutItem ? layoutItem.x : (index * 4) % 12,
+          y: layoutItem ? layoutItem.y : Math.floor((index * 4) / 12) * 2,
+          w: layoutItem ? layoutItem.w : def.defaultW,
+          h: layoutItem ? layoutItem.h : def.defaultH,
+          visible: !gridState.hiddenIds.includes(def.id)
+        };
+      });
+
+      const divCodes: Record<number, string> = {
+        1: 'DIR',
+        2: 'FIN',
+        3: 'PUB',
+        4: 'MKT',
+        5: 'PRD',
+        6: 'LOG'
+      };
+
+      const success = await exportRglDashboardToPdf({
+        divisionId,
+        divisionName: currentDivObj?.nama_divisi || `Divisi ${divisionId}`,
+        divisionCode: divCodes[divisionId] || `DIV-${divisionId}`,
+        userName: currentUser?.name || 'Eksekutif Yayasan',
+        userRole: currentUser?.role || 'Administrator',
+        rglContainerElement: containerRef.current,
+        includeFullDashboard,
+        orientation,
+        widgetsSnapshot,
+        onProgress: msg => setPdfExportStatus(msg)
+      });
+
+      if (success) {
+        triggerToast(
+          includeFullDashboard
+            ? 'Laporan PDF Beranda & State RGL berhasil diunduh!'
+            : 'Laporan PDF Konfigurasi RGL Widget berhasil diunduh!'
+        );
+      } else {
+        triggerToast('Gagal mengekspor laporan PDF.');
+      }
+    } catch (err) {
+      console.error('RGL PDF Export Error:', err);
+      triggerToast('Terjadi kesalahan saat membuat PDF.');
+    } finally {
+      setIsExportingPdf(false);
+      setPdfExportStatus('');
+    }
+  };
 
   // Shared computed metrics
   const totalMasuk = mutasis.filter(m => m.tipe === 'Masuk').reduce((s, m) => s + m.nominal, 0);
@@ -1059,7 +1368,10 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
   };
 
   return (
-    <div className="print:hidden bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4">
+    <div
+      data-rgl-widget-workspace="true"
+      className="bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4"
+    >
       {/* Top Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center space-x-2.5">
@@ -1074,14 +1386,137 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                 React Grid Layout ({visibleDefs.length}/{defs.length} Aktif)
               </span>
+              <span
+                className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1 cursor-default"
+                title={`Posisi (x, y) & ukuran (w, h) widget otomatis disimpan di LocalStorage (${storageKey})`}
+              >
+                <Database className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                <span>
+                  Tersimpan di LocalStorage
+                  {gridState.updatedAt
+                    ? ` • ${new Date(gridState.updatedAt).toLocaleTimeString('id-ID', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}`
+                    : ''}
+                </span>
+              </span>
             </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Sesuaikan posisi (drag), rentang ukuran kolom/tinggi (resize), atau sembunyikan widget spesifik pada beranda divisi Anda.
+              Sesuaikan posisi (drag), rentang ukuran kolom/tinggi (resize), atau ekspor laporan tata letak RGL ke PDF.
             </p>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="print:hidden flex flex-wrap items-center gap-2">
+          {/* PDF Export Button with Quick Options for RGL State */}
+          <div className="relative inline-flex items-center">
+            <button
+              type="button"
+              disabled={isExportingPdf}
+              onClick={() => handleExportRglPdf(true, 'landscape')}
+              title="Unduh Laporan PDF Beranda & State React Grid Layout (Terpaginasi via html2pdf)"
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-l-xl text-xs font-bold border transition-all cursor-pointer ${
+                isExportingPdf
+                  ? 'bg-rose-100 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800 cursor-wait'
+                  : 'bg-rose-600 hover:bg-rose-700 text-white border-rose-600 shadow-xs'
+              }`}
+            >
+              {isExportingPdf ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <FileText className="w-3.5 h-3.5" />
+              )}
+              <span>
+                {isExportingPdf ? pdfExportStatus || 'Mengekspor PDF...' : 'PDF Export'}
+              </span>
+            </button>
+            <button
+              type="button"
+              disabled={isExportingPdf}
+              onClick={() => setPdfExportMenuOpen(prev => !prev)}
+              title="Pilih cakupan & orientasi ekspor PDF RGL"
+              className="px-2 py-1.5 rounded-r-xl text-xs font-bold bg-rose-700 hover:bg-rose-800 text-white border border-l-rose-500 border-rose-700 transition-colors cursor-pointer"
+            >
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+
+            <AnimatePresence>
+              {pdfExportMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 6 }}
+                  className="absolute right-0 top-full mt-1.5 w-72 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xl p-2 z-40 text-xs space-y-1"
+                >
+                  <div className="px-2.5 py-1.5 border-b border-slate-100 dark:border-slate-800">
+                    <p className="font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <Download className="w-3.5 h-3.5 text-rose-600" />
+                      <span>Opsi Ekspor PDF (html2pdf RGL)</span>
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Menangkap koordinat widget RGL ({visibleDefs.length}/{defs.length} aktif) ke dokumen A4 terpaginasi.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleExportRglPdf(true, 'landscape')}
+                    className="w-full text-left px-2.5 py-2 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer flex items-start justify-between gap-2"
+                  >
+                    <div>
+                      <p className="font-bold text-slate-900 dark:text-white">
+                        Full Dashboard + RGL State (Landscape)
+                      </p>
+                      <p className="text-[10px] text-slate-500">
+                        Kanvas RGL, Tabel Koordinat Grid & Lampiran Tabel Beranda
+                      </p>
+                    </div>
+                    <span className="px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 text-[9px] font-extrabold shrink-0">
+                      A4 Landscape
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleExportRglPdf(false, 'landscape')}
+                    className="w-full text-left px-2.5 py-2 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer flex items-start justify-between gap-2"
+                  >
+                    <div>
+                      <p className="font-bold text-slate-900 dark:text-white">
+                        Hanya RGL Widget & Matriks Koordinat
+                      </p>
+                      <p className="text-[10px] text-slate-500">
+                        Ekspor ringkas khusus tata letak widget & ukuran span kolom
+                      </p>
+                    </div>
+                    <span className="px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 text-[9px] font-extrabold shrink-0">
+                      Ringkas
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleExportRglPdf(true, 'portrait')}
+                    className="w-full text-left px-2.5 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer flex items-start justify-between gap-2"
+                  >
+                    <div>
+                      <p className="font-bold text-slate-900 dark:text-white">
+                        Laporan Beranda & RGL (A4 Portrait)
+                      </p>
+                      <p className="text-[10px] text-slate-500">
+                        Format dokumen vertikal multi-halaman dengan nomor halaman
+                      </p>
+                    </div>
+                    <span className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[9px] font-extrabold shrink-0">
+                      A4 Portrait
+                    </span>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           <button
             type="button"
             onClick={() => {
@@ -1100,17 +1535,19 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
             <span>{isEditMode ? 'Selesai Atur Widget' : 'Atur Widget (Drag & Resize)'}</span>
           </button>
 
-          {isEditMode && (
-            <button
-              type="button"
-              onClick={handleResetDefault}
-              className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-semibold cursor-pointer"
-              title="Kembalikan posisi dan ukuran semua widget ke standar"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleResetDefault}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+              isLayoutCustomized
+                ? 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/70 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700 shadow-2xs'
+                : 'bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+            }`}
+            title="Hapus konfigurasi tata letak React Grid Layout dari LocalStorage dan kembalikan posisi/ukuran widget ke standar"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Reset Layout</span>
+          </button>
 
           <button
             type="button"
@@ -1186,6 +1623,7 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
         <div ref={containerRef} className="w-full">
           {visibleDefs.length > 0 ? (
             <ResponsiveGridLayout
+              key={`rgl-div-${divisionId}-reset-${layoutResetKey}`}
               className="layout"
               width={containerWidth || 1120}
               layouts={gridState.layouts}
@@ -1194,18 +1632,21 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
               rowHeight={86}
               margin={[14, 14]}
               dragConfig={{
-                enabled: isEditMode,
+                enabled: true,
                 handle: '.rgl-widget-drag-handle'
               }}
               resizeConfig={{
-                enabled: isEditMode,
+                enabled: true,
                 handles: ['se']
               }}
               onLayoutChange={handleLayoutChange}
+              onDragStop={handleDragOrResizeStop}
+              onResizeStop={handleDragOrResizeStop}
             >
               {visibleDefs.map(widget => {
                 const lgItem = gridState.layouts.lg?.find(l => l.i === widget.id);
                 const curW = lgItem?.w || widget.defaultW;
+                const curH = lgItem?.h || widget.defaultH;
 
                 return (
                   <div
@@ -1219,19 +1660,29 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
                     {/* Widget Header & Drag Handle */}
                     <div className="flex items-start justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800/80">
                       <div
-                        className={`flex items-center gap-2 min-w-0 flex-1 ${
-                          isEditMode ? 'rgl-widget-drag-handle cursor-grab active:cursor-grabbing' : ''
-                        }`}
+                        className="rgl-widget-drag-handle cursor-grab active:cursor-grabbing flex items-center gap-2 min-w-0 flex-1 select-none"
+                        title="Tarik (drag) header ini untuk memindahkan posisi widget — otomatis tersimpan di LocalStorage"
                       >
-                        {isEditMode && (
-                          <span className="p-1 rounded-lg bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 shrink-0">
-                            <GripHorizontal className="w-3.5 h-3.5" />
-                          </span>
-                        )}
-                        <div className="min-w-0">
-                          <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
-                            {widget.title}
-                          </h4>
+                        <span
+                          className={`p-1 rounded-lg shrink-0 transition-colors ${
+                            isEditMode
+                              ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400'
+                          }`}
+                        >
+                          <GripHorizontal className="w-3.5 h-3.5" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
+                              {widget.title}
+                            </h4>
+                            {isEditMode && (
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-300 shrink-0">
+                                {curW}×{curH}
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[10.5px] text-slate-400 truncate">{widget.subtitle}</p>
                         </div>
                       </div>
