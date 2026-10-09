@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   ResponsiveGridLayout,
   useContainerWidth,
@@ -35,7 +35,17 @@ import {
   FileText,
   Loader2,
   Download,
-  Database
+  Database,
+  Lightbulb,
+  X,
+  ChevronRight,
+  Bookmark,
+  Sunrise,
+  Brain,
+  Moon,
+  Plus,
+  Save,
+  Trash2
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { DivisionId } from '../../types';
@@ -59,7 +69,7 @@ export interface DivisionWidgetItem {
   minH?: number;
 }
 
-const DIVISION_WIDGET_DEFINITIONS: Record<DivisionId, DivisionWidgetItem[]> = {
+export const DIVISION_WIDGET_DEFINITIONS: Record<DivisionId, DivisionWidgetItem[]> = {
   1: [
     {
       id: 'dir-w-kas',
@@ -290,16 +300,130 @@ const DIVISION_WIDGET_DEFINITIONS: Record<DivisionId, DivisionWidgetItem[]> = {
   ]
 };
 
+export interface RglNamedLayoutPreset {
+  id: string;
+  name: string;
+  description: string;
+  badge: string;
+  iconType: 'morning' | 'deepwork' | 'eod' | 'custom';
+  isBuiltIn?: boolean;
+  layouts: ResponsiveLayouts;
+  hiddenIds: string[];
+  savedAt: string;
+}
+
 export interface StoredDivisionGridState {
   layouts: ResponsiveLayouts;
   hiddenIds: string[];
   isCollapsed?: boolean;
   updatedAt?: string;
+  activePresetId?: string;
+  presets?: RglNamedLayoutPreset[];
 }
 
 export const RGL_MASTER_STORAGE_KEY = 'mis_rgl_dashboard_layouts_v1';
 export const getDivisionRglStorageKey = (divisionId: DivisionId) =>
   `mis_rgl_division_widgets_v1_div_${divisionId}`;
+
+/**
+ * Generates the 3 built-in named Preset Dashboard Layouts ('Morning Routine', 'Deep Work', 'End of Day')
+ * tailored to each division's widgets so users can switch or overwrite them anytime.
+ */
+const buildBuiltInPresetsForDivision = (divisionId: DivisionId): RglNamedLayoutPreset[] => {
+  const defs = DIVISION_WIDGET_DEFINITIONS[divisionId] || DIVISION_WIDGET_DEFINITIONS[1];
+  const defaultLayouts = buildDefaultLayoutsForDivision(divisionId);
+  const nowIso = new Date().toISOString();
+
+  // 1. Morning Routine: Full overview with priority operational & task/schedule widgets prominently placed at top
+  const morningLg: LayoutItem[] = defs.map((item, idx) => {
+    // Move task/agenda or primary operational widget to top full-width banner on Morning Routine
+    if (idx === defs.length - 1) {
+      return {
+        i: item.id,
+        x: 0,
+        y: 0,
+        w: 12,
+        h: 2,
+        minW: item.minW || 3,
+        minH: item.minH || 2
+      };
+    }
+    const colIndex = idx % 3;
+    const rowIndex = Math.floor(idx / 3) + 1;
+    return {
+      i: item.id,
+      x: colIndex * 4,
+      y: rowIndex * 2,
+      w: 4,
+      h: 2,
+      minW: item.minW || 3,
+      minH: item.minH || 2
+    };
+  });
+
+  // 2. Deep Work: Distraction-free focused workspace showing only top 2 core execution widgets expanded to 6 columns each
+  const deepWorkVisibleIds = defs.slice(0, 2).map(d => d.id);
+  const deepWorkHiddenIds = defs.slice(2).map(d => d.id);
+  const deepWorkLg: LayoutItem[] = defs.map((item, idx) => ({
+    i: item.id,
+    x: idx === 0 ? 0 : idx === 1 ? 6 : (idx % 3) * 4,
+    y: idx < 2 ? 0 : 3,
+    w: idx < 2 ? 6 : item.defaultW,
+    h: idx < 2 ? 3 : item.defaultH,
+    minW: item.minW || 3,
+    minH: item.minH || 2
+  }));
+
+  // 3. End of Day: Audit, closing realization & task completion review layout (hides middle secondary widget, expands summary & audit logs)
+  const eodHiddenIds = defs.length >= 4 ? [defs[1].id] : [];
+  const eodVisibleDefs = defs.filter(d => !eodHiddenIds.includes(d.id));
+  const eodLg: LayoutItem[] = defs.map(item => {
+    const visIdx = eodVisibleDefs.findIndex(v => v.id === item.id);
+    if (visIdx === 0) {
+      return { i: item.id, x: 0, y: 0, w: 6, h: 2, minW: item.minW || 3, minH: item.minH || 2 };
+    }
+    if (visIdx === 1) {
+      return { i: item.id, x: 6, y: 0, w: 6, h: 2, minW: item.minW || 3, minH: item.minH || 2 };
+    }
+    return { i: item.id, x: 0, y: 2, w: 12, h: 2, minW: item.minW || 3, minH: item.minH || 2 };
+  });
+
+  return [
+    {
+      id: 'morning-routine',
+      name: 'Morning Routine',
+      description: 'Prioritas pagi: jadwal tugas harian di baris teratas & ikhtisar seluruh metrik aktif',
+      badge: 'Pagi • Ikhtisar',
+      iconType: 'morning',
+      isBuiltIn: true,
+      layouts: mergeResponsiveLayouts(defaultLayouts, { ...defaultLayouts, lg: morningLg }, divisionId),
+      hiddenIds: [],
+      savedAt: nowIso
+    },
+    {
+      id: 'deep-work',
+      name: 'Deep Work',
+      description: `Mode fokus tinggi: memperbesar ${deepWorkVisibleIds.length} widget eksekusi utama & menyembunyikan sisanya`,
+      badge: 'Fokus • Minim Distraksi',
+      iconType: 'deepwork',
+      isBuiltIn: true,
+      layouts: mergeResponsiveLayouts(defaultLayouts, { ...defaultLayouts, lg: deepWorkLg }, divisionId),
+      hiddenIds: deepWorkHiddenIds,
+      savedAt: nowIso
+    },
+    {
+      id: 'end-of-day',
+      name: 'End of Day',
+      description: 'Evaluasi sore: rekapitulasi realisasi harian, penutupan kas/log, dan progres target',
+      badge: 'Sore • Rekap & Audit',
+      iconType: 'eod',
+      isBuiltIn: true,
+      layouts: mergeResponsiveLayouts(defaultLayouts, { ...defaultLayouts, lg: eodLg }, divisionId),
+      hiddenIds: eodHiddenIds,
+      savedAt: nowIso
+    }
+  ];
+};
 
 const buildDefaultLayoutsForDivision = (divisionId: DivisionId): ResponsiveLayouts => {
   const defs = DIVISION_WIDGET_DEFINITIONS[divisionId] || DIVISION_WIDGET_DEFINITIONS[1];
@@ -450,11 +574,33 @@ const loadPersistedDivisionGridState = (divisionId: DivisionId): StoredDivisionG
           ? parsed.hiddenIds.filter((id: string) => validWidgetIds.has(id))
           : [];
 
+        const builtInPresets = buildBuiltInPresetsForDivision(divisionId);
+        let mergedPresets: RglNamedLayoutPreset[] = builtInPresets;
+
+        if (Array.isArray(parsed.presets) && parsed.presets.length > 0) {
+          const storedPresets: RglNamedLayoutPreset[] = parsed.presets
+            .filter((p: RglNamedLayoutPreset) => p && typeof p.id === 'string' && typeof p.name === 'string')
+            .map((p: RglNamedLayoutPreset) => ({
+              ...p,
+              layouts: mergeResponsiveLayouts(defaultLayouts, p.layouts || defaultLayouts, divisionId),
+              hiddenIds: Array.isArray(p.hiddenIds)
+                ? p.hiddenIds.filter((id: string) => validWidgetIds.has(id))
+                : []
+            }));
+
+          // Ensure the 3 built-in presets ('Morning Routine', 'Deep Work', 'End of Day') always exist
+          const storedIds = new Set(storedPresets.map(p => p.id));
+          const missingBuiltIns = builtInPresets.filter(b => !storedIds.has(b.id));
+          mergedPresets = [...missingBuiltIns, ...storedPresets];
+        }
+
         return {
           layouts: hydratedLayouts,
           hiddenIds: validHiddenIds,
           isCollapsed: Boolean(parsed.isCollapsed),
-          updatedAt: parsed.updatedAt || new Date().toISOString()
+          updatedAt: parsed.updatedAt || new Date().toISOString(),
+          activePresetId: typeof parsed.activePresetId === 'string' ? parsed.activePresetId : 'default',
+          presets: mergedPresets
         };
       }
     }
@@ -466,7 +612,9 @@ const loadPersistedDivisionGridState = (divisionId: DivisionId): StoredDivisionG
     layouts: defaultLayouts,
     hiddenIds: [],
     isCollapsed: false,
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
+    activePresetId: 'default',
+    presets: buildBuiltInPresetsForDivision(divisionId)
   };
 
   // Seed initial state into localStorage on first mount
@@ -509,7 +657,8 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
     logisticLogs,
     promos,
     currentUser,
-    setCurrentSubTab
+    setCurrentSubTab,
+    showToast
   } = useApp();
 
   const storageKey = getDivisionRglStorageKey(divisionId);
@@ -529,8 +678,20 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [pdfExportStatus, setPdfExportStatus] = useState<string>('');
   const [pdfExportMenuOpen, setPdfExportMenuOpen] = useState(false);
+  const [presetMenuOpen, setPresetMenuOpen] = useState(false);
+  const [newPresetName, setNewPresetName] = useState('');
+  const [newPresetDesc, setNewPresetDesc] = useState('');
+  const [highlightedWidgetId, setHighlightedWidgetId] = useState<string | null>(null);
   const [calendarEvents, setCalendarEvents] = useState(() => getStoredCalendarEvents());
   const { width: containerWidth, containerRef } = useContainerWidth({ initialWidth: 1120 });
+
+  // Contextual Idle Tip Toast State (triggers when user spends >60s on dashboard view without widget interaction)
+  const IDLE_TIP_THRESHOLD_SECONDS = 60;
+  const [idleSeconds, setIdleSeconds] = useState<number>(0);
+  const [activeTipIndex, setActiveTipIndex] = useState<number | null>(null);
+  const lastTipIndexRef = useRef<number>(-1);
+  const lastWidgetInteractionAtRef = useRef<number>(Date.now());
+  const idleTipShownForCurrentCycleRef = useRef<boolean>(false);
 
   // Hydrate saved RGL state upon mount and when divisionId changes
   useEffect(() => {
@@ -611,8 +772,16 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
     [divisionId, storageKey]
   );
 
+  // Record user interaction with any dashboard widget and reset the 60s idle timer
+  const registerWidgetInteraction = useCallback(() => {
+    lastWidgetInteractionAtRef.current = Date.now();
+    idleTipShownForCurrentCycleRef.current = false;
+    setIdleSeconds(0);
+  }, []);
+
   const handleDragOrResizeStop = useCallback(
     (currentLayout: Layout) => {
+      registerWidgetInteraction();
       setGridState(prev => {
         const mergedLayouts = mergeResponsiveLayouts(
           prev.layouts,
@@ -641,6 +810,7 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
   );
 
   const handleToggleWidgetVisibility = (widgetId: string, title: string) => {
+    registerWidgetInteraction();
     const isCurrentlyHidden = gridState.hiddenIds.includes(widgetId);
     const nextHidden = isCurrentlyHidden
       ? gridState.hiddenIds.filter(id => id !== widgetId)
@@ -658,6 +828,7 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
   };
 
   const handleQuickResizeWidget = (widgetId: string, deltaW: number, deltaH: number) => {
+    registerWidgetInteraction();
     const currentLg = gridState.layouts.lg || buildDefaultLayoutsForDivision(divisionId).lg || [];
     const updatedLg = currentLg.map(item => {
       if (item.i !== widgetId) return item;
@@ -704,7 +875,9 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
       layouts: buildDefaultLayoutsForDivision(divisionId),
       hiddenIds: [],
       isCollapsed: false,
-      updatedAt: undefined
+      updatedAt: undefined,
+      activePresetId: 'default',
+      presets: buildBuiltInPresetsForDivision(divisionId)
     };
 
     setGridState(defaultState);
@@ -712,7 +885,187 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
     triggerToast('Konfigurasi LocalStorage dihapus & posisi widget dikembalikan ke Default!');
   }, [divisionId, storageKey]);
 
+  const availablePresets = useMemo<RglNamedLayoutPreset[]>(() => {
+    if (gridState.presets && gridState.presets.length > 0) {
+      return gridState.presets;
+    }
+    return buildBuiltInPresetsForDivision(divisionId);
+  }, [gridState.presets, divisionId]);
+
+  const activePresetObj = useMemo(() => {
+    return availablePresets.find(p => p.id === gridState.activePresetId) || null;
+  }, [availablePresets, gridState.activePresetId]);
+
+  const handleApplyNamedPreset = useCallback(
+    (preset: RglNamedLayoutPreset) => {
+      registerWidgetInteraction();
+      const hydratedLayouts = mergeResponsiveLayouts(
+        buildDefaultLayoutsForDivision(divisionId),
+        preset.layouts,
+        divisionId
+      );
+      const nextState: StoredDivisionGridState = {
+        ...gridState,
+        layouts: hydratedLayouts,
+        hiddenIds: [...preset.hiddenIds],
+        isCollapsed: false,
+        activePresetId: preset.id,
+        presets: availablePresets
+      };
+      persistState(nextState);
+      setLayoutResetKey(prev => prev + 1);
+      setPresetMenuOpen(false);
+      triggerToast(`Preset "${preset.name}" diterapkan & disimpan ke LocalStorage!`);
+    },
+    [divisionId, gridState, availablePresets, persistState, registerWidgetInteraction]
+  );
+
+  const handleUpdateExistingPresetWithCurrentLayout = useCallback(
+    (presetId: string) => {
+      registerWidgetInteraction();
+      const targetPreset = availablePresets.find(p => p.id === presetId);
+      if (!targetPreset) return;
+
+      const updatedPresets = availablePresets.map(p =>
+        p.id === presetId
+          ? {
+              ...p,
+              layouts: gridState.layouts,
+              hiddenIds: [...gridState.hiddenIds],
+              savedAt: new Date().toISOString()
+            }
+          : p
+      );
+
+      persistState({
+        ...gridState,
+        activePresetId: presetId,
+        presets: updatedPresets
+      });
+      triggerToast(`Konfigurasi saat ini disimpan ke preset "${targetPreset.name}"!`);
+    },
+    [availablePresets, gridState, persistState, registerWidgetInteraction]
+  );
+
+  const handleSaveNewNamedPreset = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      registerWidgetInteraction();
+      const trimmedName = newPresetName.trim();
+      if (!trimmedName) return;
+
+      const slugId = `custom-${trimmedName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now().toString().slice(-4)}`;
+      const newPreset: RglNamedLayoutPreset = {
+        id: slugId,
+        name: trimmedName,
+        description:
+          newPresetDesc.trim() ||
+          `Tata letak kustom (${ defs.length - gridState.hiddenIds.length }/${defs.length} widget aktif)`,
+        badge: 'Preset Kustom',
+        iconType: 'custom',
+        isBuiltIn: false,
+        layouts: gridState.layouts,
+        hiddenIds: [...gridState.hiddenIds],
+        savedAt: new Date().toISOString()
+      };
+
+      const nextPresets = [...availablePresets, newPreset];
+      persistState({
+        ...gridState,
+        activePresetId: newPreset.id,
+        presets: nextPresets
+      });
+      setNewPresetName('');
+      setNewPresetDesc('');
+      triggerToast(`Preset baru "${trimmedName}" disimpan ke LocalStorage!`);
+    },
+    [newPresetName, newPresetDesc, defs.length, gridState, availablePresets, persistState, registerWidgetInteraction]
+  );
+
+  const handleDeleteCustomPreset = useCallback(
+    (presetId: string, presetName: string) => {
+      registerWidgetInteraction();
+      const nextPresets = availablePresets.filter(p => p.id !== presetId);
+      const nextActiveId = gridState.activePresetId === presetId ? 'default' : gridState.activePresetId;
+      persistState({
+        ...gridState,
+        activePresetId: nextActiveId,
+        presets: nextPresets
+      });
+      triggerToast(`Preset kustom "${presetName}" dihapus dari LocalStorage.`);
+    },
+    [availablePresets, gridState, persistState, registerWidgetInteraction]
+  );
+
+  // Listen for Command Palette (Ctrl+K) navigation to a specific RGL widget or preset
+  useEffect(() => {
+    const handleFocusWidget = (e: Event) => {
+      const customEvt = e as CustomEvent<{
+        divisionId: DivisionId;
+        widgetId: string;
+        title?: string;
+      }>;
+      const detail = customEvt.detail;
+      if (!detail || detail.divisionId !== divisionId) return;
+
+      registerWidgetInteraction();
+      // If panel is collapsed or widget is hidden, uncollapse and unhide it so user sees it
+      const isHidden = gridState.hiddenIds.includes(detail.widgetId);
+      if (gridState.isCollapsed || isHidden) {
+        persistState({
+          ...gridState,
+          isCollapsed: false,
+          hiddenIds: isHidden
+            ? gridState.hiddenIds.filter(id => id !== detail.widgetId)
+            : gridState.hiddenIds
+        });
+      }
+
+      setHighlightedWidgetId(detail.widgetId);
+      setTimeout(() => {
+        const el = document.querySelector<HTMLElement>(
+          `[data-rgl-widget-id="${detail.widgetId}"]`
+        );
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+
+      setTimeout(() => {
+        setHighlightedWidgetId(prev => (prev === detail.widgetId ? null : prev));
+      }, 3600);
+    };
+
+    const handleApplyPresetEvent = (e: Event) => {
+      const customEvt = e as CustomEvent<{
+        divisionId: DivisionId;
+        presetId: string;
+      }>;
+      const detail = customEvt.detail;
+      if (!detail || detail.divisionId !== divisionId) return;
+      const foundPreset = availablePresets.find(p => p.id === detail.presetId);
+      if (foundPreset) {
+        handleApplyNamedPreset(foundPreset);
+      }
+    };
+
+    window.addEventListener('mis-focus-rgl-widget', handleFocusWidget);
+    window.addEventListener('mis-apply-rgl-preset', handleApplyPresetEvent);
+    return () => {
+      window.removeEventListener('mis-focus-rgl-widget', handleFocusWidget);
+      window.removeEventListener('mis-apply-rgl-preset', handleApplyPresetEvent);
+    };
+  }, [
+    divisionId,
+    gridState,
+    availablePresets,
+    persistState,
+    registerWidgetInteraction,
+    handleApplyNamedPreset
+  ]);
+
   const navigateToTab = (tabId: string) => {
+    registerWidgetInteraction();
     if (onNavigateSubTab) {
       onNavigateSubTab(tabId);
     } else {
@@ -723,6 +1076,175 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
   const currentDivObj = divisiList.find(d => d.id === divisionId);
   const visibleDefs = defs.filter(d => !gridState.hiddenIds.includes(d.id));
   const hiddenDefs = defs.filter(d => gridState.hiddenIds.includes(d.id));
+
+  // Contextual tips tailored to the current division & RGL dashboard capabilities
+  const contextualTips = useMemo(() => {
+    const divName = currentDivObj?.nama_divisi || `Divisi ${divisionId}`;
+    const divisionSpecificTips: Record<
+      number,
+      Array<{
+        title: string;
+        message: string;
+        badge: string;
+        ctaLabel?: string;
+        ctaTab?: string;
+        ctaAction?: 'editMode' | 'exportPdf' | 'resetLayout';
+      }>
+    > = {
+      1: [
+        {
+          title: 'Tips Eksekutif: Otorisasi SPK & Mutasi Kas',
+          message:
+            'Klik tombol pintasan di dalam widget "Persetujuan SPK Cetak" atau "Ringkasan Kas & Likuiditas" untuk memvalidasi antrean pengajuan cetak secara langsung.',
+          badge: divName,
+          ctaLabel: 'Buka Antrean SPK',
+          ctaTab: 'persetujuan'
+        },
+        {
+          title: 'Tips Produktivitas: Pantau Tren Lintas Divisi',
+          message:
+            'Gunakan tab "Productivity Stats" atau tarik (drag) sudut kanan-bawah widget di beranda ini untuk memperluas grafik pantauan kinerja.',
+          badge: 'Analitik',
+          ctaLabel: 'Buka Productivity Stats',
+          ctaTab: 'productivity'
+        }
+      ],
+      2: [
+        {
+          title: 'Tips Keuangan: Rekonsiliasi & Verifikasi Dana SPK',
+          message:
+            'Anda dapat langsung menuju modul Kas & Mutasi dari widget "Arus Kas Masuk vs Keluar" atau menyusun ulang posisi widget prioritas Anda.',
+          badge: divName,
+          ctaLabel: 'Buka Kas & Mutasi',
+          ctaTab: 'mutasi'
+        }
+      ],
+      3: [
+        {
+          title: 'Tips Penerbitan: Pantau Stok Kritis & Royalti',
+          message:
+            'Widget "Peringatan Stok Kritis (<25 Eks)" memudahkan Anda mendeteksi buku yang perlu segera diajukan cetak ulang ke Direktorat.',
+          badge: divName,
+          ctaLabel: 'Kelola Katalog Buku',
+          ctaTab: 'buku'
+        }
+      ],
+      4: [
+        {
+          title: 'Tips Pemasaran: Konversi Faktur & Voucher Promo',
+          message:
+            'Klik pintasan pada widget "Performa Faktur & Omset" untuk menindaklanjuti pesanan berstatus Pending atau mengecek kuota kode voucher aktif.',
+          badge: divName,
+          ctaLabel: 'Buka Faktur & Pesanan',
+          ctaTab: 'pesanan'
+        }
+      ],
+      5: [
+        {
+          title: 'Tips Produksi: Eksekusi SPK & Catat Output Harian',
+          message:
+            'Gunakan widget "Antrean SPK Siap Cetak" untuk memantau mandat cetak yang telah disetujui dan langsung catat realisasi oplah produksi.',
+          badge: divName,
+          ctaLabel: 'Buka Log Produksi',
+          ctaTab: 'log'
+        }
+      ],
+      6: [
+        {
+          title: 'Tips Distribusi: Pengiriman Faktur Lunas & Stok Gudang',
+          message:
+            'Cek widget "Antrean Faktur Siap Kirim" untuk segera menerbitkan surat jalan dan nomor resi bagi pesanan yang telah lunas.',
+          badge: divName,
+          ctaLabel: 'Buka Pengiriman & Resi',
+          ctaTab: 'pengiriman'
+        }
+      ]
+    };
+
+    const sharedRglTips = [
+      {
+        title: 'Tips Tata Letak: Drag & Resize Widget Beranda',
+        message:
+          'Tahukah Anda? Anda bisa menarik ikon grip di bagian atas kartu untuk memindahkan posisi widget, atau tarik sudut kanan-bawahnya untuk mengubah ukuran. Semua tersimpan otomatis di LocalStorage!',
+        badge: 'React Grid Layout',
+        ctaLabel: 'Aktifkan Mode Atur Widget',
+        ctaAction: 'editMode' as const
+      },
+      {
+        title: 'Tips Laporan: Ekspor PDF Tata Letak Beranda',
+        message:
+          'Ingin membagikan potret metrik beranda & matriks koordinat widget saat ini? Gunakan tombol "PDF Export" di header beranda untuk mengunduh laporan A4 terpaginasi.',
+        badge: 'PDF Export',
+        ctaLabel: 'Unduh PDF Sekarang',
+        ctaAction: 'exportPdf' as const
+      },
+      {
+        title: 'Tips Pintasan: Gunakan Global Hotkey Map',
+        message:
+          'Tekan tombol "?" atau "Alt + K" kapan saja untuk melihat daftar lengkap pintasan keyboard seperti Mode Privasi (Alt + P) dan Mode Presentasi.',
+        badge: 'Shortcut Cepat',
+        ctaLabel: 'Atur Widget Beranda',
+        ctaAction: 'editMode' as const
+      }
+    ];
+
+    return [...(divisionSpecificTips[divisionId] || []), ...sharedRglTips];
+  }, [divisionId, currentDivObj?.nama_divisi]);
+
+  const showContextualTipToast = useCallback(
+    (manualTrigger: boolean = false) => {
+      if (contextualTips.length === 0) return;
+      const nextIdx = (lastTipIndexRef.current + 1) % contextualTips.length;
+      lastTipIndexRef.current = nextIdx;
+      const selectedTip = contextualTips[nextIdx];
+      setActiveTipIndex(nextIdx);
+
+      // Also dispatch to global toast notification system
+      showToast({
+        title: `💡 ${selectedTip.title}`,
+        message: selectedTip.message,
+        type: 'info',
+        category: 'system',
+        divisionName: selectedTip.badge,
+        duration: 8000
+      });
+
+      if (manualTrigger) {
+        lastWidgetInteractionAtRef.current = Date.now();
+        idleTipShownForCurrentCycleRef.current = false;
+        setIdleSeconds(0);
+      }
+    },
+    [contextualTips, showToast]
+  );
+
+  // Reset idle tracker when division changes
+  useEffect(() => {
+    lastWidgetInteractionAtRef.current = Date.now();
+    idleTipShownForCurrentCycleRef.current = false;
+    setIdleSeconds(0);
+    setActiveTipIndex(null);
+  }, [divisionId]);
+
+  // Monitor time spent on the dashboard view without interacting with any widgets (>60 seconds)
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      if (document.hidden || gridState.isCollapsed) return;
+
+      const elapsedSec = Math.floor((Date.now() - lastWidgetInteractionAtRef.current) / 1000);
+      setIdleSeconds(elapsedSec);
+
+      if (elapsedSec >= IDLE_TIP_THRESHOLD_SECONDS && !idleTipShownForCurrentCycleRef.current) {
+        idleTipShownForCurrentCycleRef.current = true;
+        showContextualTipToast(false);
+        // Reset cycle timestamp so another helpful tip can surface if user remains idle for another 60s
+        lastWidgetInteractionAtRef.current = Date.now();
+        idleTipShownForCurrentCycleRef.current = false;
+      }
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, [gridState.isCollapsed, showContextualTipToast]);
 
   const handleExportRglPdf = async (
     includeFullDashboard: boolean = true,
@@ -1386,6 +1908,10 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                 React Grid Layout ({visibleDefs.length}/{defs.length} Aktif)
               </span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-50 dark:bg-violet-950/70 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800 flex items-center gap-1">
+                <Bookmark className="w-3 h-3 text-violet-600 dark:text-violet-400" />
+                <span>Preset: {activePresetObj ? activePresetObj.name : 'Default Standar'}</span>
+              </span>
               <span
                 className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1 cursor-default"
                 title={`Posisi (x, y) & ukuran (w, h) widget otomatis disimpan di LocalStorage (${storageKey})`}
@@ -1409,6 +1935,188 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
         </div>
 
         <div className="print:hidden flex flex-wrap items-center gap-2">
+          {/* Preset Dashboard Layouts Switcher & Manager ('Morning Routine', 'Deep Work', 'End of Day', + Custom) */}
+          <div className="relative inline-flex items-center">
+            <button
+              type="button"
+              onClick={() => {
+                registerWidgetInteraction();
+                setPresetMenuOpen(prev => !prev);
+                setPdfExportMenuOpen(false);
+              }}
+              title="Pilih atau simpan Preset Dashboard Layout (Morning Routine, Deep Work, End of Day, atau Kustom)"
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                presetMenuOpen || activePresetObj
+                  ? 'bg-violet-600 hover:bg-violet-700 text-white border-violet-600 shadow-xs'
+                  : 'bg-violet-50 hover:bg-violet-100 dark:bg-violet-950/60 dark:hover:bg-violet-900/70 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800'
+              }`}
+            >
+              <Bookmark className="w-3.5 h-3.5" />
+              <span>
+                Preset Layout{activePresetObj ? `: ${activePresetObj.name}` : ''}
+              </span>
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+
+            <AnimatePresence>
+              {presetMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 6, scale: 0.98 }}
+                  className="absolute right-0 top-full mt-1.5 w-80 sm:w-96 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl p-3 z-50 text-xs space-y-2.5"
+                >
+                  <div className="flex items-start justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                    <div>
+                      <p className="font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5 text-xs sm:text-sm">
+                        <Bookmark className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                        <span>Preset Dashboard Layouts</span>
+                      </p>
+                      <p className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        Beralih cepat antar konfigurasi RGL atau simpan tata letak Anda ke LocalStorage.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPresetMenuOpen(false)}
+                      className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Quick Switcher Pill Row */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {availablePresets.slice(0, 3).map(preset => {
+                      const isCurrent = gridState.activePresetId === preset.id;
+                      return (
+                        <button
+                          key={`quick-pill-${preset.id}`}
+                          type="button"
+                          onClick={() => handleApplyNamedPreset(preset)}
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
+                            isCurrent
+                              ? 'bg-violet-600 text-white border-violet-600 shadow-2xs'
+                              : 'bg-slate-100 hover:bg-violet-50 dark:bg-slate-800 dark:hover:bg-violet-950/50 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                          }`}
+                        >
+                          {preset.iconType === 'morning' && <Sunrise className="w-3 h-3 text-amber-500" />}
+                          {preset.iconType === 'deepwork' && <Brain className="w-3 h-3 text-indigo-400" />}
+                          {preset.iconType === 'eod' && <Moon className="w-3 h-3 text-sky-400" />}
+                          <span>{preset.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Detailed Preset List */}
+                  <div className="max-h-60 overflow-y-auto space-y-1.5 pr-0.5">
+                    {availablePresets.map(preset => {
+                      const isSelected = gridState.activePresetId === preset.id;
+                      const activeCount = defs.length - preset.hiddenIds.length;
+                      return (
+                        <div
+                          key={preset.id}
+                          className={`p-2.5 rounded-xl border transition-all ${
+                            isSelected
+                              ? 'bg-violet-50/90 dark:bg-violet-950/50 border-violet-300 dark:border-violet-700'
+                              : 'bg-slate-50/70 dark:bg-slate-800/50 border-slate-200/80 dark:border-slate-800 hover:border-violet-200 dark:hover:border-violet-800'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleApplyNamedPreset(preset)}
+                              className="text-left flex-1 min-w-0 cursor-pointer group"
+                            >
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {preset.iconType === 'morning' && (
+                                  <Sunrise className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                )}
+                                {preset.iconType === 'deepwork' && (
+                                  <Brain className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                )}
+                                {preset.iconType === 'eod' && (
+                                  <Moon className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                                )}
+                                {preset.iconType === 'custom' && (
+                                  <Bookmark className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                )}
+                                <span className="font-extrabold text-slate-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
+                                  {preset.name}
+                                </span>
+                                <span className="px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                  {activeCount}/{defs.length} Widget
+                                </span>
+                                {isSelected && (
+                                  <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-violet-600 text-white">
+                                    Aktif
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
+                                {preset.description}
+                              </p>
+                            </button>
+
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateExistingPresetWithCurrentLayout(preset.id)}
+                                title={`Timpa preset "${preset.name}" dengan posisi & ukuran widget di layar saat ini`}
+                                className="p-1.5 rounded-lg bg-white hover:bg-violet-100 dark:bg-slate-900 dark:hover:bg-violet-900/60 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 cursor-pointer"
+                              >
+                                <Save className="w-3.5 h-3.5" />
+                              </button>
+                              {!preset.isBuiltIn && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteCustomPreset(preset.id, preset.name)}
+                                  title={`Hapus preset "${preset.name}"`}
+                                  className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/60 cursor-pointer"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Save Current Layout as New Named Preset Form */}
+                  <form
+                    onSubmit={handleSaveNewNamedPreset}
+                    className="pt-2.5 border-t border-slate-200 dark:border-slate-800 space-y-2"
+                  >
+                    <p className="text-[11px] font-extrabold text-slate-700 dark:text-slate-200 flex items-center gap-1">
+                      <Plus className="w-3.5 h-3.5 text-violet-600" />
+                      <span>Simpan Konfigurasi Saat Ini Sebagai Preset Baru</span>
+                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        value={newPresetName}
+                        onChange={e => setNewPresetName(e.target.value)}
+                        placeholder="Nama preset (mis. Rapat Mingguan)..."
+                        className="flex-1 px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                      />
+                      <button
+                        type="submit"
+                        disabled={!newPresetName.trim()}
+                        className="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:opacity-40 text-white text-xs font-bold cursor-pointer shrink-0 flex items-center gap-1"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>Simpan</span>
+                      </button>
+                    </div>
+                  </form>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           {/* PDF Export Button with Quick Options for RGL State */}
           <div className="relative inline-flex items-center">
             <button
@@ -1537,6 +2245,19 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
 
           <button
             type="button"
+            onClick={() => showContextualTipToast(true)}
+            className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/70 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/70 transition-all cursor-pointer"
+            title={`Tips Kontekstual Beranda (Otomatis muncul saat tanpa interaksi widget selama 60 detik • Idle: ${idleSeconds}d/${IDLE_TIP_THRESHOLD_SECONDS}d)`}
+          >
+            <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
+            <span className="hidden sm:inline">Tips</span>
+            <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-amber-100 dark:bg-amber-900/80 text-amber-800 dark:text-amber-200">
+              {Math.min(idleSeconds, IDLE_TIP_THRESHOLD_SECONDS)}s
+            </span>
+          </button>
+
+          <button
+            type="button"
             onClick={handleResetDefault}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
               isLayoutCustomized
@@ -1620,7 +2341,13 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
 
       {/* React Grid Layout Canvas */}
       {!gridState.isCollapsed && (
-        <div ref={containerRef} className="w-full">
+        <div
+          ref={containerRef}
+          className="w-full"
+          onPointerDownCapture={registerWidgetInteraction}
+          onKeyDownCapture={registerWidgetInteraction}
+          onWheelCapture={registerWidgetInteraction}
+        >
           {visibleDefs.length > 0 ? (
             <ResponsiveGridLayout
               key={`rgl-div-${divisionId}-reset-${layoutResetKey}`}
@@ -1651,8 +2378,13 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
                 return (
                   <div
                     key={widget.id}
-                    className={`rounded-2xl border bg-white dark:bg-slate-900 p-4 flex flex-col justify-between transition-shadow overflow-hidden ${
-                      isEditMode
+                    data-rgl-widget-id={widget.id}
+                    onMouseEnter={registerWidgetInteraction}
+                    onClick={registerWidgetInteraction}
+                    className={`rounded-2xl border bg-white dark:bg-slate-900 p-4 flex flex-col justify-between transition-all overflow-hidden ${
+                      highlightedWidgetId === widget.id
+                        ? 'border-2 border-amber-500 ring-4 ring-amber-400/30 shadow-xl'
+                        : isEditMode
                         ? 'border-2 border-dashed border-indigo-400 dark:border-indigo-500 shadow-md ring-2 ring-indigo-500/10'
                         : 'border-slate-200/90 dark:border-slate-800 shadow-2xs hover:border-indigo-300 dark:hover:border-indigo-800/80'
                     }`}
@@ -1759,6 +2491,105 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
           )}
         </div>
       )}
+
+      {/* Contextual Helpful Tip Toast Notification (Appears after 60s without widget interaction or via Tips button) */}
+      <AnimatePresence>
+        {activeTipIndex !== null && contextualTips[activeTipIndex] && (
+          <motion.div
+            key={`contextual-tip-${activeTipIndex}`}
+            initial={{ opacity: 0, y: 20, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.96 }}
+            transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+            className="fixed bottom-6 left-6 z-50 max-w-md w-[calc(100vw-3rem)] rounded-2xl bg-slate-900/95 dark:bg-slate-900 text-white p-4 shadow-2xl border border-amber-500/40 backdrop-blur-md print:hidden"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-300 shrink-0 mt-0.5">
+                <Lightbulb className="w-5 h-5" />
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-400/30">
+                    Tips Kontekstual • {contextualTips[activeTipIndex].badge}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    60d Tanpa Interaksi Widget
+                  </span>
+                </div>
+
+                <h4 className="text-xs sm:text-sm font-extrabold text-white mt-1.5">
+                  {contextualTips[activeTipIndex].title}
+                </h4>
+                <p className="text-[11.5px] text-slate-300 leading-relaxed mt-1">
+                  {contextualTips[activeTipIndex].message}
+                </p>
+
+                <div className="flex items-center justify-between gap-2 mt-3 pt-2.5 border-t border-slate-800">
+                  <div className="flex items-center gap-2">
+                    {contextualTips[activeTipIndex].ctaLabel && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const tip = contextualTips[activeTipIndex];
+                          registerWidgetInteraction();
+                          setActiveTipIndex(null);
+                          if (tip.ctaTab) {
+                            navigateToTab(tip.ctaTab);
+                          } else if (tip.ctaAction === 'editMode') {
+                            setIsEditMode(true);
+                          } else if (tip.ctaAction === 'exportPdf') {
+                            handleExportRglPdf(true, 'landscape');
+                          } else if (tip.ctaAction === 'resetLayout') {
+                            handleResetDefault();
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-extrabold transition-colors cursor-pointer"
+                      >
+                        <span>{contextualTips[activeTipIndex].ctaLabel}</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => showContextualTipToast(true)}
+                      className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-bold transition-colors cursor-pointer"
+                    >
+                      Tips Berikutnya
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      registerWidgetInteraction();
+                      setActiveTipIndex(null);
+                    }}
+                    className="text-[11px] text-slate-400 hover:text-white font-semibold cursor-pointer"
+                  >
+                    Tutup
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  registerWidgetInteraction();
+                  setActiveTipIndex(null);
+                }}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+                title="Tutup Tips"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Toast Feedback */}
       <AnimatePresence>

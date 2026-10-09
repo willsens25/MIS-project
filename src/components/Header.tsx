@@ -55,7 +55,8 @@ import {
   ShieldAlert,
   MonitorPlay,
   PanelLeft,
-  Keyboard
+  Keyboard,
+  Search
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -66,6 +67,7 @@ interface HeaderProps {
   onOpenMobileSidebar?: () => void;
   isLeftSidebarCollapsed?: boolean;
   onOpenHotkeyMap?: () => void;
+  onOpenCommandPalette?: () => void;
   activeTab?: string;
   setActiveTab?: (tab: string) => void;
 }
@@ -78,6 +80,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenMobileSidebar,
   isLeftSidebarCollapsed,
   onOpenHotkeyMap,
+  onOpenCommandPalette,
 }) => {
   const {
     currentUser,
@@ -387,6 +390,28 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
               </AnimatePresence>
             </div>
+
+            {/* Global Search Command Palette Button (Ctrl+K) */}
+            {onOpenCommandPalette && (
+              <motion.button
+                id="btn-global-command-palette"
+                type="button"
+                onClick={onOpenCommandPalette}
+                whileHover={{ scale: 1.03, y: -1 }}
+                whileTap={{ scale: 0.96 }}
+                className="flex items-center space-x-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-800/90 hover:bg-indigo-50 dark:hover:bg-slate-700/80 text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                title="Buka Command Palette Pencarian Global: Cari Widget RGL, Tugas Kalender, Buku, Faktur & Konten Divisi (Ctrl+K)"
+              >
+                <Search className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                <span className="hidden xl:inline text-slate-700 dark:text-slate-200">
+                  Cari Widget & Tugas...
+                </span>
+                <span className="xl:hidden inline text-slate-700 dark:text-slate-200">Cari</span>
+                <kbd className="text-[9.5px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 border border-slate-200 dark:border-slate-700">
+                  Ctrl+K
+                </kbd>
+              </motion.button>
+            )}
 
             {/* Global Hotkey Map Button */}
             {onOpenHotkeyMap && (

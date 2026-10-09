@@ -190,17 +190,34 @@ export const DivisionQuickSearchBar: React.FC<DivisionQuickSearchBarProps> = ({
     return () => window.removeEventListener('mis-calendar-events-updated', handleCal);
   }, []);
 
-  // Keyboard shortcut Ctrl+F / Ctrl+K to focus division search bar
+  // Keyboard shortcut Ctrl+F to focus inline division search bar, and listen to Command Palette (Ctrl+K) filter navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f' && e.shiftKey) {
         e.preventDefault();
         inputRef.current?.focus();
       }
     };
+    const handleGlobalSearchNavigate = (e: Event) => {
+      const customEvt = e as CustomEvent<{
+        divisionId: DivisionId;
+        subTab: string;
+        keyword: string;
+      }>;
+      if (customEvt.detail?.keyword) {
+        setInternalQuery(customEvt.detail.keyword);
+        if (onQueryChange) {
+          onQueryChange(customEvt.detail.keyword);
+        }
+      }
+    };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+    window.addEventListener('mis-global-search-navigate', handleGlobalSearchNavigate);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('mis-global-search-navigate', handleGlobalSearchNavigate);
+    };
+  }, [onQueryChange]);
 
   const handleInputChange = (nextVal: string) => {
     setInternalQuery(nextVal);

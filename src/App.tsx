@@ -20,6 +20,7 @@ import { DivisionReportModal } from './components/modals/DivisionReportModal';
 import { AnnualReportModal } from './components/modals/AnnualReportModal';
 import { ExecutivePresentationModal } from './components/modals/ExecutivePresentationModal';
 import { GlobalHotkeyMapModal } from './components/modals/GlobalHotkeyMapModal';
+import { GlobalCommandPaletteModal } from './components/modals/GlobalCommandPaletteModal';
 import { ToastContainer } from './components/common/ToastContainer';
 import { UserSettingsModal } from './components/profile/UserSettingsModal';
 import { NightShiftFloatingWidget } from './components/theme/NightShiftFloatingWidget';
@@ -202,6 +203,7 @@ const AppContent: React.FC = () => {
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isUserSettingsOpen, setIsUserSettingsOpen] = useState(false);
   const [isHotkeyMapOpen, setIsHotkeyMapOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isLeftSidebarCollapsed, setIsLeftSidebarCollapsed] = useState<boolean>(() => {
     try {
       return localStorage.getItem('mis_left_sidebar_collapsed') === 'true';
@@ -443,6 +445,13 @@ const AppContent: React.FC = () => {
   // Global Hotkey Map & Keyboard Shortcuts Listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl + K or Cmd + K -> Toggle Global Search Command Palette (works even when focused in inputs)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(prev => !prev);
+        return;
+      }
+
       if (
         e.target instanceof HTMLInputElement ||
         e.target instanceof HTMLTextAreaElement ||
@@ -608,6 +617,7 @@ const AppContent: React.FC = () => {
         onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)}
         isLeftSidebarCollapsed={isLeftSidebarCollapsed}
         onOpenHotkeyMap={() => setIsHotkeyMapOpen(true)}
+        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
       />
 
       {/* Main Workspace with Categorized Left Sidebar & Content Area */}
@@ -1113,6 +1123,13 @@ const AppContent: React.FC = () => {
         onClose={() => setIsHotkeyMapOpen(false)}
         onToggleLeftSidebar={handleToggleLeftSidebar}
         onOpenAI={() => setIsAiModalOpen(true)}
+        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+      />
+
+      {/* Global Search Command Palette Modal (Ctrl+K) */}
+      <GlobalCommandPaletteModal
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
       />
 
       {/* Floating Privacy Mode Indicator Banner when screen is mirrored to projector */}

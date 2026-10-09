@@ -46,13 +46,15 @@ interface GlobalHotkeyMapModalProps {
   onClose: () => void;
   onToggleLeftSidebar?: () => void;
   onOpenAI?: () => void;
+  onOpenCommandPalette?: () => void;
 }
 
 export const GlobalHotkeyMapModal: React.FC<GlobalHotkeyMapModalProps> = ({
   isOpen,
   onClose,
   onToggleLeftSidebar,
-  onOpenAI
+  onOpenAI,
+  onOpenCommandPalette
 }) => {
   const {
     currentUser,
@@ -167,16 +169,22 @@ export const GlobalHotkeyMapModal: React.FC<GlobalHotkeyMapModalProps> = ({
         id: 'hotkey-quick-search',
         keys: ['Ctrl', 'K'],
         altKeys: ['⌘', 'K'],
-        title: 'Fokus Pencarian Real-Time Divisi & Global',
+        title: 'Buka Global Search Command Palette (Widget, Kalender & Divisi)',
         description:
-          'Langsung mengarahkan kursor ke kolom pencarian untuk memfilter tugas kalender, dokumen SPK/Invoice, atau data anggota.',
+          'Membuka Command Palette untuk mencari & melompat cepat ke widget beranda RGL, tugas kalender, katalog buku, faktur, SPK, atau modul divisi.',
         category: 'pencarian-aksi',
         categoryLabel: 'Pencarian & Aksi Cepat',
-        badge: 'Instan',
+        badge: 'Command Palette',
         badgeColor:
           'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
         icon: <Search className="w-4 h-4 text-emerald-500" />,
-        onTrigger: focusDivisionSearch
+        onTrigger: () => {
+          if (onOpenCommandPalette) {
+            onOpenCommandPalette();
+          } else {
+            focusDivisionSearch();
+          }
+        }
       },
       {
         id: 'hotkey-quick-actions',
