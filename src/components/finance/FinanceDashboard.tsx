@@ -33,6 +33,7 @@ import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { ExportCsvButton } from '../common/ExportCsvButton';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
+import { ShareDashboardViewButton } from '../common/ShareDashboardViewButton';
 import { exportDataToCsv, getCsvDateStamp } from '../../utils/exportCsv';
 import { formatLogDateTime } from '../../utils/greetingUtils';
 import { RupiahInput } from '../common/RupiahInput';
@@ -599,6 +600,14 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
         </div>
 
         <div className="flex items-center space-x-2">
+          {/* Share Current Dashboard View Deep-Link URL */}
+          <ShareDashboardViewButton
+            id="btn-share-finance"
+            divisionId={2}
+            subTab={activeSubTab}
+            label="Share"
+          />
+
           {/* Print Current View Action Button */}
           <PrintCurrentViewButton
             id="btn-print-finance"

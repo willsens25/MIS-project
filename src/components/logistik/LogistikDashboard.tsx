@@ -33,6 +33,7 @@ import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { ExportCsvButton } from '../common/ExportCsvButton';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
+import { ShareDashboardViewButton } from '../common/ShareDashboardViewButton';
 import { exportDataToCsv, getCsvDateStamp } from '../../utils/exportCsv';
 import { DivisionCalendarTodoView } from '../common/DivisionCalendarTodoView';
 import { DivisionQuickSearchBar } from '../common/DivisionQuickSearchBar';
@@ -541,6 +542,14 @@ export const LogistikDashboard: React.FC = () => {
             <ScanBarcode className="w-4 h-4" />
             <span>Scan Barcode (Stok)</span>
           </button>
+
+          {/* Share Current Dashboard View Deep-Link URL */}
+          <ShareDashboardViewButton
+            id="btn-share-logistik"
+            divisionId={6}
+            subTab={activeSubTab}
+            label="Share"
+          />
 
           {/* Print Current View Action Button */}
           <PrintCurrentViewButton

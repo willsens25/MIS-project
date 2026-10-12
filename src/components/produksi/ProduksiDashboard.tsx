@@ -14,6 +14,7 @@ import {
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
+import { ShareDashboardViewButton } from '../common/ShareDashboardViewButton';
 import { DivisionCalendarTodoView } from '../common/DivisionCalendarTodoView';
 import { DivisionQuickSearchBar } from '../common/DivisionQuickSearchBar';
 import { DivisionWidgetGrid } from '../dashboard-layout/DivisionWidgetGrid';
@@ -200,6 +201,14 @@ export const ProduksiDashboard: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-2">
+          {/* Share Current Dashboard View Deep-Link URL */}
+          <ShareDashboardViewButton
+            id="btn-share-produksi"
+            divisionId={5}
+            subTab={activeSubTab}
+            label="Share"
+          />
+
           {/* Print Current View Action Button */}
           <PrintCurrentViewButton
             id="btn-print-produksi"

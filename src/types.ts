@@ -450,8 +450,14 @@ export interface NightShiftConfig {
   preset: NightShiftPreset;
 }
 
+export type MascotPersonality = 'professional' | 'casual' | 'motivational';
+
+export type MascotSpeechFrequency = 'frequent' | 'normal' | 'minimal';
+
 export interface UserSettings {
   mascotSpeechBubbleEnabled: boolean; // Toggle mascot speech bubbles on/off globally
+  mascotPersonality?: MascotPersonality; // Tone of speech bubble greetings ('professional' | 'casual' | 'motivational')
+  mascotSpeechFrequency?: MascotSpeechFrequency; // Frequency of proactive speech bubble greetings ('frequent' | 'normal' | 'minimal')
   mascotSoundEffectsEnabled: boolean; // Audio tactile feedback on interaction
   mascotParticleBurstEnabled: boolean; // Sparkle particle burst effect on hover
   mascotShortcutHintsEnabled: boolean; // Division contextual shortcuts in tooltip

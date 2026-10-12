@@ -58,6 +58,7 @@ import { computeMemberLoyaltyProfile } from '../../utils/membershipUtils';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
+import { ShareDashboardViewButton } from '../common/ShareDashboardViewButton';
 import { RupiahInput } from '../common/RupiahInput';
 
 export const MarketingDashboard: React.FC = () => {
@@ -730,6 +731,14 @@ export const MarketingDashboard: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-2">
+          {/* Share Current Dashboard View Deep-Link URL */}
+          <ShareDashboardViewButton
+            id="btn-share-marketing"
+            divisionId={4}
+            subTab={activeSubTab}
+            label="Share"
+          />
+
           {/* Print Current View Action Button */}
           <PrintCurrentViewButton
             id="btn-print-marketing"

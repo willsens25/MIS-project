@@ -36,7 +36,10 @@ import {
   Shield,
   ShieldAlert,
   SlidersHorizontal,
-  Flame
+  Flame,
+  Briefcase,
+  Smile,
+  HeartHandshake
 } from 'lucide-react';
 import { MascotAvatar } from '../MascotAvatar';
 import { PRESET_LOCATIONS, LocationCoordinates } from '../../lib/solarCalculator';
@@ -45,7 +48,18 @@ import {
   getNightShiftStatusText,
   DEFAULT_NIGHT_SHIFT_CONFIG
 } from '../../lib/nightShiftHelper';
-import { NightShiftPreset, NightShiftScheduleType } from '../../types';
+import {
+  NightShiftPreset,
+  NightShiftScheduleType,
+  MascotPersonality,
+  MascotSpeechFrequency
+} from '../../types';
+import {
+  MASCOT_PERSONALITY_CONFIGS,
+  MASCOT_FREQUENCY_CONFIGS,
+  getDivisionGreetingOptions,
+  getWelcomeSalutation
+} from '../../utils/greetingUtils';
 
 interface UserSettingsModalProps {
   isOpen: boolean;
@@ -82,6 +96,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
   const [toastNotice, setToastNotice] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [isRefreshingSchedule, setIsRefreshingSchedule] = useState(false);
+  const [sampleGreetingIndex, setSampleGreetingIndex] = useState<number>(0);
   const [toastFilter, setToastFilter] = useState<string>(() => {
     try {
       return localStorage.getItem('mis_toast_filter_category') || 'all';
@@ -211,10 +226,59 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
     );
   };
 
+  const activePersonality: MascotPersonality = userSettings.mascotPersonality || 'casual';
+  const activeFrequency: MascotSpeechFrequency =
+    userSettings.mascotSpeechFrequency || MASCOT_PERSONALITY_CONFIGS[activePersonality].defaultFrequency;
+
+  const handleSelectPersonality = (personality: MascotPersonality) => {
+    const config = MASCOT_PERSONALITY_CONFIGS[personality];
+    updateUserSettings({
+      mascotPersonality: personality,
+      mascotSpeechFrequency: config.defaultFrequency,
+      mascotSpeechBubbleEnabled: true
+    });
+    setSampleGreetingIndex(0);
+    window.dispatchEvent(
+      new CustomEvent('mis-mascot-personality-changed', {
+        detail: { personality, frequency: config.defaultFrequency }
+      })
+    );
+    showToast(
+      `🎭 Kepribadian Maskot diubah ke "${config.name}" (${config.subtitle}) • Frekuensi: ${MASCOT_FREQUENCY_CONFIGS[config.defaultFrequency].name}`
+    );
+  };
+
+  const handleSelectSpeechFrequency = (frequency: MascotSpeechFrequency) => {
+    const freqConfig = MASCOT_FREQUENCY_CONFIGS[frequency];
+    updateUserSettings({
+      mascotSpeechFrequency: frequency,
+      mascotSpeechBubbleEnabled: true
+    });
+    window.dispatchEvent(
+      new CustomEvent('mis-mascot-personality-changed', {
+        detail: { personality: activePersonality, frequency }
+      })
+    );
+    showToast(`⏱️ Frekuensi Balon Kata diatur ke "${freqConfig.name}" (${freqConfig.label})`);
+  };
+
+  const handleCycleSampleGreeting = () => {
+    const options = getDivisionGreetingOptions(
+      currentUser.name,
+      currentUser.divisi_id,
+      undefined,
+      new Date(),
+      activePersonality
+    );
+    setSampleGreetingIndex((prev) => (prev + 1) % options.length);
+  };
+
   const handleResetDefaults = () => {
     setThemeMode('system-synced');
     updateUserSettings({
       mascotSpeechBubbleEnabled: true,
+      mascotPersonality: 'casual',
+      mascotSpeechFrequency: 'normal',
       mascotSoundEffectsEnabled: true,
       mascotParticleBurstEnabled: true,
       mascotShortcutHintsEnabled: true,
@@ -222,7 +286,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
       themeMode: 'system-synced',
     });
     updateNightShift(DEFAULT_NIGHT_SHIFT_CONFIG);
-    showToast('🔄 Preferensi Maskot AI, Tema, & Night Shift dikembalikan ke setelan default');
+    showToast('🔄 Preferensi Maskot AI, Kepribadian, Tema, & Night Shift dikembalikan ke setelan default');
   };
 
   return createPortal(
@@ -953,68 +1017,246 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
             </div>
           </div>
 
-          {/* SECTION 2: Mascot AI Interactive Live Preview Box */}
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-teal-50/40 dark:from-slate-800/60 dark:to-teal-950/20 border border-slate-200 dark:border-slate-700/80">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                <Eye className="w-3.5 h-3.5 text-teal-500" />
-                Pratinjau Interaksi Maskot Saat Ini
-              </span>
+          {/* SECTION 2: Mascot AI Interactive Live Preview & Personality Setting */}
+          <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-slate-50 via-teal-50/30 to-indigo-50/20 dark:from-slate-800/70 dark:via-teal-950/25 dark:to-indigo-950/20 border border-slate-200 dark:border-slate-700/80 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-teal-100 dark:bg-teal-950/80 text-teal-600 dark:text-teal-400">
+                  <MessageSquare className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 block">
+                    Kepribadian Maskot & Nada Sapaan (*Personality*)
+                  </span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Mengatur gaya bahasa sapaan (*tone*) serta frekuensi kemunculan balon kata
+                  </span>
+                </div>
+              </div>
               <span
-                className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${
+                className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${
                   userSettings.mascotSpeechBubbleEnabled
                     ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
                     : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700'
                 }`}
               >
-                {userSettings.mascotSpeechBubbleEnabled ? 'Balon Kata: AKTIF' : 'Balon Kata: NONAKTIF'}
+                {userSettings.mascotSpeechBubbleEnabled
+                  ? `${MASCOT_PERSONALITY_CONFIGS[activePersonality].name} • ${MASCOT_FREQUENCY_CONFIGS[activeFrequency].name}`
+                  : 'Balon Kata: NONAKTIF'}
               </span>
             </div>
 
-            <div className="flex items-end gap-3.5 pt-2 pb-1">
-              {/* Mini Mascot Simulation with real MascotAvatar and idle animation preview */}
-              <div className="relative group shrink-0">
-                <MascotAvatar
-                  size="md"
-                  variant="badge"
-                  interactive={false}
-                  enableIdleAnimation={userSettings.mascotIdleAnimationEnabled !== false}
-                  className="shadow-md ring-2 ring-teal-500/80"
-                />
-                {userSettings.mascotParticleBurstEnabled && (
-                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-teal-500"></span>
-                  </span>
+            {/* 3 Mascot Personality Selector Cards ('Professional', 'Casual', 'Motivational') */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              {(
+                [
+                  {
+                    id: 'professional' as MascotPersonality,
+                    icon: Briefcase,
+                    accentBg: 'bg-indigo-100 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400',
+                    activeCard:
+                      'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-500 dark:border-indigo-400 ring-2 ring-indigo-500/20',
+                    activeBadge: 'bg-indigo-600 text-white',
+                    tagColor: 'text-indigo-600 dark:text-indigo-400'
+                  },
+                  {
+                    id: 'casual' as MascotPersonality,
+                    icon: Smile,
+                    accentBg: 'bg-teal-100 dark:bg-teal-950/80 text-teal-600 dark:text-teal-400',
+                    activeCard:
+                      'bg-teal-50/80 dark:bg-teal-950/40 border-teal-500 dark:border-teal-400 ring-2 ring-teal-500/20',
+                    activeBadge: 'bg-teal-600 text-white',
+                    tagColor: 'text-teal-600 dark:text-teal-400'
+                  },
+                  {
+                    id: 'motivational' as MascotPersonality,
+                    icon: HeartHandshake,
+                    accentBg: 'bg-amber-100 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400',
+                    activeCard:
+                      'bg-amber-50/80 dark:bg-amber-950/40 border-amber-500 dark:border-amber-400 ring-2 ring-amber-500/20',
+                    activeBadge: 'bg-amber-500 text-slate-950',
+                    tagColor: 'text-amber-600 dark:text-amber-400'
+                  }
+                ] as const
+              ).map((item) => {
+                const cfg = MASCOT_PERSONALITY_CONFIGS[item.id];
+                const Icon = item.icon;
+                const isSelected = activePersonality === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    id={`btn-mascot-personality-${item.id}`}
+                    onClick={() => handleSelectPersonality(item.id)}
+                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      isSelected
+                        ? `${item.activeCard} shadow-xs`
+                        : 'bg-white dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${item.accentBg}`}>
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        {isSelected ? (
+                          <div className={`w-4 h-4 rounded-full flex items-center justify-center ${item.activeBadge}`}>
+                            <Check className="w-2.5 h-2.5 stroke-[3]" />
+                          </div>
+                        ) : (
+                          <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                            Pilih
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <span>{cfg.name}</span>
+                        {isSelected && <span className={`text-[9px] font-semibold ${item.tagColor}`}>• Aktif</span>}
+                      </div>
+                      <div className="text-[10.5px] font-semibold text-slate-600 dark:text-slate-300 mt-0.5">
+                        {cfg.subtitle}
+                      </div>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+                        {cfg.description}
+                      </p>
+                    </div>
+                    <div className="mt-2.5 pt-2 border-t border-slate-200/70 dark:border-slate-700/60 flex items-center justify-between text-[9.5px] font-mono text-slate-500 dark:text-slate-400">
+                      <span>{cfg.badgeText}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Speech Bubble Frequency Selector ('frequent' | 'normal' | 'minimal') */}
+            <div className="p-3.5 rounded-2xl bg-white/90 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                  <span>Frekuensi Sapaan Balon Kata (*Greeting Frequency*):</span>
+                </label>
+                <span className="text-[10px] font-mono font-semibold text-teal-600 dark:text-teal-400">
+                  Durasi tampil: {(MASCOT_FREQUENCY_CONFIGS[activeFrequency].autoFadeMs / 1000).toFixed(1)}s
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {(['frequent', 'normal', 'minimal'] as MascotSpeechFrequency[]).map((freqKey) => {
+                  const fCfg = MASCOT_FREQUENCY_CONFIGS[freqKey];
+                  const isSelected = activeFrequency === freqKey;
+                  return (
+                    <button
+                      key={freqKey}
+                      type="button"
+                      id={`btn-mascot-freq-${freqKey}`}
+                      onClick={() => handleSelectSpeechFrequency(freqKey)}
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-teal-50 dark:bg-teal-950/60 border-teal-500 dark:border-teal-400 text-teal-950 dark:text-teal-100 ring-1 ring-teal-500/25'
+                          : 'bg-slate-50/70 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-[11px] font-bold">{fCfg.name}</span>
+                        {isSelected && <Check className="w-3 h-3 text-teal-600 dark:text-teal-400 stroke-[3]" />}
+                      </div>
+                      <div className="text-[10px] font-mono text-teal-700 dark:text-teal-300 font-semibold">
+                        {fCfg.label}
+                      </div>
+                      <p className="text-[9.5px] text-slate-500 dark:text-slate-400 mt-1 leading-tight">
+                        {fCfg.description}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Live Interactive Mascot Speech Bubble Preview */}
+            <div className="pt-1">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <Eye className="w-3.5 h-3.5 text-teal-500" />
+                  Pratinjau Sapaan ({MASCOT_PERSONALITY_CONFIGS[activePersonality].name})
+                </span>
+                {userSettings.mascotSpeechBubbleEnabled && (
+                  <button
+                    type="button"
+                    onClick={handleCycleSampleGreeting}
+                    className="text-[10.5px] font-bold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 flex items-center gap-1 cursor-pointer"
+                    title="Lihat contoh kalimat sapaan lainnya untuk kepribadian ini"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Contoh Sapaan Lainnya</span>
+                  </button>
                 )}
               </div>
 
-              {/* Bubble Simulation */}
-              <div className="flex-1">
-                {userSettings.mascotSpeechBubbleEnabled ? (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="p-3 bg-white dark:bg-slate-900 border border-teal-200 dark:border-teal-800/80 rounded-2xl shadow-sm space-y-1.5"
-                  >
-                    <p className="text-xs font-medium text-slate-800 dark:text-slate-200">
-                      "Halo {currentUser.name ? currentUser.name.split(' ')[0] : 'Rekan'}! Ada data penerbitan atau transaksi yang ingin dicek?"
-                    </p>
-                    {userSettings.mascotShortcutHintsEnabled && (
-                      <div className="flex items-center justify-between text-[10px] text-teal-600 dark:text-teal-400 font-semibold pt-1 border-t border-slate-100 dark:border-slate-800">
-                        <span>⚡ Pintasan Otomatis Divisi Aktif</span>
-                        <span className="text-[9px] text-slate-400 italic">Auto-fading 4.2s</span>
-                      </div>
-                    )}
-                  </motion.div>
-                ) : (
-                  <div className="p-3 bg-slate-100/80 dark:bg-slate-800/60 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                    <EyeOff className="w-4 h-4 shrink-0 text-slate-400" />
-                    <span>
-                      Balon kata disembunyikan. Maskot tetap siap diklik tanpa memunculkan balon ucapan saat mouse lewat (*hover*).
+              <div className="flex items-end gap-3.5 pt-1 pb-1">
+                {/* Mini Mascot Simulation with real MascotAvatar and idle animation preview */}
+                <div className="relative group shrink-0">
+                  <MascotAvatar
+                    size="md"
+                    variant="badge"
+                    interactive={false}
+                    enableIdleAnimation={userSettings.mascotIdleAnimationEnabled !== false}
+                    className="shadow-md ring-2 ring-teal-500/80"
+                  />
+                  {userSettings.mascotParticleBurstEnabled && (
+                    <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-teal-500"></span>
                     </span>
-                  </div>
-                )}
+                  )}
+                </div>
+
+                {/* Bubble Simulation */}
+                <div className="flex-1">
+                  {userSettings.mascotSpeechBubbleEnabled ? (
+                    <motion.div
+                      key={`${activePersonality}-${sampleGreetingIndex}`}
+                      initial={{ opacity: 0, scale: 0.96, y: 4 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      className="p-3 bg-white dark:bg-slate-900 border border-teal-200 dark:border-teal-800/80 rounded-2xl shadow-sm space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500">
+                        <span className="font-bold text-teal-700 dark:text-teal-300">
+                          🎭 Gaya: {MASCOT_PERSONALITY_CONFIGS[activePersonality].name}
+                        </span>
+                        <span className="font-mono">
+                          {MASCOT_FREQUENCY_CONFIGS[activeFrequency].label}
+                        </span>
+                      </div>
+                      <p className="text-xs font-medium text-slate-800 dark:text-slate-200 leading-relaxed">
+                        "{(() => {
+                          const samples = getDivisionGreetingOptions(
+                            currentUser.name,
+                            currentUser.divisi_id,
+                            undefined,
+                            new Date(),
+                            activePersonality
+                          );
+                          return samples[sampleGreetingIndex % samples.length] || getWelcomeSalutation(currentUser.name, currentUser.divisi_id, undefined, new Date(), activePersonality);
+                        })()}"
+                      </p>
+                      {userSettings.mascotShortcutHintsEnabled && (
+                        <div className="flex items-center justify-between text-[10px] text-teal-600 dark:text-teal-400 font-semibold pt-1 border-t border-slate-100 dark:border-slate-800">
+                          <span>⚡ Pintasan Otomatis Divisi Aktif</span>
+                          <span className="text-[9px] text-slate-400 italic">
+                            Auto-fading {(MASCOT_FREQUENCY_CONFIGS[activeFrequency].autoFadeMs / 1000).toFixed(1)}s
+                          </span>
+                        </div>
+                      )}
+                    </motion.div>
+                  ) : (
+                    <div className="p-3 bg-slate-100/80 dark:bg-slate-800/60 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                      <EyeOff className="w-4 h-4 shrink-0 text-slate-400" />
+                      <span>
+                        Balon kata disembunyikan. Maskot tetap siap diklik tanpa memunculkan balon ucapan saat mouse lewat (*hover*).
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

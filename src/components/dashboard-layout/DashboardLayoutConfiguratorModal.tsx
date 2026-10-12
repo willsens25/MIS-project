@@ -23,7 +23,9 @@ import {
   Download,
   Upload,
   CheckCircle2,
-  Clock
+  Clock,
+  Magnet,
+  Grid
 } from 'lucide-react';
 import {
   DashboardCardConfig,
@@ -83,8 +85,49 @@ export const DashboardLayoutConfiguratorModal: React.FC<DashboardLayoutConfigura
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showImportBox, setShowImportBox] = useState<boolean>(false);
   const [importJsonText, setImportJsonText] = useState<string>('');
+  const [rglSnapToGrid, setRglSnapToGrid] = useState<boolean>(() => {
+    try {
+      const raw = localStorage.getItem('mis_rgl_division_widgets_v1_div_1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed.snapToGrid === 'boolean') return parsed.snapToGrid;
+      }
+    } catch {
+      // ignore
+    }
+    return true;
+  });
+  const [rglCompactMode, setRglCompactMode] = useState<'vertical' | 'horizontal' | 'free'>(() => {
+    try {
+      const raw = localStorage.getItem('mis_rgl_division_widgets_v1_div_1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.compactMode === 'vertical' || parsed.compactMode === 'horizontal' || parsed.compactMode === 'free') {
+          return parsed.compactMode;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return 'vertical';
+  });
 
   if (!isOpen) return null;
+
+  const handleUpdateGlobalRglSnap = (snap: boolean, mode: 'vertical' | 'horizontal' | 'free') => {
+    setRglSnapToGrid(snap);
+    setRglCompactMode(mode);
+    window.dispatchEvent(
+      new CustomEvent('mis-rgl-snap-settings-changed', {
+        detail: { snapToGrid: snap, compactMode: mode }
+      })
+    );
+    showToast(
+      snap
+        ? `🧲 RGL Snap-to-Grid diaktifkan (${mode === 'horizontal' ? 'Snap Horizontal' : 'Snap Vertikal'}) & disimpan!`
+        : '🔓 RGL Snap-to-Grid dinonaktifkan (Mode Bebas / Free-form)!'
+    );
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -435,6 +478,89 @@ export const DashboardLayoutConfiguratorModal: React.FC<DashboardLayoutConfigura
                   Kompak (Rapat)
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* React Grid Layout (RGL) Snap-to-Grid & Compaction Settings */}
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-teal-50/80 via-slate-50 to-indigo-50/50 dark:from-teal-950/30 dark:via-slate-800/60 dark:to-indigo-950/30 border border-teal-200/80 dark:border-teal-800/70 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-start gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                  <Magnet className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-xs font-extrabold text-slate-900 dark:text-white">
+                      Perilaku Snap-to-Grid (React Grid Layout)
+                    </h4>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[9.5px] font-extrabold ${
+                        rglSnapToGrid
+                          ? 'bg-teal-600 text-white'
+                          : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      {rglSnapToGrid ? 'SNAP ON' : 'FREE-FORM'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Mengatur apakah widget beranda merapat otomatis ke kisi kolom (Snap-to-Grid) atau dapat ditempatkan bebas saat di-drag & resize.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                role="switch"
+                aria-checked={rglSnapToGrid}
+                onClick={() =>
+                  handleUpdateGlobalRglSnap(
+                    !rglSnapToGrid,
+                    !rglSnapToGrid ? (rglCompactMode === 'free' ? 'vertical' : rglCompactMode) : 'free'
+                  )
+                }
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out self-end sm:self-center ${
+                  rglSnapToGrid ? 'bg-teal-600' : 'bg-slate-300 dark:bg-slate-700'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition duration-200 ease-in-out ${
+                    rglSnapToGrid ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              {(
+                [
+                  { id: 'vertical' as const, label: 'Snap Vertikal', sub: 'Merapat otomatis ke atas' },
+                  { id: 'horizontal' as const, label: 'Snap Horizontal', sub: 'Merapat otomatis ke kiri' },
+                  { id: 'free' as const, label: 'Mode Bebas (OFF)', sub: 'Posisi bebas tanpa komisi' }
+                ]
+              ).map(modeOpt => {
+                const isSelected = rglCompactMode === modeOpt.id;
+                return (
+                  <button
+                    key={modeOpt.id}
+                    type="button"
+                    onClick={() => handleUpdateGlobalRglSnap(modeOpt.id !== 'free', modeOpt.id)}
+                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-teal-600 text-white border-teal-600 shadow-xs'
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-teal-400'
+                    }`}
+                  >
+                    <div className="text-xs font-bold flex items-center justify-between">
+                      <span>{modeOpt.label}</span>
+                      {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
+                    </div>
+                    <p className={`text-[10px] mt-0.5 ${isSelected ? 'text-teal-100' : 'text-slate-400'}`}>
+                      {modeOpt.sub}
+                    </p>
+                  </button>
+                );
+              })}
             </div>
           </div>
 

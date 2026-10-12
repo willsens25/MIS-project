@@ -27,9 +27,15 @@ import { NightShiftFloatingWidget } from './components/theme/NightShiftFloatingW
 import { QuickActionsFloatingMenu } from './components/navigation/QuickActionsFloatingMenu';
 import { getStoredCalendarEvents, getDeadlineInfo } from './components/common/DivisionCalendarTodoView';
 import { useAutoLogout } from './hooks/useAutoLogout';
-import { DivisionId } from './types';
+import { DivisionId, MascotPersonality, MascotSpeechFrequency } from './types';
 import { playPleasantClickSound, playPleasantSuccessChime, isEnvironmentMuted, toggleSoundMuted } from './utils/soundEffects';
-import { getWelcomeSalutation, getDivisionGreetingOptions, getTimeBasedSalutation } from './utils/greetingUtils';
+import {
+  getWelcomeSalutation,
+  getDivisionGreetingOptions,
+  getTimeBasedSalutation,
+  MASCOT_PERSONALITY_CONFIGS,
+  MASCOT_FREQUENCY_CONFIGS
+} from './utils/greetingUtils';
 
 interface MascotParticle {
   id: number;
@@ -245,6 +251,11 @@ const AppContent: React.FC = () => {
     }
   }, []);
 
+  const activeMascotPersonality: MascotPersonality = userSettings?.mascotPersonality || 'casual';
+  const activeMascotFrequency: MascotSpeechFrequency =
+    userSettings?.mascotSpeechFrequency ||
+    MASCOT_PERSONALITY_CONFIGS[activeMascotPersonality].defaultFrequency;
+
   const triggerSpeechBubble = useCallback(() => {
     // If user has disabled mascot speech bubbles globally in settings, do not show
     if (!userSettings?.mascotSpeechBubbleEnabled) {
@@ -260,18 +271,30 @@ const AppContent: React.FC = () => {
     const greetings = getDivisionGreetingOptions(
       currentUser.name,
       currentUser.divisi_id,
-      currentDivisi?.nama_divisi
+      currentDivisi?.nama_divisi,
+      new Date(),
+      activeMascotPersonality
     );
     const randomIndex = Math.floor(Math.random() * greetings.length);
     setSpeechBubbleMessage(greetings[randomIndex]);
     setIsSpeechBubbleVisible(true);
 
-    // Auto-fades after 5 seconds of complete inactivity
+    const fadeDurationMs = MASCOT_FREQUENCY_CONFIGS[activeMascotFrequency]?.autoFadeMs || 5200;
+
+    // Auto-fades after personality/frequency configured duration
     speechBubbleTimerRef.current = setTimeout(() => {
       setIsSpeechBubbleVisible(false);
       setIsMascotHovered(false);
-    }, 5000);
-  }, [currentUser.name, currentUser.divisi_id, divisiList, userSettings?.mascotSpeechBubbleEnabled, cancelDismissTimer]);
+    }, fadeDurationMs);
+  }, [
+    currentUser.name,
+    currentUser.divisi_id,
+    divisiList,
+    userSettings?.mascotSpeechBubbleEnabled,
+    activeMascotPersonality,
+    activeMascotFrequency,
+    cancelDismissTimer
+  ]);
 
   // Auto-welcome greeting upon entering the app or switching division/account
   const lastWelcomedUserKeyRef = useRef<string>('');
@@ -362,8 +385,11 @@ const AppContent: React.FC = () => {
     const welcomeText = getWelcomeSalutation(
       currentUser.name,
       currentUser.divisi_id,
-      currentDivisi?.nama_divisi
+      currentDivisi?.nama_divisi,
+      new Date(),
+      activeMascotPersonality
     );
+    const fadeDurationMs = MASCOT_FREQUENCY_CONFIGS[activeMascotFrequency]?.autoFadeMs || 6000;
 
     // Friendly 850ms entrance delay so the dashboard renders smoothly first
     const entryTimer = setTimeout(() => {
@@ -371,14 +397,14 @@ const AppContent: React.FC = () => {
       setSpeechBubbleMessage(welcomeText);
       setIsSpeechBubbleVisible(true);
 
-      // Auto-fades after 6 seconds of complete inactivity unless hovered
+      // Auto-fades after personality/frequency configured duration unless hovered
       if (speechBubbleTimerRef.current) {
         clearTimeout(speechBubbleTimerRef.current);
       }
       speechBubbleTimerRef.current = setTimeout(() => {
         setIsSpeechBubbleVisible(false);
         setIsMascotHovered(false);
-      }, 6000);
+      }, fadeDurationMs);
     }, 850);
 
     return () => {
@@ -390,7 +416,70 @@ const AppContent: React.FC = () => {
     currentUser.name,
     divisiList,
     userSettings?.mascotSpeechBubbleEnabled,
+    activeMascotPersonality,
+    activeMascotFrequency,
     cancelDismissTimer
+  ]);
+
+  // Proactive periodic speech bubble greetings governed by mascotSpeechFrequency ('frequent' | 'normal' | 'minimal')
+  // and instant preview when personality/frequency is changed in UserSettingsModal
+  useEffect(() => {
+    const handlePersonalityChange = (e: Event) => {
+      const customEv = e as CustomEvent<{ personality?: MascotPersonality; frequency?: MascotSpeechFrequency }>;
+      const chosenPersonality = customEv.detail?.personality || activeMascotPersonality;
+      const chosenFreq = customEv.detail?.frequency || activeMascotFrequency;
+      const currentDivisi = divisiList.find(d => d.id === currentUser.divisi_id);
+      const greetings = getDivisionGreetingOptions(
+        currentUser.name,
+        currentUser.divisi_id,
+        currentDivisi?.nama_divisi,
+        new Date(),
+        chosenPersonality
+      );
+      setSpeechBubbleMessage(greetings[0]);
+      setIsSpeechBubbleVisible(true);
+
+      if (speechBubbleTimerRef.current) {
+        clearTimeout(speechBubbleTimerRef.current);
+      }
+      const fadeMs = MASCOT_FREQUENCY_CONFIGS[chosenFreq]?.autoFadeMs || 5500;
+      speechBubbleTimerRef.current = setTimeout(() => {
+        setIsSpeechBubbleVisible(false);
+        setIsMascotHovered(false);
+      }, fadeMs);
+    };
+
+    window.addEventListener('mis-mascot-personality-changed', handlePersonalityChange);
+    return () => window.removeEventListener('mis-mascot-personality-changed', handlePersonalityChange);
+  }, [currentUser.name, currentUser.divisi_id, divisiList, activeMascotPersonality, activeMascotFrequency]);
+
+  useEffect(() => {
+    if (!isAuthenticated || userSettings?.mascotSpeechBubbleEnabled === false) {
+      return;
+    }
+
+    const intervalMs = MASCOT_FREQUENCY_CONFIGS[activeMascotFrequency]?.intervalMs;
+    if (!intervalMs) {
+      // 'minimal' frequency -> no periodic auto-greetings
+      return;
+    }
+
+    const periodicTimer = setInterval(() => {
+      // Don't interrupt if user is already hovering mascot or AI is busy
+      if (isMascotHovered || aiAppState !== 'idle') {
+        return;
+      }
+      triggerSpeechBubble();
+    }, intervalMs);
+
+    return () => clearInterval(periodicTimer);
+  }, [
+    isAuthenticated,
+    userSettings?.mascotSpeechBubbleEnabled,
+    activeMascotFrequency,
+    isMascotHovered,
+    aiAppState,
+    triggerSpeechBubble
   ]);
 
   // Grace period dismiss: gives user 750ms of leeway to move cursor to the bubble or buttons without disappearing
@@ -847,11 +936,15 @@ const AppContent: React.FC = () => {
                 </button>
               )}
 
-              {/* Speech Bubble Footer with Auto-fade indicator and Settings Quicklink */}
+              {/* Speech Bubble Footer with Personality & Frequency indicator and Settings Quicklink */}
               <div className="mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800 text-[9px] text-slate-400 dark:text-slate-500 flex items-center justify-between">
-                <span>Klik balon untuk chat langsung</span>
+                <span className="font-semibold text-teal-700 dark:text-teal-300">
+                  🎭 {MASCOT_PERSONALITY_CONFIGS[activeMascotPersonality].name} • {MASCOT_FREQUENCY_CONFIGS[activeMascotFrequency].name}
+                </span>
                 <div className="flex items-center gap-1.5">
-                  <span className="italic text-[8.5px] text-teal-600/80 dark:text-teal-400/80">Auto-fading</span>
+                  <span className="italic text-[8.5px] text-teal-600/80 dark:text-teal-400/80">
+                    {(MASCOT_FREQUENCY_CONFIGS[activeMascotFrequency].autoFadeMs / 1000).toFixed(1)}s
+                  </span>
                   <button
                     type="button"
                     onClick={(e) => {
@@ -859,7 +952,7 @@ const AppContent: React.FC = () => {
                       setIsUserSettingsOpen(true);
                     }}
                     className="hover:text-teal-600 dark:hover:text-teal-400 hover:underline flex items-center gap-0.5 cursor-pointer font-medium"
-                    title="Atur preferensi balon kata"
+                    title="Atur kepribadian & frekuensi balon kata"
                   >
                     <Sliders className="w-2.5 h-2.5" />
                     <span>Atur</span>

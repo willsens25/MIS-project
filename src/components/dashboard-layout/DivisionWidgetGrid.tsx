@@ -58,6 +58,7 @@ import {
   getTaskCompletionProgress,
   getDeadlineInfo
 } from '../common/DivisionCalendarTodoView';
+import { ShareDashboardViewButton } from '../common/ShareDashboardViewButton';
 
 export interface DivisionWidgetItem {
   id: string;
@@ -641,21 +642,21 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
   onNavigateSubTab
 }) => {
   const {
-    divisiList,
-    mutasis,
-    orders,
-    books,
-    pengajuans,
-    accounts,
-    identitasList,
-    bazaarEvents,
-    preOrders,
-    donasiProyeks,
-    royaltiPenulisList,
-    productionLogs,
-    penyalurans,
-    logisticLogs,
-    promos,
+    divisiList = [],
+    mutasis = [],
+    orders = [],
+    books = [],
+    pengajuans = [],
+    accounts = [],
+    identitasList = [],
+    bazaarEvents = [],
+    preOrderCampaigns: preOrders = [],
+    donasiProyeks = [],
+    royaltiPenulisList = [],
+    productionLogs = [],
+    penyalurans = [],
+    logisticLogs = [],
+    promos = [],
     currentUser,
     setCurrentSubTab,
     showToast
@@ -1935,6 +1936,14 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
         </div>
 
         <div className="print:hidden flex flex-wrap items-center gap-2">
+          {/* Share Deep-Link URL Button for Active Dashboard Division & Sub-Tab */}
+          <ShareDashboardViewButton
+            id={`btn-share-rgl-dashboard-div-${divisionId}`}
+            divisionId={divisionId}
+            presetId={gridState.activePresetId}
+            label="Share"
+          />
+
           {/* Preset Dashboard Layouts Switcher & Manager ('Morning Routine', 'Deep Work', 'End of Day', + Custom) */}
           <div className="relative inline-flex items-center">
             <button

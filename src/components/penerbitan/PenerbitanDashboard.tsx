@@ -39,6 +39,7 @@ import { DataImportExportModal } from '../modals/DataImportExportModal';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
+import { ShareDashboardViewButton } from '../common/ShareDashboardViewButton';
 import { RupiahInput } from '../common/RupiahInput';
 import { formatLogDateTime } from '../../utils/greetingUtils';
 import { cleanIsbn, lookupIsbnOnline } from '../../utils/isbnLookup';
@@ -290,6 +291,14 @@ export const PenerbitanDashboard: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-2">
+          {/* Share Current Dashboard View Deep-Link URL */}
+          <ShareDashboardViewButton
+            id="btn-share-penerbitan"
+            divisionId={3}
+            subTab={activeSubTab}
+            label="Share"
+          />
+
           {/* Print Current View Action Button */}
           <PrintCurrentViewButton
             id="btn-print-penerbitan"

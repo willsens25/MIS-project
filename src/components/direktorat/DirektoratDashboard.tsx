@@ -36,6 +36,7 @@ import { DataImportExportModal } from '../modals/DataImportExportModal';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
+import { ShareDashboardViewButton } from '../common/ShareDashboardViewButton';
 import { ConfigurableDashboardGrid } from '../dashboard-layout/ConfigurableDashboardGrid';
 import { DivisionWidgetGrid } from '../dashboard-layout/DivisionWidgetGrid';
 import { Pagination } from '../common/Pagination';
@@ -402,6 +403,14 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
         </div>
 
         <div className="flex items-center space-x-2">
+          {/* Share Current Dashboard View Deep-Link URL */}
+          <ShareDashboardViewButton
+            id="btn-share-direktorat"
+            divisionId={1}
+            subTab={activeSubTab}
+            label="Share"
+          />
+
           {/* Print Current View Action Button */}
           <PrintCurrentViewButton
             id="btn-print-direktorat"

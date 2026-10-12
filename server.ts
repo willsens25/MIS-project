@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import { GoogleGenAI } from "@google/genai";
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 app.use(cors());
 app.use(express.json());
@@ -513,14 +513,23 @@ app.post("/api/gemini", async (req: Request, res: Response) => {
 });
 
 async function startServer() {
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
-    const { createServer: createViteServer } = await import("vite");
-    const vite = await createViteServer({
-      server: { middlewareMode: true, host: "0.0.0.0", port: 3000 },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
+  const isProd = process.env.NODE_ENV === "production";
+
+  if (!isProd) {
+    try {
+      const { createServer: createViteServer } = await import("vite");
+      const vite = await createViteServer({
+        server: { middlewareMode: true, host: "0.0.0.0", port: PORT },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+    } catch {
+      const distPath = path.join(process.cwd(), "dist");
+      app.use(express.static(distPath));
+      app.get("*all", (_req: Request, res: Response) => {
+        res.sendFile(path.join(distPath, "index.html"));
+      });
+    }
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));

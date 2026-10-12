@@ -458,6 +458,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const DEFAULT_USER_SETTINGS: UserSettings = {
     mascotSpeechBubbleEnabled: true,
+    mascotPersonality: 'casual',
+    mascotSpeechFrequency: 'normal',
     mascotSoundEffectsEnabled: true,
     mascotParticleBurstEnabled: true,
     mascotShortcutHintsEnabled: true,
@@ -1137,6 +1139,96 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     recordActivity('Ganti Divisi', 'User', `Beralih ke divisi: ${divisiList.find(d => d.id === divisiId)?.nama_divisi}`);
   };
+
+  // Deep-Link URL Hydration: Parse ?divisi=1..6 (or ?kode=dir|keu|pen|mkt|prd|log), ?tab=..., and ?preset=... on initial load
+  const hasHydratedDeepLinkRef = useRef<boolean>(false);
+  useEffect(() => {
+    if (hasHydratedDeepLinkRef.current || typeof window === 'undefined') return;
+    hasHydratedDeepLinkRef.current = true;
+
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const rawDiv = params.get('divisi') || params.get('division');
+      const rawCode = (params.get('kode') || params.get('code') || '').toUpperCase();
+      const rawTab = params.get('tab') || params.get('subtab');
+      const rawPreset = params.get('preset');
+
+      const codeToDivId: Record<string, DivisionId> = {
+        DIR: 1,
+        KEU: 2,
+        FIN: 2,
+        PEN: 3,
+        PUB: 3,
+        MKT: 4,
+        PRD: 5,
+        LOG: 6
+      };
+
+      let targetDivId: DivisionId | null = null;
+      if (rawDiv && ['1', '2', '3', '4', '5', '6'].includes(rawDiv)) {
+        targetDivId = Number(rawDiv) as DivisionId;
+      } else if (rawCode && codeToDivId[rawCode]) {
+        targetDivId = codeToDivId[rawCode];
+      }
+
+      if (targetDivId) {
+        const userForDivisi = usersList.find(u => u.divisi_id === targetDivId) || {
+          id: 99,
+          name: `User ${divisiList.find(d => d.id === targetDivId)?.nama_divisi || 'Divisi'}`,
+          email: `user.${targetDivId}@lamrimnesia.org`,
+          divisi_id: targetDivId,
+          role: 'Staff'
+        };
+        setCurrentUser(userForDivisi);
+        if (rawTab) {
+          setDivisionSubTabs(prev => ({
+            ...prev,
+            [targetDivId!]: rawTab
+          }));
+        }
+      } else if (rawTab) {
+        setDivisionSubTabs(prev => ({
+          ...prev,
+          [currentUser.divisi_id]: rawTab
+        }));
+      }
+
+      if (rawPreset) {
+        const effDiv = targetDivId || currentUser.divisi_id;
+        setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent('mis-apply-rgl-preset', {
+              detail: { divisionId: effDiv, presetId: rawPreset }
+            })
+          );
+        }, 400);
+      }
+    } catch (e) {
+      console.warn('Deep-link URL parse warning:', e);
+    }
+  }, []);
+
+  // Keep browser URL query parameters (?divisi=...&tab=...) synchronized with active division & sub-tab
+  useEffect(() => {
+    if (typeof window === 'undefined' || !isAuthenticated) return;
+    try {
+      const url = new URL(window.location.href);
+      const codeMap: Record<number, string> = {
+        1: 'dir',
+        2: 'keu',
+        3: 'pen',
+        4: 'mkt',
+        5: 'prd',
+        6: 'log'
+      };
+      url.searchParams.set('divisi', String(currentUser.divisi_id));
+      url.searchParams.set('kode', codeMap[currentUser.divisi_id] || 'dir');
+      url.searchParams.set('tab', currentSubTab);
+      window.history.replaceState({}, '', url.toString());
+    } catch {
+      // ignore if restricted in iframe
+    }
+  }, [currentUser.divisi_id, currentSubTab, isAuthenticated]);
 
   // Toast Notification Simulation Helper for Testing & Demos
   const simulateToastNotification = useCallback((category: ToastCategory = 'stock') => {

@@ -31,6 +31,7 @@ import { useDashboardLayout } from '../../hooks/useDashboardLayout';
 import { DashboardCardWrapper } from './DashboardCardWrapper';
 import { DashboardLayoutConfiguratorModal } from './DashboardLayoutConfiguratorModal';
 import { DashboardCardConfig, LAYOUT_PRESETS } from '../../types/dashboardLayout';
+import { ShareDashboardViewButton } from '../common/ShareDashboardViewButton';
 
 interface ConfigurableDashboardGridProps {
   onOpenAnnualReport?: () => void;
@@ -778,6 +779,12 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
 
         {/* Action Controls */}
         <div className="flex flex-wrap items-center gap-2 self-end sm:self-auto">
+          {/* Share Deep-Link Button */}
+          <ShareDashboardViewButton
+            id="btn-share-configurable-grid"
+            label="Share"
+          />
+
           {/* Grid vs List View Toggle for Dashboard Cards */}
           <div
             className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs"
