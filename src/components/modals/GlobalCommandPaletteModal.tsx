@@ -254,8 +254,8 @@ export const GlobalCommandPaletteModal: React.FC<GlobalCommandPaletteModalProps>
         divisionCode: divMeta.code,
         title: ev.title,
         subtitle: `PIC: ${ev.picName} • Tenggat: ${ev.date} (${dl.label}) • Progres ${prog.percent}%`,
-        badge: ev.status === 'done' ? 'Selesai' : dl.label,
-        badgeVariant: ev.status === 'done' ? 'emerald' : dl.isOverdue ? 'rose' : 'amber',
+        badge: ev.status === 'Selesai' ? 'Selesai' : dl.label,
+        badgeVariant: ev.status === 'Selesai' ? 'emerald' : dl.state === 'overdue' ? 'rose' : 'amber',
         keywords: `${ev.title} ${ev.description} ${ev.picName} ${ev.date} ${divMeta.name} ${divMeta.code} tugas kalender todo agenda`,
         targetSubTab: 'kalender',
         filterKeyword: ev.title
@@ -438,7 +438,7 @@ export const GlobalCommandPaletteModal: React.FC<GlobalCommandPaletteModalProps>
         divisionName: DIVISION_META[4].name,
         divisionCode: 'MKT',
         title: `Invoice ${o.no_invoice} — ${o.nama_pembeli}`,
-        subtitle: `Tagihan: Rp ${fmtNum(o.total_tagihan)} • Status: ${o.status} • Tanggal: ${o.tanggal}`,
+        subtitle: `Tagihan: Rp ${fmtNum(o.total_tagihan)} • Status: ${o.status} • Tanggal: ${o.tanggal_pesan}`,
         badge: o.status,
         badgeVariant: o.status === 'Lunas' ? 'emerald' : 'amber',
         keywords: `${o.no_invoice} ${o.nama_pembeli} ${o.status} invoice faktur pesanan marketing`,
@@ -449,7 +449,7 @@ export const GlobalCommandPaletteModal: React.FC<GlobalCommandPaletteModalProps>
 
     // SPK Pengajuan Cetak (Division 2 & 5)
     pengajuans.forEach(p => {
-      const bookTitle = books.find(b => b.id === p.book_id)?.judul || `Buku #${p.book_id}`;
+      const bookTitle = books.find(b => b.id === p.buku_id)?.judul || `Buku #${p.buku_id}`;
       items.push({
         id: `cmd-spk-${p.id}`,
         category: 'content',
@@ -458,7 +458,7 @@ export const GlobalCommandPaletteModal: React.FC<GlobalCommandPaletteModalProps>
         divisionName: DIVISION_META[5].name,
         divisionCode: 'PRD',
         title: `SPK-${String(p.id).padStart(3, '0')}: ${bookTitle}`,
-        subtitle: `Oplah: ${fmtNum(p.jumlah_cetak)} eks • Estimasi Biaya: Rp ${fmtNum(p.estimasi_biaya)} • Status: ${p.status.toUpperCase()}`,
+        subtitle: `Oplah: ${fmtNum(p.jumlah_pengajuan)} eks • Status: ${p.status.toUpperCase()}`,
         badge: p.status.toUpperCase(),
         badgeVariant: p.status === 'approved' ? 'emerald' : p.status === 'pending' ? 'amber' : 'rose',
         keywords: `spk-${String(p.id).padStart(3, '0')} ${bookTitle} ${p.status} pengajuan cetak produksi`,
@@ -470,6 +470,7 @@ export const GlobalCommandPaletteModal: React.FC<GlobalCommandPaletteModalProps>
     // Mutasi Kas (Division 2)
     mutasis.slice(0, 25).forEach(m => {
       const accName = accounts.find(a => a.id === m.account_id)?.nama_akun || 'Rekening Kas';
+      const katName = m.category?.nama_kategori || 'Kas Operasional';
       items.push({
         id: `cmd-mutasi-${m.id}`,
         category: 'content',
@@ -478,10 +479,10 @@ export const GlobalCommandPaletteModal: React.FC<GlobalCommandPaletteModalProps>
         divisionName: DIVISION_META[2].name,
         divisionCode: 'FIN',
         title: `${m.keterangan} (${m.tipe})`,
-        subtitle: `${accName} • Kategori: ${m.nama_kategori} • Rp ${fmtNum(m.nominal)} • ${m.tanggal}`,
+        subtitle: `${accName} • Kategori: ${katName} • Rp ${fmtNum(m.nominal)} • ${m.tanggal}`,
         badge: `${m.tipe} Rp ${fmtNum(m.nominal)}`,
         badgeVariant: m.tipe === 'Masuk' ? 'emerald' : 'rose',
-        keywords: `${m.keterangan} ${m.nama_kategori} ${accName} ${m.tanggal} mutasi kas keuangan finance`,
+        keywords: `${m.keterangan} ${katName} ${accName} ${m.tanggal} mutasi kas keuangan finance`,
         targetSubTab: 'mutasi',
         filterKeyword: m.keterangan
       });
@@ -497,10 +498,10 @@ export const GlobalCommandPaletteModal: React.FC<GlobalCommandPaletteModalProps>
         divisionName: DIVISION_META[1].name,
         divisionCode: 'DIR',
         title: `${idn.nama_lengkap} (${idn.jenis_identitas})`,
-        subtitle: `${idn.kota || 'Indonesia'} • ${idn.no_wa || '-'} • ${idn.catatan || 'Anggota Terdaftar'}`,
+        subtitle: `${idn.kota || 'Indonesia'} • ${idn.nomor_hp_primary || '-'} • ${idn.pekerjaan || 'Anggota Terdaftar'}`,
         badge: idn.jenis_identitas,
         badgeVariant: 'indigo',
-        keywords: `${idn.nama_lengkap} ${idn.jenis_identitas} ${idn.kota || ''} ${idn.no_wa || ''} anggota umat donatur direktorat`,
+        keywords: `${idn.nama_lengkap} ${idn.jenis_identitas} ${idn.kota || ''} ${idn.nomor_hp_primary || ''} anggota umat donatur direktorat`,
         targetSubTab: 'identitas',
         filterKeyword: idn.nama_lengkap
       });

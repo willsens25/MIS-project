@@ -39,7 +39,9 @@ import {
   Flame,
   Briefcase,
   Smile,
-  HeartHandshake
+  HeartHandshake,
+  Lightbulb,
+  LightbulbOff
 } from 'lucide-react';
 import { MascotAvatar } from '../MascotAvatar';
 import { PRESET_LOCATIONS, LocationCoordinates } from '../../lib/solarCalculator';
@@ -223,6 +225,19 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
       nextVal
         ? '🪷 Animasi gerak diam maskot (kedip & melayang) aktif'
         : '⏸️ Animasi gerak diam maskot dijeda / nonaktif'
+    );
+  };
+
+  const handleToggleDashboardTips = () => {
+    const nextVal = userSettings.dashboardTipsEnabled === false;
+    updateUserSettings({ dashboardTipsEnabled: nextVal });
+    try {
+      localStorage.setItem('mis_tips_disabled', nextVal ? 'false' : 'true');
+    } catch {}
+    showToast(
+      nextVal
+        ? '💡 Tips kontekstual & panduan otomatis beranda telah diaktifkan'
+        : '🔇 Tips kontekstual & panduan otomatis beranda telah dinonaktifkan'
     );
   };
 
@@ -1528,6 +1543,73 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                   aria-hidden="true"
                   className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
                     userSettings.mascotIdleAnimationEnabled !== false ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Toggle Tips & Rekomendasi Otomatis Beranda */}
+            <div
+              className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between cursor-pointer ${
+                userSettings.dashboardTipsEnabled !== false
+                  ? 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700/60'
+                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+              }`}
+              onClick={handleToggleDashboardTips}
+            >
+              <div className="flex items-center space-x-3 min-w-0 pr-2">
+                <div
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                    userSettings.dashboardTipsEnabled !== false
+                      ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                  }`}
+                >
+                  {userSettings.dashboardTipsEnabled !== false ? (
+                    <Lightbulb className="w-4 h-4 text-amber-500" />
+                  ) : (
+                    <LightbulbOff className="w-4 h-4 text-slate-400" />
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                      Tips & Rekomendasi Otomatis Beranda
+                    </h4>
+                    <span
+                      className={`text-[9px] font-extrabold px-1.5 py-0.2 rounded ${
+                        userSettings.dashboardTipsEnabled !== false
+                          ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                      }`}
+                    >
+                      {userSettings.dashboardTipsEnabled !== false ? 'AKTIF (IDLE 60S)' : 'NONAKTIF'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Munculkan tips rekomendasi alur kerja divisi secara otomatis saat tanpa interaksi di dashboard
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                role="switch"
+                aria-checked={userSettings.dashboardTipsEnabled !== false}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggleDashboardTips();
+                }}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                  userSettings.dashboardTipsEnabled !== false
+                    ? 'bg-amber-500'
+                    : 'bg-slate-300 dark:bg-slate-700'
+                }`}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                    userSettings.dashboardTipsEnabled !== false ? 'translate-x-4' : 'translate-x-0'
                   }`}
                 />
               </button>

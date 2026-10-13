@@ -179,6 +179,7 @@ export const LeftSidebarNav: React.FC<LeftSidebarNavProps> = ({
                 shortLabel: 'Stats',
                 icon: BarChart3
               },
+              { id: 'struktur', label: 'Struktur Kepanitiaan', shortLabel: 'Panitia', icon: Layers },
               { id: 'users', label: 'Manajemen Staf & Akun', shortLabel: 'Staf', icon: UserCog }
             ]
           },

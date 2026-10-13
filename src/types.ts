@@ -462,6 +462,7 @@ export interface UserSettings {
   mascotParticleBurstEnabled: boolean; // Sparkle particle burst effect on hover
   mascotShortcutHintsEnabled: boolean; // Division contextual shortcuts in tooltip
   mascotIdleAnimationEnabled: boolean; // Toggle interactive idle animations (blinking, slight floating bob)
+  dashboardTipsEnabled?: boolean; // Toggle contextual tips & idle tips globally
   themeMode?: ThemeMode; // 'light' | 'dark' | 'system-synced' (auto-switching based on local sunrise & sunset)
   autoThemeCoordinates?: {
     latitude: number;
@@ -511,6 +512,7 @@ export interface ToastNotification {
   actionLabel?: string;
   onAction?: () => void;
   category?: ToastCategory;
+  divisionName?: string;
 }
 
 export interface BackupMetadata {

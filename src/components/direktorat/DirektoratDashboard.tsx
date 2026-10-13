@@ -42,9 +42,10 @@ import { DivisionWidgetGrid } from '../dashboard-layout/DivisionWidgetGrid';
 import { Pagination } from '../common/Pagination';
 import { DivisionQuickSearchBar } from '../common/DivisionQuickSearchBar';
 import { DirektoratCalendarTodoTab } from './DirektoratCalendarTodoTab';
+import { StrukturKepanitiaanTab } from './StrukturKepanitiaanTab';
 
 interface DirektoratDashboardProps {
-  initialSubTab?: 'overview' | 'identitas' | 'users' | 'kalender' | 'productivity-stats';
+  initialSubTab?: 'overview' | 'identitas' | 'users' | 'kalender' | 'productivity-stats' | 'struktur';
 }
 
 export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initialSubTab }) => {
@@ -67,10 +68,10 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
     setCurrentSubTab
   } = useApp();
 
-  const activeSubTab = (['overview', 'identitas', 'users', 'kalender', 'productivity-stats'].includes(currentSubTab)
+  const activeSubTab = (['overview', 'identitas', 'users', 'kalender', 'productivity-stats', 'struktur'].includes(currentSubTab)
     ? currentSubTab
-    : 'overview') as 'overview' | 'identitas' | 'users' | 'kalender' | 'productivity-stats';
-  const setActiveSubTab = (tab: 'overview' | 'identitas' | 'users' | 'kalender' | 'productivity-stats') =>
+    : 'overview') as 'overview' | 'identitas' | 'users' | 'kalender' | 'productivity-stats' | 'struktur';
+  const setActiveSubTab = (tab: 'overview' | 'identitas' | 'users' | 'kalender' | 'productivity-stats' | 'struktur') =>
     setCurrentSubTab(tab);
 
   useEffect(() => {
@@ -378,6 +379,18 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
           </button>
 
           <button
+            onClick={() => setActiveSubTab('struktur')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              activeSubTab === 'struktur'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span>Struktur Kepanitiaan</span>
+          </button>
+
+          <button
             onClick={() => setActiveSubTab('productivity-stats')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'productivity-stats'
@@ -402,7 +415,7 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
           </button>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Share Current Dashboard View Deep-Link URL */}
           <ShareDashboardViewButton
             id="btn-share-direktorat"
@@ -427,10 +440,10 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
           {activeSubTab === 'overview' && (
             <button
               onClick={() => setAnnualReportOpen(true)}
-              className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
             >
-              <Award className="w-4 h-4" />
-              <span>Laporan Tahunan (Annual Report)</span>
+              <Award className="w-3.5 h-3.5" />
+              <span>Laporan Tahunan</span>
             </button>
           )}
 
@@ -913,6 +926,9 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
 
       {/* KALENDER & TO-DO LIST 12 BULAN SUB TAB */}
       {activeSubTab === 'kalender' && <DirektoratCalendarTodoTab />}
+
+      {/* STRUKTUR KEPANITIAAN SUB TAB */}
+      {activeSubTab === 'struktur' && <StrukturKepanitiaanTab />}
 
       {/* PRODUCTIVITY STATS SUB TAB */}
       {activeSubTab === 'productivity-stats' && (

@@ -464,6 +464,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     mascotParticleBurstEnabled: true,
     mascotShortcutHintsEnabled: true,
     mascotIdleAnimationEnabled: true,
+    dashboardTipsEnabled: true,
     themeMode: 'system-synced',
     autoThemeCoordinates: {
       latitude: autoThemeLocation.latitude,
@@ -476,8 +477,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [userSettings, setUserSettings] = useState<UserSettings>(() => {
     try {
       const stored = localStorage.getItem('mis_user_settings');
+      const tipsDisabled = localStorage.getItem('mis_tips_disabled') === 'true';
       if (stored) {
-        return { ...DEFAULT_USER_SETTINGS, ...JSON.parse(stored) };
+        const parsed = JSON.parse(stored);
+        return {
+          ...DEFAULT_USER_SETTINGS,
+          ...parsed,
+          dashboardTipsEnabled: tipsDisabled ? false : (parsed.dashboardTipsEnabled ?? true)
+        };
+      }
+      if (tipsDisabled) {
+        return { ...DEFAULT_USER_SETTINGS, dashboardTipsEnabled: false };
       }
     } catch (e) {
       console.warn('Error reading user settings from storage:', e);

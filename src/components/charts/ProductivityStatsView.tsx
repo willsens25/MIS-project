@@ -631,7 +631,7 @@ export const ProductivityStatsView: React.FC<ProductivityStatsViewProps> = ({
                     color: '#f8fafc',
                     fontSize: '12px'
                   }}
-                  formatter={(value: number, name: string) => [
+                  formatter={(value: any, name: any) => [
                     name === 'Rata-rata Jam / Tugas' ? `${value} Jam / Tugas` : `${value}%`,
                     name
                   ]}

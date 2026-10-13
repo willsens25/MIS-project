@@ -208,43 +208,44 @@ export const ShareDashboardViewButton: React.FC<ShareDashboardViewButtonProps> =
   };
 
   return (
-    <div ref={containerRef} className="relative inline-flex items-center gap-1.5 print:hidden">
+    <div ref={containerRef} className="relative inline-flex items-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-2xs overflow-hidden print:hidden">
       {/* Share Deep-Link URL Button */}
       <button
         id={id}
         type="button"
         onClick={handleCopyDeepLink}
         title={`Bagikan tautan langsung (Deep-Link URL) ke ${divMeta.name} — Sub-Tab: ${activeTab}`}
-        className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border shadow-2xs ${
+        className={`flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
           copied
-            ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-400/30'
+            ? 'bg-emerald-600 text-white'
             : variant === 'primary'
-            ? 'bg-teal-600 hover:bg-teal-700 text-white border-teal-600'
-            : variant === 'outline'
-            ? 'bg-white dark:bg-slate-900 hover:bg-teal-50 dark:hover:bg-teal-950/50 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800'
-            : 'bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/60 dark:hover:bg-teal-900/70 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800/80'
+            ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+            : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'
         } ${className}`}
       >
         {copied ? (
           <Check className="w-3.5 h-3.5 stroke-[2.5]" />
         ) : (
-          <Share2 className="w-3.5 h-3.5" />
+          <Share2 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
         )}
-        <span>{copied ? 'Tautan Tersalin!' : label}</span>
+        <span>{copied ? 'Tersalin!' : label}</span>
       </button>
 
       {/* Dedicated Scannable QR Code Modal Button on the #printable-area Dashboard Card */}
       {showQrTriggerButton && (
-        <button
-          id={`${id}-qr-code`}
-          type="button"
-          onClick={handleOpenQrModal}
-          title={`Tampilkan QR Code yang dapat dipindai (Scannable QR) untuk URL tampilan ${divMeta.name} (${activeTab})`}
-          className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border shadow-2xs bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/70 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/80"
-        >
-          <QrCode className="w-3.5 h-3.5" />
-          <span>QR Code</span>
-        </button>
+        <>
+          <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 shrink-0" />
+          <button
+            id={`${id}-qr-code`}
+            type="button"
+            onClick={handleOpenQrModal}
+            title={`Tampilkan QR Code yang dapat dipindai (Scannable QR) untuk URL tampilan ${divMeta.name} (${activeTab})`}
+            className="flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+          >
+            <QrCode className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
+            <span className="hidden sm:inline">QR</span>
+          </button>
+        </>
       )}
 
       {/* Popover for Quick Deep-Link Copy */}

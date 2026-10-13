@@ -87,6 +87,13 @@ export const NAVIGATION_CONFIG: Record<DivisionId, DivisionNavConfig> = {
         description: 'Kalender kerja 12 bulan, buat event & delegasi PIC'
       },
       {
+        id: 'struktur',
+        name: 'Struktur Kepanitiaan',
+        shortName: 'Kepanitiaan',
+        icon: Layers,
+        description: 'Bagan organisasi hierarki & kepanitiaan yayasan'
+      },
+      {
         id: 'users',
         name: 'Manajemen Pengguna',
         shortName: 'Pengguna Sistem',
