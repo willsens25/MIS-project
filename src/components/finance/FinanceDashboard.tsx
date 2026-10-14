@@ -441,61 +441,76 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
         onNavigateSubTab={tab => setActiveSubTab(tab as any)}
       />
 
-      {/* Top Stat Summary */}
+      {/* Top Stat Summary - Modern Bento Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
+        <div className="p-4 sm:p-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] rounded-2xl shadow-xs hover:shadow-md transition-all group">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Kas Masuk</span>
-            <div className="p-2 bg-emerald-500/10 text-emerald-600 rounded-lg">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Total Kas Masuk
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 shadow-2xs group-hover:scale-105 transition-transform">
               <ArrowDownLeft className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-2">
+          <p className="text-2xl font-bold font-mono tracking-tight text-emerald-600 dark:text-emerald-400 mt-3">
             Rp {totalMasuk.toLocaleString('id-ID')}
           </p>
-          <span className="text-[11px] text-slate-400">{filteredMutasi.filter(m => m.tipe === 'Masuk').length} Transaksi</span>
+          <div className="mt-2 text-[11px] text-slate-400 font-medium">
+            {filteredMutasi.filter(m => m.tipe === 'Masuk').length} Transaksi Terverifikasi
+          </div>
         </div>
 
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
+        <div className="p-4 sm:p-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] rounded-2xl shadow-xs hover:shadow-md transition-all group">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Kas Keluar</span>
-            <div className="p-2 bg-rose-500/10 text-rose-600 rounded-lg">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+              Total Kas Keluar
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-rose-500/10 dark:bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-500/20 shadow-2xs group-hover:scale-105 transition-transform">
               <ArrowUpRight className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl font-extrabold text-rose-600 dark:text-rose-400 mt-2">
+          <p className="text-2xl font-bold font-mono tracking-tight text-rose-600 dark:text-rose-400 mt-3">
             Rp {totalKeluar.toLocaleString('id-ID')}
           </p>
-          <span className="text-[11px] text-slate-400">{filteredMutasi.filter(m => m.tipe === 'Keluar').length} Transaksi</span>
+          <div className="mt-2 text-[11px] text-slate-400 font-medium">
+            {filteredMutasi.filter(m => m.tipe === 'Keluar').length} Transaksi Keluar
+          </div>
         </div>
 
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
+        <div className="p-4 sm:p-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] rounded-2xl shadow-xs hover:shadow-md transition-all group">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Saldo Bersih</span>
-            <div className="p-2 bg-indigo-500/10 text-indigo-600 rounded-lg">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+              Saldo Kas Bersih
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-500/20 shadow-2xs group-hover:scale-105 transition-transform">
               <Wallet className="w-4 h-4" />
             </div>
           </div>
-          <p className={`text-xl font-extrabold mt-2 ${saldoBersih >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-rose-600'}`}>
+          <p className={`text-2xl font-bold font-mono tracking-tight mt-3 ${saldoBersih >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-rose-600'}`}>
             Rp {saldoBersih.toLocaleString('id-ID')}
           </p>
-          <span className="text-[11px] text-slate-400">Total Akumulatif Periode</span>
+          <div className="mt-2 text-[11px] text-slate-400 font-medium">
+            Total Akumulatif Periode Berjalan
+          </div>
         </div>
       </div>
 
-      {/* Sub tabs & Actions */}
-      <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
-        <div className="flex items-center space-x-1.5 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl">
+      {/* Sub navigation tabs & Toolbar */}
+      <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 dark:border-white/[0.06] pb-3">
+        <div className="flex flex-wrap items-center gap-1 bg-slate-200/60 dark:bg-white/[0.05] p-1 rounded-2xl border border-slate-200/80 dark:border-white/[0.06] backdrop-blur-md">
           <button
             onClick={() => setActiveSubTab('grafik')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'grafik'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
             }`}
           >
             <TrendingUp className="w-3.5 h-3.5" />
-            <span>Grafik & Analisis Finansial</span>
+            <span>Grafik & Analisis</span>
             <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
               6 Bln
             </span>
@@ -503,26 +518,26 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
 
           <button
             onClick={() => setActiveSubTab('mutasi')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'mutasi'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
             }`}
           >
             <Wallet className="w-3.5 h-3.5" />
-            <span>Jurnal Mutasi Kas ({mutasis.length})</span>
+            <span>Jurnal Mutasi ({mutasis.length})</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('persetujuan')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'persetujuan'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
             }`}
           >
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>Persetujuan Cetak</span>
+            <span>Approval SPK</span>
             {pendingPengajuans.length > 0 && (
               <span className="bg-amber-500 text-slate-950 font-bold px-1.5 py-0.2 rounded-full text-[10px]">
                 {pendingPengajuans.length}
@@ -532,10 +547,10 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
 
           <button
             onClick={() => setActiveSubTab('penjualan')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'penjualan'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
             }`}
           >
             <FileSpreadsheet className="w-3.5 h-3.5" />
@@ -544,26 +559,26 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
 
           <button
             onClick={() => setActiveSubTab('akun')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'akun'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
             }`}
           >
             <CreditCard className="w-3.5 h-3.5" />
-            <span>Akun Kas & Bank ({accounts.length})</span>
+            <span>Rekening Bank ({accounts.length})</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('rekonsiliasi')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'rekonsiliasi'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
             }`}
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>Rekonsiliasi Bank</span>
+            <span>Rekonsiliasi</span>
             {bankStatements.length > 0 && (
               <span className="bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold px-1.5 py-0.2 rounded-full text-[10px]">
                 {bankStatements.length}
@@ -573,14 +588,14 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
 
           <button
             onClick={() => setActiveSubTab('laporan')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'laporan'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
             }`}
           >
             <Scale className="w-3.5 h-3.5" />
-            <span>Laporan Standar PSAK</span>
+            <span>Laporan PSAK</span>
             <span className="bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold px-1.5 py-0.2 rounded-full text-[10px]">
               ISAK 35
             </span>
@@ -588,10 +603,10 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
 
           <button
             onClick={() => setActiveSubTab('kalender')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'kalender'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
             }`}
           >
             <Calendar className="w-3.5 h-3.5" />
@@ -599,7 +614,7 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
           </button>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Share Current Dashboard View Deep-Link URL */}
           <ShareDashboardViewButton
             id="btn-share-finance"

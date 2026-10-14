@@ -280,17 +280,104 @@ export const PenerbitanDashboard: React.FC = () => {
         onNavigateSubTab={tab => setActiveSubTab(tab as any)}
       />
 
-      {/* Header Bar */}
-      <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
-        <div>
-          <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-            Katalog Penerbitan & Manajemen Buku
-          </h2>
-          <p className="text-xs text-slate-500">Kelola judul buku dharma, penetapan harga jual, dan pengajuan cetak ke Finance.</p>
+      {/* Sub navigation tabs & Action Bar */}
+      <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 dark:border-white/[0.06] pb-3">
+        <div className="flex flex-wrap items-center gap-1 bg-slate-200/60 dark:bg-white/[0.05] p-1 rounded-2xl border border-slate-200/80 dark:border-white/[0.06] backdrop-blur-md">
+          <button
+            onClick={() => setActiveSubTab('katalog')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              activeSubTab === 'katalog'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
+            }`}
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>Katalog Judul ({books.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('donasi_cetak')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeSubTab === 'donasi_cetak'
+                ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-xs'
+                : 'text-amber-800 dark:text-amber-400 hover:text-amber-950 dark:hover:text-white hover:bg-amber-50/50'
+            }`}
+          >
+            <Heart className="w-3.5 h-3.5 fill-current" />
+            <span>🪷 Fashili & Donasi</span>
+            <span className="px-1.5 py-0.2 bg-white/20 text-white text-[10px] rounded-full font-bold">
+              {donasiProyeks.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('royalti')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeSubTab === 'royalti'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
+            }`}
+          >
+            <Award className="w-3.5 h-3.5" />
+            <span>Royalti & Lisensi</span>
+            <span className="px-1.5 py-0.2 bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 text-[10px] rounded-full font-bold">
+              {royaltiPenulisList.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('ekonomi')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              activeSubTab === 'ekonomi'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
+            }`}
+          >
+            <PieChart className="w-3.5 h-3.5" />
+            <span>Unit Ekonomi</span>
+            <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] rounded-full font-bold">
+              HPP & BEP
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('grafik')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              activeSubTab === 'grafik'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>Grafik Stok</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('pengajuan')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              activeSubTab === 'pengajuan'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>Pengajuan Cetak ({pengajuans.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('kalender')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              activeSubTab === 'kalender'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
+            }`}
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Kalender & To-Do</span>
+          </button>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Share Current Dashboard View Deep-Link URL */}
           <ShareDashboardViewButton
             id="btn-share-penerbitan"
@@ -314,20 +401,20 @@ export const PenerbitanDashboard: React.FC = () => {
 
           <button
             onClick={() => setIsImportExportModalOpen(true)}
-            className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer"
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer"
             title="Impor atau ekspor massal katalog buku format Excel (.xlsx) atau CSV"
           >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>Impor / Ekspor Excel</span>
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Impor/Ekspor</span>
           </button>
 
           <button
             onClick={() => setIsBarcodeModalOpen(true)}
-            className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer"
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer"
             title="Pindai barcode kamera atau ketik ISBN manual untuk memasukkan buku & stok fisik"
           >
-            <ScanBarcode className="w-4 h-4" />
-            <span>Scan Barcode / ISBN</span>
+            <ScanBarcode className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Scan ISBN</span>
           </button>
 
           <button
@@ -344,108 +431,12 @@ export const PenerbitanDashboard: React.FC = () => {
               });
               setModalBookOpen(true);
             }}
-            className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm cursor-pointer"
+            className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs active:scale-95 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Tambah Judul Buku</span>
+            <span>Tambah Judul</span>
           </button>
         </div>
-      </div>
-
-      {/* Sub Tabs */}
-      <div className="print:hidden flex items-center space-x-1.5 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl w-fit">
-        <button
-          onClick={() => setActiveSubTab('katalog')}
-          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-            activeSubTab === 'katalog'
-              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <BookOpen className="w-3.5 h-3.5" />
-          <span>Katalog Judul ({books.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('donasi_cetak')}
-          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-            activeSubTab === 'donasi_cetak'
-              ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-sm'
-              : 'text-amber-800 dark:text-amber-400 hover:text-amber-950 dark:hover:text-white hover:bg-amber-50/50'
-          }`}
-        >
-          <Heart className="w-3.5 h-3.5 fill-current" />
-          <span>🪷 Fashili & Donasi Cetak</span>
-          <span className="px-1.5 py-0.2 bg-white/20 text-white text-[10px] rounded-full font-bold">
-            {donasiProyeks.length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('royalti')}
-          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-            activeSubTab === 'royalti'
-              ? 'bg-indigo-600 text-white shadow-sm'
-              : 'text-indigo-700 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-white hover:bg-indigo-50/50'
-          }`}
-        >
-          <Award className="w-3.5 h-3.5" />
-          <span>Royalti & Lisensi</span>
-          <span className="px-1.5 py-0.2 bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 text-[10px] rounded-full font-bold">
-            {royaltiPenulisList.length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('ekonomi')}
-          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-            activeSubTab === 'ekonomi'
-              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <PieChart className="w-3.5 h-3.5" />
-          <span>Analisis Unit Ekonomi</span>
-          <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 text-[10px] rounded-full font-bold">
-            HPP & BEP
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('grafik')}
-          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-            activeSubTab === 'grafik'
-              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <TrendingUp className="w-3.5 h-3.5" />
-          <span>Grafik Stok & Valuasi</span>
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('pengajuan')}
-          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-            activeSubTab === 'pengajuan'
-              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <FileText className="w-3.5 h-3.5" />
-          <span>Riwayat Pengajuan Cetak ({pengajuans.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('kalender')}
-          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-            activeSubTab === 'kalender'
-              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          }`}
-        >
-          <Calendar className="w-3.5 h-3.5" />
-          <span>Kalender & To-Do</span>
-        </button>
       </div>
 
       {/* KALENDER & TO-DO LIST PENERBITAN VIEW */}

@@ -175,7 +175,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="print:hidden sticky top-0 z-40 bg-white/95 dark:bg-[#1A1D21]/95 backdrop-blur-md text-slate-800 dark:text-white border-b border-slate-200 dark:border-slate-800 shadow-sm transition-colors duration-200">
+    <header className="print:hidden sticky top-0 z-40 bg-white/80 dark:bg-[#0e131b]/80 backdrop-blur-xl text-slate-800 dark:text-white border-b border-slate-200/80 dark:border-white/[0.08] shadow-2xs transition-colors duration-200">
       <div className="w-full px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
           
@@ -250,10 +250,10 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={() => setShowPlenoMenu(!showPlenoMenu)}
                 whileHover={{ scale: 1.05, y: -1 }}
                 whileTap={{ scale: 0.95 }}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer border ${
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer border ${
                   isPrivacyMode
                     ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
-                    : 'bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700'
+                    : 'bg-slate-100/90 dark:bg-white/[0.06] hover:bg-slate-200/80 dark:hover:bg-white/[0.1] text-slate-700 dark:text-slate-200 border-slate-200/90 dark:border-white/[0.08]'
                 }`}
                 title="Mode Rapat Pleno & Sensor Privasi Proyektor LCD (Alt+P)"
               >
@@ -397,18 +397,18 @@ export const Header: React.FC<HeaderProps> = ({
                 id="btn-global-command-palette"
                 type="button"
                 onClick={onOpenCommandPalette}
-                whileHover={{ scale: 1.03, y: -1 }}
-                whileTap={{ scale: 0.96 }}
-                className="flex items-center space-x-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-800/90 hover:bg-indigo-50 dark:hover:bg-slate-700/80 text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-                title="Buka Command Palette Pencarian Global: Cari Widget RGL, Tugas Kalender, Buku, Faktur & Konten Divisi (Ctrl+K)"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                className="flex items-center space-x-2 px-3.5 py-1.5 bg-slate-100/90 dark:bg-white/[0.06] hover:bg-slate-200/80 dark:hover:bg-white/[0.1] text-slate-600 dark:text-slate-300 border border-slate-200/90 dark:border-white/[0.08] rounded-xl text-xs font-medium shadow-2xs transition-all cursor-pointer group"
+                title="Buka Command Palette Pencarian Global (Ctrl+K)"
               >
-                <Search className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                <span className="hidden xl:inline text-slate-700 dark:text-slate-200">
-                  Cari Widget & Tugas...
+                <Search className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
+                <span className="hidden xl:inline text-slate-700 dark:text-slate-200 font-medium">
+                  Cari cepat...
                 </span>
-                <span className="xl:hidden inline text-slate-700 dark:text-slate-200">Cari</span>
-                <kbd className="text-[9.5px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 border border-slate-200 dark:border-slate-700">
-                  Ctrl+K
+                <span className="xl:hidden inline text-slate-700 dark:text-slate-200 font-medium">Cari</span>
+                <kbd className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shadow-2xs">
+                  ⌘K
                 </kbd>
               </motion.button>
             )}
@@ -419,14 +419,14 @@ export const Header: React.FC<HeaderProps> = ({
                 id="btn-global-hotkey-map"
                 type="button"
                 onClick={onOpenHotkeyMap}
-                whileHover={{ scale: 1.05, y: -1 }}
-                whileTap={{ scale: 0.95 }}
-                className="flex items-center space-x-1.5 px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800/80 hover:bg-indigo-50 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-                title="Buka Peta Pintasan Keyboard / Global Hotkey Map (? atau Alt+H)"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                className="flex items-center space-x-1.5 px-2.5 py-1.5 bg-slate-100/90 dark:bg-white/[0.06] hover:bg-slate-200/80 dark:hover:bg-white/[0.1] text-slate-700 dark:text-slate-200 border border-slate-200/90 dark:border-white/[0.08] rounded-xl text-xs font-medium shadow-2xs transition-all cursor-pointer"
+                title="Buka Peta Pintasan Keyboard (? atau Alt+H)"
               >
-                <Keyboard className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                <Keyboard className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
                 <span className="hidden xl:inline">Hotkeys</span>
-                <kbd className="text-[9.5px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 border border-slate-200 dark:border-slate-700">
+                <kbd className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shadow-2xs">
                   ?
                 </kbd>
               </motion.button>
@@ -436,12 +436,12 @@ export const Header: React.FC<HeaderProps> = ({
             <motion.button
               id="btn-download-pdf-report"
               onClick={() => setShowReportModal(true)}
-              whileHover={{ scale: 1.05, y: -1 }}
-              whileTap={{ scale: 0.95 }}
-              className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-600/25 hover:bg-indigo-100 dark:hover:bg-indigo-600/40 text-indigo-700 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-500/40 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-50/90 dark:bg-indigo-500/10 hover:bg-indigo-100/90 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200/90 dark:border-indigo-500/30 rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer"
               title="Download PDF Report — Cetak Ringkasan Laporan Divisi"
             >
-              <FileDown className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+              <FileDown className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
               <span className="hidden sm:inline">Laporan PDF</span>
               <span className="sm:hidden inline">PDF</span>
             </motion.button>
@@ -450,9 +450,9 @@ export const Header: React.FC<HeaderProps> = ({
             <motion.button
               id="btn-gemini-assistant"
               onClick={onOpenAI}
-              whileHover={{ scale: 1.06, y: -1 }}
-              whileTap={{ scale: 0.94 }}
-              className="flex items-center space-x-1.5 px-2.5 py-1.5 bg-teal-50 dark:bg-teal-950/50 hover:bg-teal-100 dark:hover:bg-teal-900/60 text-teal-800 dark:text-teal-200 border border-teal-300 dark:border-teal-700/70 rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer group"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              className="flex items-center space-x-2 px-3 py-1.5 bg-gradient-to-r from-teal-500/15 via-emerald-500/15 to-teal-500/10 hover:from-teal-500/25 hover:to-emerald-500/25 text-teal-800 dark:text-teal-200 border border-teal-500/30 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer group"
               title="Tanya Asisten AI MIS Lamrimnesia"
             >
               <MascotAvatar
@@ -463,6 +463,10 @@ export const Header: React.FC<HeaderProps> = ({
                 className="w-5 h-5 group-hover:scale-110 transition-transform shadow-xs"
               />
               <span className="hidden sm:inline font-bold">AI MIS</span>
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-teal-500" />
+              </span>
             </motion.button>
 
             {/* Division-Specific Notification Bell */}

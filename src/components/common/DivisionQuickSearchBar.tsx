@@ -692,11 +692,11 @@ export const DivisionQuickSearchBar: React.FC<DivisionQuickSearchBarProps> = ({
   };
 
   return (
-    <div className="print:hidden bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-3.5 sm:p-4 shadow-xs transition-all space-y-3">
+    <div className="print:hidden bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] rounded-3xl p-4 sm:p-4.5 shadow-xs hover:shadow-md transition-all duration-300 space-y-3">
       {/* Search Input Row */}
       <div className="flex flex-col lg:flex-row lg:items-center gap-2.5">
         <div
-          className={`flex-1 flex items-center bg-slate-50 dark:bg-slate-800/90 border border-slate-300/90 dark:border-slate-700 rounded-xl px-3.5 py-2 transition-all focus-within:ring-2 ${meta.accentBorder}`}
+          className={`flex-1 flex items-center bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/90 dark:border-white/[0.08] rounded-2xl px-4 py-2.5 transition-all focus-within:ring-2 ${meta.accentBorder}`}
         >
           <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 mr-2.5 shrink-0" />
           <input
@@ -728,11 +728,11 @@ export const DivisionQuickSearchBar: React.FC<DivisionQuickSearchBarProps> = ({
         {/* Scope Switcher & Category Filter Pills */}
         <div className="flex flex-wrap items-center justify-between lg:justify-end gap-2">
           {/* Scope Toggle: Current Division vs All Divisions */}
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-[11px]">
+          <div className="flex items-center bg-slate-100/80 dark:bg-slate-800/80 p-1 rounded-2xl border border-slate-200/80 dark:border-white/[0.06] text-[11px]">
             <button
               type="button"
               onClick={() => setScopeMode('division')}
-              className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+              className={`flex items-center space-x-1 px-3 py-1 rounded-xl font-bold transition-all cursor-pointer ${
                 scopeMode === 'division'
                   ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
@@ -745,7 +745,7 @@ export const DivisionQuickSearchBar: React.FC<DivisionQuickSearchBarProps> = ({
             <button
               type="button"
               onClick={() => setScopeMode('global')}
-              className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+              className={`flex items-center space-x-1 px-3 py-1 rounded-xl font-bold transition-all cursor-pointer ${
                 scopeMode === 'global'
                   ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'

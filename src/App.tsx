@@ -695,7 +695,11 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100/70 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white">
+    <div className="relative min-h-screen bg-slate-100/70 dark:bg-[#0b0e14] text-slate-900 dark:text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white overflow-x-hidden">
+      {/* Gen Z Ambient Aura Top Mesh */}
+      <div className="fixed -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[360px] bg-gradient-to-b from-indigo-500/10 via-violet-500/5 to-transparent blur-3xl pointer-events-none -z-10 dark:from-indigo-600/15" />
+      <div className="fixed top-24 -left-32 w-80 h-80 rounded-full bg-teal-500/5 dark:bg-teal-400/5 blur-3xl pointer-events-none -z-10" />
+      <div className="fixed top-48 -right-32 w-80 h-80 rounded-full bg-indigo-500/5 dark:bg-indigo-400/5 blur-3xl pointer-events-none -z-10" />
       
       {/* Top Header & Division Navigation */}
       <Header
@@ -750,8 +754,20 @@ const AppContent: React.FC = () => {
           </main>
 
           {/* Footer */}
-          <footer className="border-t border-slate-200 dark:border-slate-800 py-4 px-6 text-center text-xs text-slate-500 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm print:hidden">
-            <p>© {new Date().getFullYear()} Yayasan Pelestarian & Pengembangan Lamrim Nusantara (Lamrimnesia). SAPA-ALL MIS Project.</p>
+          <footer className="border-t border-slate-200/80 dark:border-white/[0.06] py-4 sm:py-5 px-6 text-center text-xs text-slate-500 dark:text-slate-400 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md print:hidden">
+            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2.5">
+              <div className="flex items-center space-x-2 text-xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="font-semibold text-slate-700 dark:text-slate-300">MIS Lamrimnesia</span>
+                <span className="text-slate-300 dark:text-slate-700">·</span>
+                <span className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-white/[0.06]">
+                  v2.6 Live
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                © {new Date().getFullYear()} Yayasan Pelestarian & Pengembangan Lamrim Nusantara. SAPA-ALL MIS Project.
+              </p>
+            </div>
           </footer>
         </div>
       </div>

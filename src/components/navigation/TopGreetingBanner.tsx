@@ -112,18 +112,21 @@ export const TopGreetingBanner: React.FC<TopGreetingBannerProps> = ({ onOpenAI }
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -8, transition: { duration: 0.15 } }}
         transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-        className={`relative overflow-hidden rounded-2xl border ${theme.border} bg-linear-to-r ${theme.gradient} bg-white/70 dark:bg-slate-900/70 backdrop-blur-md p-4 sm:p-4.5 shadow-2xs print:hidden mb-6 transition-all`}
+        className={`relative overflow-hidden rounded-3xl border ${theme.border} bg-white/75 dark:bg-slate-900/80 backdrop-blur-xl p-4.5 sm:p-5 shadow-xs hover:shadow-md print:hidden mb-6 transition-all duration-300`}
       >
-        {/* Subtle decorative background circles */}
-        <div className="absolute -right-12 -top-12 w-44 h-44 rounded-full bg-indigo-500/5 dark:bg-indigo-400/5 blur-2xl pointer-events-none" />
-        <div className="absolute right-32 -bottom-10 w-32 h-32 rounded-full bg-teal-500/5 dark:bg-teal-400/5 blur-xl pointer-events-none" />
+        {/* Top subtle glow accent line */}
+        <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-500/60 dark:via-indigo-400/80 to-transparent pointer-events-none" />
 
-        <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-3.5">
+        {/* Ambient background mesh */}
+        <div className="absolute -right-12 -top-12 w-48 h-48 rounded-full bg-indigo-500/10 dark:bg-indigo-400/10 blur-3xl pointer-events-none" />
+        <div className="absolute right-36 -bottom-12 w-40 h-40 rounded-full bg-teal-500/10 dark:bg-teal-400/10 blur-2xl pointer-events-none" />
+
+        <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
           {/* Left section: Icon + Dynamic Salutation + Division Welcome */}
           <div className="flex items-start sm:items-center space-x-3.5 min-w-0">
             {/* Time icon with pleasant frame */}
             <div
-              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 border shadow-2xs ${theme.iconBg}`}
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 border shadow-xs transition-transform duration-300 hover:scale-105 ${theme.iconBg}`}
               title={`${timeInfo.salutation} (${timeInfo.period})`}
             >
               <span className="select-none leading-none">{timeInfo.icon}</span>
@@ -131,18 +134,29 @@ export const TopGreetingBanner: React.FC<TopGreetingBannerProps> = ({ onOpenAI }
 
             {/* Headline and Division Welcome message */}
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-800 dark:text-slate-100">
-                  {timeInfo.salutation}, <span className="font-extrabold text-indigo-600 dark:text-indigo-400">Kak {firstName}</span>!
-                </h1>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${theme.badgeBg}`}>
-                  Divisi {cleanDivisiName}
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                  </span>
+                  Workspace Aktif · {timeInfo.period}
+                </span>
+                <span className="text-slate-300 dark:text-slate-700">|</span>
+                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  {cleanDivisiName}
                 </span>
               </div>
 
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1 flex flex-wrap items-center gap-1.5 leading-relaxed">
-                <span>Selamat datang di <strong>Divisi {cleanDivisiName}</strong>.</span>
-                <span className="hidden sm:inline text-slate-400 dark:text-slate-500">•</span>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <h1 className="text-base sm:text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
+                  {timeInfo.salutation}, <span className="bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400 bg-clip-text text-transparent">Kak {firstName}</span>! ✨
+                </h1>
+              </div>
+
+              <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 flex flex-wrap items-center gap-1.5 leading-relaxed">
+                <span>Selamat bertugas di <strong>Divisi {cleanDivisiName}</strong>.</span>
+                <span className="hidden sm:inline text-slate-400 dark:text-slate-600">·</span>
                 <span className="text-slate-500 dark:text-slate-400 font-normal">{timeInfo.description}</span>
               </p>
             </div>
@@ -154,7 +168,7 @@ export const TopGreetingBanner: React.FC<TopGreetingBannerProps> = ({ onOpenAI }
             <LiveClockBadge variant="standard" showSeconds={true} showTimezone={true} />
 
             {/* Today Date Pill */}
-            <div className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/70 text-slate-600 dark:text-slate-300 text-xs font-medium shadow-2xs">
+            <div className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 text-xs font-medium shadow-2xs">
               <Calendar className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400 shrink-0" />
               <span>{formattedDate}</span>
             </div>
@@ -164,7 +178,7 @@ export const TopGreetingBanner: React.FC<TopGreetingBannerProps> = ({ onOpenAI }
               <button
                 type="button"
                 onClick={onOpenAI}
-                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-xs hover:shadow-sm transition-all cursor-pointer"
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-semibold shadow-xs hover:shadow-sm active:scale-95 transition-all cursor-pointer"
                 title="Tanya panduan atau rekap data dengan Asisten AI MIS"
               >
                 <Bot className="w-3.5 h-3.5" />

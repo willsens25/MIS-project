@@ -429,7 +429,7 @@ export const LeftSidebarNav: React.FC<LeftSidebarNavProps> = ({
     let runningDivisionIndex = 0;
 
     return (
-      <div className="flex flex-col h-full bg-white dark:bg-[#15181C] text-slate-800 dark:text-slate-100 border-r border-slate-200/90 dark:border-slate-800/90 select-none overflow-hidden">
+      <div className="flex flex-col h-full bg-white/80 dark:bg-[#0c1016]/95 backdrop-blur-xl text-slate-800 dark:text-slate-100 border-r border-slate-200/80 dark:border-white/[0.06] select-none overflow-hidden">
         {/* Top Sidebar Header: Brand & Collapse Toggle with Staggered Morph */}
         <motion.div
           layout

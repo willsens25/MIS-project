@@ -561,36 +561,36 @@ export const MarketingDashboard: React.FC = () => {
         onNavigateSubTab={tab => setActiveSubTab(tab as any)}
       />
 
-      {/* Sub tabs */}
-      <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
-        <div className="flex items-center space-x-1.5 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl flex-wrap">
+      {/* Sub tabs & Toolbar */}
+      <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 dark:border-white/[0.06] pb-3">
+        <div className="flex flex-wrap items-center gap-1 bg-slate-200/60 dark:bg-white/[0.05] p-1 rounded-2xl border border-slate-200/80 dark:border-white/[0.06] backdrop-blur-md">
           <button
             onClick={() => setActiveSubTab('event_pos')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'event_pos'
-                ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-sm'
-                : 'text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-white hover:bg-amber-100/50'
+                ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
             }`}
           >
-            <Zap className="w-3.5 h-3.5 fill-current" />
-            <span>⚡ Kasir Event / Bazar</span>
+            <Zap className={`w-3.5 h-3.5 ${activeSubTab === 'event_pos' ? 'text-amber-500 fill-amber-500' : 'text-amber-500'}`} />
+            <span>Kasir Event</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('bazaar')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'bazaar'
-                ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-sm'
-                : 'text-indigo-700 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-white hover:bg-indigo-50/50'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
             }`}
           >
-            <Calendar className="w-3.5 h-3.5" />
-            <span>🎪 Agenda Bazaar & Konsinyasi</span>
+            <Calendar className="w-3.5 h-3.5 text-indigo-500" />
+            <span>Bazaar & Konsinyasi</span>
             {bazaarEvents.length > 0 && (
               <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
                 activeSubTab === 'bazaar'
-                  ? 'bg-white text-indigo-700'
-                  : 'bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300'
+                  ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300'
+                  : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
               }`}>
                 {bazaarEvents.length}
               </span>
@@ -599,119 +599,121 @@ export const MarketingDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('grafik')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'grafik'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
             }`}
           >
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>Grafik & Analisis Penjualan</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300">
+            <TrendingUp className="w-3.5 h-3.5 text-blue-500" />
+            <span>Grafik Penjualan</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-800/40">
               6 Bln
             </span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('pos')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'pos'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
             }`}
           >
-            <ShoppingBag className="w-3.5 h-3.5" />
-            <span>POS & Buat Pesanan</span>
+            <ShoppingBag className="w-3.5 h-3.5 text-indigo-500" />
+            <span>POS & Pesanan</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('invoices')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'invoices'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
             }`}
           >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Daftar Invoice & Pesanan ({orders.length})</span>
+            <Printer className="w-3.5 h-3.5 text-slate-500" />
+            <span>Invoice</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+              {orders.length}
+            </span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('promos')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'promos'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
             }`}
           >
-            <Tag className="w-3.5 h-3.5" />
-            <span>Kode Promo ({promos.length})</span>
+            <Tag className="w-3.5 h-3.5 text-rose-500" />
+            <span>Promo</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300">
+              {promos.length}
+            </span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('preorder')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'preorder'
-                ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-sm'
-                : 'text-orange-700 dark:text-orange-400 hover:text-orange-900 dark:hover:text-white hover:bg-orange-50/50'
+                ? 'bg-white dark:bg-slate-800 text-orange-600 dark:text-orange-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
             }`}
           >
-            <Rocket className="w-3.5 h-3.5" />
-            <span>🚀 PO & Bundling</span>
+            <Rocket className="w-3.5 h-3.5 text-orange-500" />
+            <span>PO & Bundling</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('membership')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'membership'
-                ? 'bg-gradient-to-r from-amber-600 to-yellow-600 text-white shadow-sm'
-                : 'text-amber-800 dark:text-amber-400 hover:text-amber-950 dark:hover:text-white hover:bg-amber-50/50'
+                ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
             }`}
           >
-            <Crown className="w-3.5 h-3.5" />
-            <span>🎖️ Sahabat Member</span>
+            <Crown className="w-3.5 h-3.5 text-amber-500" />
+            <span>Sahabat Member</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('saluran')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'saluran'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
             }`}
           >
-            <Globe className="w-3.5 h-3.5" />
-            <span>Saluran & Ekspedisi ({salesChannels.length}/{expeditions.length})</span>
+            <Globe className="w-3.5 h-3.5 text-cyan-500" />
+            <span>Saluran</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('agen')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'agen'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
             }`}
           >
-            <Users className="w-3.5 h-3.5" />
-            <span>Agen & Pembeli</span>
+            <Users className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Agen</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('whatsapp')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'whatsapp'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'text-emerald-700 dark:text-emerald-400 hover:text-emerald-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
             }`}
           >
-            <MessageSquare className="w-3.5 h-3.5" />
-            <span>Otomatisasi WhatsApp</span>
+            <MessageSquare className="w-3.5 h-3.5 text-emerald-500" />
+            <span>WhatsApp</span>
             {orders.filter(o => o.status === 'Pending').length > 0 && (
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                activeSubTab === 'whatsapp'
-                  ? 'bg-white text-emerald-800'
-                  : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-              }`}>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
                 {orders.filter(o => o.status === 'Pending').length}
               </span>
             )}
@@ -719,18 +721,18 @@ export const MarketingDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('kalender')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'kalender'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
             }`}
           >
-            <Calendar className="w-3.5 h-3.5" />
+            <Calendar className="w-3.5 h-3.5 text-violet-500" />
             <span>Kalender & To-Do</span>
           </button>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Share Current Dashboard View Deep-Link URL */}
           <ShareDashboardViewButton
             id="btn-share-marketing"
@@ -755,20 +757,20 @@ export const MarketingDashboard: React.FC = () => {
           {activeSubTab === 'invoices' && (
             <button
               onClick={handleExportOrdersCSV}
-              className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm"
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs active:scale-95 cursor-pointer"
             >
               <FileSpreadsheet className="w-3.5 h-3.5" />
-              <span>Ekspor Rekap Excel / CSV</span>
+              <span>Ekspor CSV</span>
             </button>
           )}
 
           {activeSubTab === 'promos' && (
             <button
               onClick={() => setModalPromoOpen(true)}
-              className="flex items-center space-x-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm"
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs active:scale-95 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>Tambah Kode Promo</span>
+              <span>Tambah Promo</span>
             </button>
           )}
         </div>

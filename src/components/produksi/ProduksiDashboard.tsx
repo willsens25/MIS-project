@@ -9,7 +9,8 @@ import {
   CheckCircle2,
   Calendar,
   AlertCircle,
-  Trash2
+  Trash2,
+  BookOpen
 } from 'lucide-react';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
@@ -121,42 +122,60 @@ export const ProduksiDashboard: React.FC = () => {
         onNavigateSubTab={tab => setActiveSubTab(tab as any)}
       />
 
-      {/* Top Banner & Stats */}
+      {/* Top Banner & Stats - Bento Glassmorphism */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
-          <span className="text-xs font-bold text-slate-500 uppercase">Total Unit Dicetak</span>
-          <p className="text-xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-2">
-            {totalProduksiUnit} <span className="text-xs text-slate-500">Eksemplar</span>
+        <div className="p-4 sm:p-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] rounded-3xl shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all pointer-events-none" />
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Unit Dicetak</span>
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+              <Factory className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-3 tracking-tight">
+            {totalProduksiUnit.toLocaleString('id-ID')} <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Eks</span>
           </p>
-          <span className="text-[11px] text-slate-400">Total batch produksi pabrikasi</span>
+          <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-1 inline-block">Total batch produksi percetakan</span>
         </div>
 
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
-          <span className="text-xs font-bold text-slate-500 uppercase">Judul Buku Aktif</span>
-          <p className="text-xl font-extrabold text-slate-900 dark:text-white mt-2">
-            {books.length} <span className="text-xs text-slate-500">Judul</span>
+        <div className="p-4 sm:p-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] rounded-3xl shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all pointer-events-none" />
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Judul Buku Aktif</span>
+            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <BookOpen className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-3 tracking-tight">
+            {books.length} <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Judul</span>
           </p>
-          <span className="text-[11px] text-slate-400">Tersedia untuk percetakan</span>
+          <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-1 inline-block">Katalog aktif siap diproduksi</span>
         </div>
 
-        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
-          <span className="text-xs font-bold text-slate-500 uppercase">Batch Produksi Tercatat</span>
-          <p className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-2">
-            {productionLogs.length} <span className="text-xs text-slate-500">Kali Selesai</span>
+        <div className="p-4 sm:p-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] rounded-3xl shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all pointer-events-none" />
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Batch Produksi</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <History className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-3 tracking-tight">
+            {productionLogs.length} <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Kali Selesai</span>
           </p>
-          <span className="text-[11px] text-slate-400">Tercatat di sistem</span>
+          <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-1 inline-block">Tercatat di riwayat sistem</span>
         </div>
       </div>
 
-      {/* Sub tabs selector & Print action */}
-      <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
-        <div className="flex items-center space-x-1.5 bg-slate-200/70 dark:bg-slate-800/80 p-1 rounded-xl w-fit">
+      {/* Sub navigation tabs & Action Bar */}
+      <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 dark:border-white/[0.06] pb-3">
+        <div className="flex flex-wrap items-center gap-1 bg-slate-200/60 dark:bg-white/[0.05] p-1 rounded-2xl border border-slate-200/80 dark:border-white/[0.06] backdrop-blur-md">
           <button
             onClick={() => setActiveSubTab('overview')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'overview'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
             }`}
           >
             <Factory className="w-3.5 h-3.5" />
@@ -165,10 +184,10 @@ export const ProduksiDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('input')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'input'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
             }`}
           >
             <Plus className="w-3.5 h-3.5" />
@@ -177,22 +196,22 @@ export const ProduksiDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('logs')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'logs'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
             }`}
           >
             <History className="w-3.5 h-3.5" />
-            <span>Riwayat Log Produksi ({productionLogs.length})</span>
+            <span>Riwayat Log ({productionLogs.length})</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('kalender')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'kalender'
-                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
             }`}
           >
             <Calendar className="w-3.5 h-3.5" />
@@ -200,7 +219,7 @@ export const ProduksiDashboard: React.FC = () => {
           </button>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Share Current Dashboard View Deep-Link URL */}
           <ShareDashboardViewButton
             id="btn-share-produksi"

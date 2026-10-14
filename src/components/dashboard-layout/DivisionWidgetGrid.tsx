@@ -1942,7 +1942,7 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
   return (
     <div
       data-rgl-widget-workspace="true"
-      className="bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4"
+      className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] rounded-3xl p-4.5 sm:p-5.5 shadow-xs space-y-4 transition-all duration-300"
     >
       {/* Top Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -2550,12 +2550,12 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
                     data-rgl-widget-id={widget.id}
                     onMouseEnter={registerWidgetInteraction}
                     onClick={registerWidgetInteraction}
-                    className={`rounded-2xl border bg-white dark:bg-slate-900 p-4 flex flex-col justify-between transition-all overflow-hidden ${
+                    className={`rounded-2xl border bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-4 flex flex-col justify-between transition-all duration-200 overflow-hidden ${
                       highlightedWidgetId === widget.id
                         ? 'border-2 border-amber-500 ring-4 ring-amber-400/30 shadow-xl'
                         : isEditMode
                         ? 'border-2 border-dashed border-indigo-400 dark:border-indigo-500 shadow-md ring-2 ring-indigo-500/10'
-                        : 'border-slate-200/90 dark:border-slate-800 shadow-2xs hover:border-indigo-300 dark:hover:border-indigo-800/80'
+                        : 'border-slate-200/80 dark:border-white/[0.08] shadow-2xs hover:shadow-md hover:border-slate-300 dark:hover:border-white/20'
                     }`}
                   >
                     {/* Widget Header & Drag Handle */}

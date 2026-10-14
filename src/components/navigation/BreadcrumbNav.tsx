@@ -1,8 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { DivisionId } from '../../types';
-import { getTimeBasedSalutation, getFriendlyUserFirstName } from '../../utils/greetingUtils';
-import { LiveClockBadge } from './LiveClockBadge';
 import {
   Home,
   ChevronRight,
@@ -439,20 +437,6 @@ export const BreadcrumbNav: React.FC = () => {
     year: 'numeric'
   }).format(new Date());
 
-  const [timeSalutation, setTimeSalutation] = useState(() => getTimeBasedSalutation());
-
-  useEffect(() => {
-    const updateSalutation = () => setTimeSalutation(getTimeBasedSalutation());
-    window.addEventListener('mis-timezone-changed', updateSalutation);
-    const interval = setInterval(updateSalutation, 30000);
-    return () => {
-      window.removeEventListener('mis-timezone-changed', updateSalutation);
-      clearInterval(interval);
-    };
-  }, []);
-
-  const friendlyFirstName = getFriendlyUserFirstName(currentUser.name);
-
   const handleNavigateHome = () => {
     switchDivision(1, 'overview');
     setIsDivisionDropdownOpen(false);
@@ -474,7 +458,7 @@ export const BreadcrumbNav: React.FC = () => {
     <nav
       aria-label="Breadcrumb Navigation"
       id="breadcrumb-navigation-bar"
-      className="print:hidden sticky top-16 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors shadow-2xs"
+      className="print:hidden sticky top-16 z-30 bg-white/75 dark:bg-[#0e131b]/75 backdrop-blur-xl border-b border-slate-200/80 dark:border-white/[0.06] transition-colors shadow-2xs"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between gap-4 text-xs">
         
@@ -486,7 +470,7 @@ export const BreadcrumbNav: React.FC = () => {
             id="breadcrumb-home-link"
             type="button"
             onClick={handleNavigateHome}
-            className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors font-medium whitespace-nowrap cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-indigo-500/30"
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-all font-medium whitespace-nowrap cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-indigo-500/30"
             title="Kembali ke Beranda Utama (Direktorat Overview)"
           >
             <Home className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 group-hover:text-indigo-600" />
@@ -695,26 +679,18 @@ export const BreadcrumbNav: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Side: Contextual Time Salutation, Live Clock & Date (Spacious & Clean) */}
-        <div className="hidden md:flex items-center space-x-2 text-slate-500 dark:text-slate-400 shrink-0 text-[11px] ml-auto">
-          {/* Time Salutation Pill */}
-          <div
-            className="flex items-center space-x-1.5 bg-indigo-50/90 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-lg border border-indigo-200/70 dark:border-indigo-800/70 shadow-2xs"
-            title={`${timeSalutation.salutation} Kak ${friendlyFirstName}!`}
-          >
-            <span className="text-xs select-none">{timeSalutation.icon}</span>
-            <span className="font-medium text-[11px]">
-              {timeSalutation.salutation}, <strong className="font-semibold text-indigo-950 dark:text-indigo-100">Kak {friendlyFirstName}</strong>
-            </span>
+        {/* Right Side: Quick System State & Date (Clean & Non-redundant) */}
+        <div className="hidden md:flex items-center space-x-2.5 text-slate-500 dark:text-slate-400 shrink-0 text-xs ml-auto">
+          <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-slate-100/90 dark:bg-white/[0.05] border border-slate-200/80 dark:border-white/[0.06] text-[11px] font-medium text-slate-600 dark:text-slate-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="font-semibold">Sistem Terhubung</span>
+            <span className="text-slate-300 dark:text-slate-700">·</span>
+            <span className="text-slate-400 font-mono text-[10px]">MIS v2.5</span>
           </div>
 
-          {/* Compact Clock in Breadcrumb bar */}
-          <LiveClockBadge variant="compact" showSeconds={false} showTimezone={false} className="hidden lg:inline-flex" />
-
-          {/* Date is shown on xl screens to guarantee plenty of breathing room */}
-          <div className="hidden xl:flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-200/60 dark:border-slate-700/60">
-            <Calendar className="w-3.5 h-3.5 text-indigo-500" />
-            <span className="font-medium text-slate-700 dark:text-slate-300">{formattedToday}</span>
+          <div className="hidden xl:flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-slate-100/90 dark:bg-white/[0.05] border border-slate-200/80 dark:border-white/[0.06] text-[11px] text-slate-600 dark:text-slate-300 font-medium">
+            <Calendar className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
+            <span>{formattedToday}</span>
           </div>
         </div>
 
