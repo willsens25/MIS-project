@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { motion } from 'motion/react';
 import {
   Users,
   Shield,
@@ -503,16 +504,27 @@ export const StrukturKepanitiaanTab: React.FC = () => {
     }
   };
 
-  const renderMemberCard = (member: CommitteeMember, isCompact = false) => {
+  const renderMemberCard = (member: CommitteeMember, isCompact = false, index: number = 0) => {
     const isSelected = selectedMember?.id === member.id;
     return (
-      <div
+      <motion.div
         key={member.id}
+        initial={{ opacity: 0, y: 18, scale: 0.97, filter: 'blur(3px)' }}
+        animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+        transition={{
+          type: 'spring',
+          damping: 24,
+          stiffness: 260,
+          delay: Math.min(index * 0.045, 0.4),
+          opacity: { duration: 0.4, delay: Math.min(index * 0.045, 0.4), ease: [0.21, 1.02, 0.49, 0.99] },
+          filter: { duration: 0.3, delay: Math.min(index * 0.045, 0.4) }
+        }}
+        whileHover={{ y: -3, transition: { duration: 0.2 } }}
         onClick={() => setSelectedMember(member)}
-        className={`group relative rounded-2xl border transition-all duration-200 cursor-pointer text-left select-none ${
+        className={`group relative rounded-2xl border transition-shadow duration-200 cursor-pointer text-left select-none ${
           isSelected
-            ? 'bg-indigo-50/90 dark:bg-indigo-950/60 border-indigo-500 dark:border-indigo-400 shadow-md ring-2 ring-indigo-500/20 -translate-y-0.5'
-            : 'bg-white/85 dark:bg-slate-900/85 backdrop-blur-xs border-slate-200/80 dark:border-white/[0.08] hover:border-indigo-300 dark:hover:border-indigo-700/80 hover:-translate-y-0.5 shadow-xs hover:shadow-md'
+            ? 'bg-indigo-50/90 dark:bg-indigo-950/60 border-indigo-500 dark:border-indigo-400 shadow-md ring-2 ring-indigo-500/20'
+            : 'bg-white/85 dark:bg-slate-900/85 backdrop-blur-xs border-slate-200/80 dark:border-white/[0.08] hover:border-indigo-300 dark:hover:border-indigo-700/80 shadow-xs hover:shadow-md'
         } ${isCompact ? 'p-3' : 'p-4'}`}
       >
         <div className="flex items-start justify-between gap-2.5">
@@ -565,7 +577,7 @@ export const StrukturKepanitiaanTab: React.FC = () => {
             </span>
           </div>
         )}
-      </div>
+      </motion.div>
     );
   };
 
@@ -694,7 +706,7 @@ export const StrukturKepanitiaanTab: React.FC = () => {
                   <span>Tingkat I • Dewan Pembina & Pengawas Spiritual</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto">
-                  {dewanPembina.map(m => renderMemberCard(m))}
+                  {dewanPembina.map((m, idx) => renderMemberCard(m, false, idx))}
                 </div>
 
                 {/* Vertical connecting line */}
@@ -708,7 +720,7 @@ export const StrukturKepanitiaanTab: React.FC = () => {
                   <span>Tingkat II • Badan Pengurus Harian (BPH Eksekutif)</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {bphMembers.map(m => renderMemberCard(m))}
+                  {bphMembers.map((m, idx) => renderMemberCard(m, false, idx + 2))}
                 </div>
 
                 {/* Vertical connecting line */}
@@ -722,7 +734,7 @@ export const StrukturKepanitiaanTab: React.FC = () => {
                   <span>Tingkat III • Koordinator Divisi Operasional (MIS Yayasan)</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {divisiHeads.map(m => renderMemberCard(m))}
+                  {divisiHeads.map((m, idx) => renderMemberCard(m, false, idx + 5))}
                 </div>
 
                 {/* Vertical connecting line */}
@@ -739,7 +751,7 @@ export const StrukturKepanitiaanTab: React.FC = () => {
                     <span>Tingkat IV • Kepanitiaan Ad-Hoc & Satuan Tugas Event</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {adhocEvents.map(m => renderMemberCard(m))}
+                    {adhocEvents.map((m, idx) => renderMemberCard(m, false, idx + 11))}
                   </div>
                 </div>
               )}
@@ -747,7 +759,7 @@ export const StrukturKepanitiaanTab: React.FC = () => {
           ) : (
             /* Grid View */
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {filteredMembers.map(m => renderMemberCard(m))}
+              {filteredMembers.map((m, idx) => renderMemberCard(m, false, idx))}
             </div>
           )}
         </div>

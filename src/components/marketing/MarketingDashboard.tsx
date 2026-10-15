@@ -41,6 +41,7 @@ import {
 import { InvoicePrintModal } from '../modals/InvoicePrintModal';
 import { MarketingCharts } from '../charts/MarketingCharts';
 import { SixMonthOrderVolumeBarChart } from '../charts/SixMonthOrderVolumeBarChart';
+import { DivisionKpiSummaryBanner } from '../charts/DivisionKpiSummaryBanner';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { SalesChannelModal } from './SalesChannelModal';
 import { ExpeditionModal } from './ExpeditionModal';
@@ -561,9 +562,30 @@ export const MarketingDashboard: React.FC = () => {
         onNavigateSubTab={tab => setActiveSubTab(tab as any)}
       />
 
+      {/* KPI Visual Performance Summary Chart Banner (Recharts) */}
+      <DivisionKpiSummaryBanner
+        divisionId={4}
+        onNavigateToCharts={() => setActiveSubTab('grafik')}
+      />
+
       {/* Sub tabs & Toolbar */}
       <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 dark:border-white/[0.06] pb-3">
         <div className="flex flex-wrap items-center gap-1 bg-slate-200/60 dark:bg-white/[0.05] p-1 rounded-2xl border border-slate-200/80 dark:border-white/[0.06] backdrop-blur-md">
+          <button
+            onClick={() => setActiveSubTab('grafik')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+              activeSubTab === 'grafik'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5 text-indigo-500" />
+            <span>Grafik & Analisis</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+              KPI
+            </span>
+          </button>
+
           <button
             onClick={() => setActiveSubTab('event_pos')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${

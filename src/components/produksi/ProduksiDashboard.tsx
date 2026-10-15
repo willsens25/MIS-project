@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import { useApp } from '../../context/AppContext';
 import { Book, ProductionLog } from '../../types';
 import {
@@ -10,8 +11,11 @@ import {
   Calendar,
   AlertCircle,
   Trash2,
-  BookOpen
+  BookOpen,
+  TrendingUp
 } from 'lucide-react';
+import { ProduksiCharts } from '../charts/ProduksiCharts';
+import { DivisionKpiSummaryBanner } from '../charts/DivisionKpiSummaryBanner';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
@@ -30,10 +34,10 @@ export const ProduksiDashboard: React.FC = () => {
     setCurrentSubTab
   } = useApp();
 
-  const activeSubTab = (['overview', 'input', 'logs', 'kalender'].includes(currentSubTab)
+  const activeSubTab = (['overview', 'grafik', 'input', 'logs', 'kalender'].includes(currentSubTab)
     ? currentSubTab
-    : 'overview') as 'overview' | 'input' | 'logs' | 'kalender';
-  const setActiveSubTab = (tab: 'overview' | 'input' | 'logs' | 'kalender') => setCurrentSubTab(tab);
+    : 'overview') as 'overview' | 'grafik' | 'input' | 'logs' | 'kalender';
+  const setActiveSubTab = (tab: 'overview' | 'grafik' | 'input' | 'logs' | 'kalender') => setCurrentSubTab(tab);
 
   const [selectedBookId, setSelectedBookId] = useState<number>(books[0]?.id || 1);
   const [qtyProduksi, setQtyProduksi] = useState<number>(100);
@@ -124,7 +128,19 @@ export const ProduksiDashboard: React.FC = () => {
 
       {/* Top Banner & Stats - Bento Glassmorphism */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 sm:p-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] rounded-3xl shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.96, filter: 'blur(3px)' }}
+          animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+          transition={{
+            type: 'spring',
+            damping: 24,
+            stiffness: 260,
+            delay: 0,
+            opacity: { duration: 0.45, ease: [0.21, 1.02, 0.49, 0.99] }
+          }}
+          whileHover={{ y: -3, transition: { duration: 0.2 } }}
+          className="p-4 sm:p-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] rounded-3xl shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden"
+        >
           <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all pointer-events-none" />
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Unit Dicetak</span>
@@ -136,9 +152,21 @@ export const ProduksiDashboard: React.FC = () => {
             {totalProduksiUnit.toLocaleString('id-ID')} <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Eks</span>
           </p>
           <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-1 inline-block">Total batch produksi percetakan</span>
-        </div>
+        </motion.div>
 
-        <div className="p-4 sm:p-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] rounded-3xl shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.96, filter: 'blur(3px)' }}
+          animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+          transition={{
+            type: 'spring',
+            damping: 24,
+            stiffness: 260,
+            delay: 0.08,
+            opacity: { duration: 0.45, delay: 0.08, ease: [0.21, 1.02, 0.49, 0.99] }
+          }}
+          whileHover={{ y: -3, transition: { duration: 0.2 } }}
+          className="p-4 sm:p-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] rounded-3xl shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden"
+        >
           <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all pointer-events-none" />
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Judul Buku Aktif</span>
@@ -150,9 +178,21 @@ export const ProduksiDashboard: React.FC = () => {
             {books.length} <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Judul</span>
           </p>
           <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-1 inline-block">Katalog aktif siap diproduksi</span>
-        </div>
+        </motion.div>
 
-        <div className="p-4 sm:p-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] rounded-3xl shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.96, filter: 'blur(3px)' }}
+          animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+          transition={{
+            type: 'spring',
+            damping: 24,
+            stiffness: 260,
+            delay: 0.16,
+            opacity: { duration: 0.45, delay: 0.16, ease: [0.21, 1.02, 0.49, 0.99] }
+          }}
+          whileHover={{ y: -3, transition: { duration: 0.2 } }}
+          className="p-4 sm:p-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] rounded-3xl shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden"
+        >
           <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all pointer-events-none" />
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Batch Produksi</span>
@@ -164,8 +204,14 @@ export const ProduksiDashboard: React.FC = () => {
             {productionLogs.length} <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Kali Selesai</span>
           </p>
           <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-1 inline-block">Tercatat di riwayat sistem</span>
-        </div>
+        </motion.div>
       </div>
+
+      {/* KPI Visual Performance Summary Chart Banner (Recharts) */}
+      <DivisionKpiSummaryBanner
+        divisionId={5}
+        onNavigateToCharts={() => setActiveSubTab('grafik')}
+      />
 
       {/* Sub navigation tabs & Action Bar */}
       <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 dark:border-white/[0.06] pb-3">
@@ -180,6 +226,21 @@ export const ProduksiDashboard: React.FC = () => {
           >
             <Factory className="w-3.5 h-3.5" />
             <span>Pusat Cetak & Log</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('grafik')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              activeSubTab === 'grafik'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>Grafik & Analisis</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300">
+              KPI
+            </span>
           </button>
 
           <button
@@ -375,6 +436,11 @@ export const ProduksiDashboard: React.FC = () => {
             </table>
           </div>
         </div>
+        )}
+
+        {/* GRAFIK & ANALISIS PRODUKSI SUB TAB */}
+        {activeSubTab === 'grafik' && (
+          <ProduksiCharts productionLogs={productionLogs} books={books} />
         )}
 
         {/* KALENDER & TO-DO LIST PRODUKSI SUB TAB */}

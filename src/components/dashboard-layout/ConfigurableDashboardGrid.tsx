@@ -684,8 +684,15 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
     const info = getRowData();
 
     return (
-      <div
+      <motion.div
         key={card.id}
+        initial={{ opacity: 0, x: -16, filter: 'blur(3px)' }}
+        animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+        transition={{
+          duration: 0.35,
+          delay: idx * 0.04,
+          ease: [0.21, 1.02, 0.49, 0.99]
+        }}
         className="px-4 py-3 hover:bg-slate-50/90 dark:hover:bg-slate-800/50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
       >
         <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -725,7 +732,7 @@ export const ConfigurableDashboardGrid: React.FC<ConfigurableDashboardGridProps>
             <ArrowUpRight className="w-3.5 h-3.5" />
           </button>
         </div>
-      </div>
+      </motion.div>
     );
   };
 

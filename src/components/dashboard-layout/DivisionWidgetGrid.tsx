@@ -2539,7 +2539,7 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
               onDragStop={handleDragOrResizeStop}
               onResizeStop={handleDragOrResizeStop}
             >
-              {visibleDefs.map(widget => {
+              {visibleDefs.map((widget, widgetIndex) => {
                 const lgItem = gridState.layouts.lg?.find(l => l.i === widget.id);
                 const curW = lgItem?.w || widget.defaultW;
                 const curH = lgItem?.h || widget.defaultH;
@@ -2550,14 +2550,28 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
                     data-rgl-widget-id={widget.id}
                     onMouseEnter={registerWidgetInteraction}
                     onClick={registerWidgetInteraction}
-                    className={`rounded-2xl border bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-4 flex flex-col justify-between transition-all duration-200 overflow-hidden ${
-                      highlightedWidgetId === widget.id
-                        ? 'border-2 border-amber-500 ring-4 ring-amber-400/30 shadow-xl'
-                        : isEditMode
-                        ? 'border-2 border-dashed border-indigo-400 dark:border-indigo-500 shadow-md ring-2 ring-indigo-500/10'
-                        : 'border-slate-200/80 dark:border-white/[0.08] shadow-2xs hover:shadow-md hover:border-slate-300 dark:hover:border-white/20'
-                    }`}
+                    className="h-full w-full"
                   >
+                    <motion.div
+                      initial={{ opacity: 0, y: 18, scale: 0.97, filter: 'blur(3px)' }}
+                      animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+                      transition={{
+                        type: 'spring',
+                        damping: 24,
+                        stiffness: 260,
+                        mass: 0.8,
+                        delay: widgetIndex * 0.065,
+                        opacity: { duration: 0.45, delay: widgetIndex * 0.065, ease: [0.21, 1.02, 0.49, 0.99] },
+                        filter: { duration: 0.35, delay: widgetIndex * 0.065 }
+                      }}
+                      className={`h-full w-full rounded-2xl border bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-4 flex flex-col justify-between transition-all duration-200 overflow-hidden ${
+                        highlightedWidgetId === widget.id
+                          ? 'border-2 border-amber-500 ring-4 ring-amber-400/30 shadow-xl'
+                          : isEditMode
+                          ? 'border-2 border-dashed border-indigo-400 dark:border-indigo-500 shadow-md ring-2 ring-indigo-500/10'
+                          : 'border-slate-200/80 dark:border-white/[0.08] shadow-2xs hover:shadow-md hover:border-slate-300 dark:hover:border-white/20'
+                      }`}
+                    >
                     {/* Widget Header & Drag Handle */}
                     <div className="flex items-start justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800/80">
                       <div
@@ -2621,6 +2635,7 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
                     <div className="flex-1 pt-2.5 overflow-y-auto no-scrollbar">
                       {renderWidgetBody(widget)}
                     </div>
+                    </motion.div>
                   </div>
                 );
               })}

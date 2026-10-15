@@ -54,17 +54,49 @@ export const DashboardCardWrapper: React.FC<DashboardCardWrapperProps> = ({
     onDragEnd(e);
   };
 
+  // Staggered entrance animation variants for modern premium feel
+  const cardVariants = {
+    hidden: {
+      opacity: 0,
+      y: 22,
+      scale: 0.96,
+      filter: 'blur(4px)'
+    },
+    visible: (customIndex: number) => ({
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      filter: 'blur(0px)',
+      transition: {
+        type: 'spring' as const,
+        damping: 24,
+        stiffness: 260,
+        mass: 0.8,
+        delay: customIndex * 0.055,
+        opacity: { duration: 0.45, delay: customIndex * 0.055, ease: [0.21, 1.02, 0.49, 0.99] },
+        filter: { duration: 0.35, delay: customIndex * 0.055 }
+      }
+    }),
+    exit: {
+      opacity: 0,
+      scale: 0.92,
+      y: 12,
+      transition: { duration: 0.2, ease: 'easeIn' as const }
+    }
+  };
+
   return (
     <motion.div
       layout
       layoutId={card.id}
-      initial={{ opacity: 0, scale: 0.94 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+      custom={index}
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      whileHover={!isConfigMode ? { y: -3, transition: { duration: 0.2, ease: 'easeOut' } } : undefined}
       transition={{
-        layout: { type: 'spring', damping: 28, stiffness: 320 },
-        opacity: { duration: 0.2 },
-        scale: { duration: 0.2 }
+        layout: { type: 'spring', damping: 28, stiffness: 320 }
       }}
       draggable={isConfigMode}
       onDragStart={isConfigMode ? (handleDragStart as any) : undefined}

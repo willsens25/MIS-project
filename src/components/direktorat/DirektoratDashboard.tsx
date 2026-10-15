@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { motion } from 'motion/react';
 import { useApp } from '../../context/AppContext';
 import { Identitas, User, DivisionId } from '../../types';
 import {
@@ -31,6 +32,7 @@ import { IdentitasModal } from '../modals/IdentitasModal';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { DirektoratCharts } from '../charts/DirektoratCharts';
 import { ProductivityStatsView } from '../charts/ProductivityStatsView';
+import { DivisionKpiSummaryBanner } from '../charts/DivisionKpiSummaryBanner';
 import { AnnualReportModal } from '../modals/AnnualReportModal';
 import { DataImportExportModal } from '../modals/DataImportExportModal';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
@@ -339,6 +341,12 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
         onNavigateSubTab={tab => setActiveSubTab(tab as any)}
       />
 
+      {/* KPI Visual Performance Summary Chart Banner (Recharts) */}
+      <DivisionKpiSummaryBanner
+        divisionId={1}
+        onNavigateToCharts={() => setActiveSubTab('overview')}
+      />
+
       {/* Sub navigation tabs */}
       <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 dark:border-white/[0.06] pb-3">
         <div className="flex flex-wrap items-center gap-1 bg-slate-200/60 dark:bg-white/[0.05] p-1 rounded-2xl border border-slate-200/80 dark:border-white/[0.06] backdrop-blur-md">
@@ -505,7 +513,12 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
           />
 
           {/* Annual Report Quick Access Banner */}
-          <div className="p-4 sm:p-5 bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border border-amber-300/70 dark:border-amber-700/50 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+          <motion.div
+            initial={{ opacity: 0, y: 16, filter: 'blur(3px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            transition={{ duration: 0.45, delay: 0.1, ease: [0.21, 1.02, 0.49, 0.99] }}
+            className="p-4 sm:p-5 bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent border border-amber-300/70 dark:border-amber-700/50 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs"
+          >
             <div className="flex items-center space-x-3.5">
               <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shadow-sm shrink-0">
                 <Award className="w-5 h-5" />
@@ -529,7 +542,7 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
               <FileSpreadsheet className="w-4 h-4" />
               <span>Buka Laporan Tahunan</span>
             </button>
-          </div>
+          </motion.div>
 
           {/* Performance & Financial Metrics Visualizations */}
           <DirektoratCharts
@@ -547,7 +560,13 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
             {/* Struktur Penanggung Jawab Divisi */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
+            <motion.div
+              initial={{ opacity: 0, y: 18, scale: 0.98, filter: 'blur(3px)' }}
+              animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+              transition={{ duration: 0.45, delay: 0.15, ease: [0.21, 1.02, 0.49, 0.99] }}
+              whileHover={{ y: -2, transition: { duration: 0.2 } }}
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm"
+            >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
                   <Users className="w-4 h-4 text-indigo-600" />
@@ -584,10 +603,16 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
                   );
                 })}
               </div>
-            </div>
+            </motion.div>
 
             {/* Quick Status Breakdown */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+            <motion.div
+              initial={{ opacity: 0, y: 18, scale: 0.98, filter: 'blur(3px)' }}
+              animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+              transition={{ duration: 0.45, delay: 0.22, ease: [0.21, 1.02, 0.49, 0.99] }}
+              whileHover={{ y: -2, transition: { duration: 0.2 } }}
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col justify-between"
+            >
               <div>
                 <h3 className="font-bold text-sm text-slate-900 dark:text-white mb-3">
                   Distribusi Keanggotaan & Keamanan
@@ -620,7 +645,7 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
                   Buka Master Database Anggota →
                 </button>
               </div>
-            </div>
+            </motion.div>
 
           </div>
         </div>

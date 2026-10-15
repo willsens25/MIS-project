@@ -22,8 +22,11 @@ import {
   Filter,
   ScanBarcode,
   MessageSquare,
-  Calendar
+  Calendar,
+  TrendingUp
 } from 'lucide-react';
+import { LogistikCharts } from '../charts/LogistikCharts';
+import { DivisionKpiSummaryBanner } from '../charts/DivisionKpiSummaryBanner';
 import { SuratJalanPrintModal } from '../modals/SuratJalanPrintModal';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { BarcodeScannerModal } from '../modals/BarcodeScannerModal';
@@ -53,10 +56,10 @@ export const LogistikDashboard: React.FC = () => {
     setCurrentSubTab
   } = useApp();
 
-  const activeSubTab = (['antrean', 'manual', 'logs', 'kalender'].includes(currentSubTab)
+  const activeSubTab = (['antrean', 'grafik', 'manual', 'logs', 'kalender'].includes(currentSubTab)
     ? currentSubTab
-    : 'antrean') as 'antrean' | 'manual' | 'logs' | 'kalender';
-  const setActiveSubTab = (tab: 'antrean' | 'manual' | 'logs' | 'kalender') => setCurrentSubTab(tab);
+    : 'antrean') as 'antrean' | 'grafik' | 'manual' | 'logs' | 'kalender';
+  const setActiveSubTab = (tab: 'antrean' | 'grafik' | 'manual' | 'logs' | 'kalender') => setCurrentSubTab(tab);
 
   // Bulk delete selection states
   const [selectedLogIds, setSelectedLogIds] = useState<number[]>([]);
@@ -475,6 +478,12 @@ export const LogistikDashboard: React.FC = () => {
         onNavigateSubTab={tab => setActiveSubTab(tab as any)}
       />
 
+      {/* KPI Visual Performance Summary Chart Banner (Recharts) */}
+      <DivisionKpiSummaryBanner
+        divisionId={6}
+        onNavigateToCharts={() => setActiveSubTab('grafik')}
+      />
+
       {/* Sub navigation tabs & Action Bar */}
       <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 dark:border-white/[0.06] pb-3">
         <div className="flex flex-wrap items-center gap-1 bg-slate-200/60 dark:bg-white/[0.05] p-1 rounded-2xl border border-slate-200/80 dark:border-white/[0.06] backdrop-blur-md">
@@ -493,6 +502,21 @@ export const LogistikDashboard: React.FC = () => {
                 {Object.keys(groupedInvoices).length}
               </span>
             )}
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('grafik')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              activeSubTab === 'grafik'
+                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>Grafik & Analisis</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300">
+              KPI
+            </span>
           </button>
 
           <button
@@ -574,6 +598,11 @@ export const LogistikDashboard: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* GRAFIK & ANALISIS LOGISTIK SUB TAB */}
+      {activeSubTab === 'grafik' && (
+        <LogistikCharts penyalurans={penyalurans} logisticLogs={logisticLogs} orders={orders} />
+      )}
 
       {/* ANTREAN PACKING SUB TAB */}
       {activeSubTab === 'antrean' && (

@@ -27,6 +27,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { PenerbitanCharts } from '../charts/PenerbitanCharts';
+import { DivisionKpiSummaryBanner } from '../charts/DivisionKpiSummaryBanner';
 import { UnitEconomicsAnalysis } from './UnitEconomicsAnalysis';
 import { DonasiSponsorshipTab } from './DonasiSponsorshipTab';
 import { RoyaltiPenerbitanTab } from './RoyaltiPenerbitanTab';
@@ -278,6 +279,12 @@ export const PenerbitanDashboard: React.FC = () => {
       <DivisionWidgetGrid
         divisionId={3}
         onNavigateSubTab={tab => setActiveSubTab(tab as any)}
+      />
+
+      {/* KPI Visual Performance Summary Chart Banner (Recharts) */}
+      <DivisionKpiSummaryBanner
+        divisionId={3}
+        onNavigateToCharts={() => setActiveSubTab('grafik')}
       />
 
       {/* Sub navigation tabs & Action Bar */}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { motion } from 'motion/react';
 import { useApp } from '../../context/AppContext';
 import { Mutasi, Account, PengajuanCetak } from '../../types';
 import {
@@ -28,6 +29,7 @@ import {
 } from 'lucide-react';
 import { FinanceCharts } from '../charts/FinanceCharts';
 import { SixMonthCashFlowBarChart } from '../charts/SixMonthCashFlowBarChart';
+import { DivisionKpiSummaryBanner } from '../charts/DivisionKpiSummaryBanner';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { PrintReportHeader } from '../common/PrintReportHeader';
@@ -443,7 +445,19 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
 
       {/* Top Stat Summary - Modern Bento Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 sm:p-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] rounded-2xl shadow-xs hover:shadow-md transition-all group">
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.96, filter: 'blur(3px)' }}
+          animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+          transition={{
+            type: 'spring',
+            damping: 24,
+            stiffness: 260,
+            delay: 0,
+            opacity: { duration: 0.45, ease: [0.21, 1.02, 0.49, 0.99] }
+          }}
+          whileHover={{ y: -3, transition: { duration: 0.2 } }}
+          className="p-4 sm:p-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] rounded-2xl shadow-xs hover:shadow-md transition-shadow group"
+        >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -459,9 +473,21 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
           <div className="mt-2 text-[11px] text-slate-400 font-medium">
             {filteredMutasi.filter(m => m.tipe === 'Masuk').length} Transaksi Terverifikasi
           </div>
-        </div>
+        </motion.div>
 
-        <div className="p-4 sm:p-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] rounded-2xl shadow-xs hover:shadow-md transition-all group">
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.96, filter: 'blur(3px)' }}
+          animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+          transition={{
+            type: 'spring',
+            damping: 24,
+            stiffness: 260,
+            delay: 0.08,
+            opacity: { duration: 0.45, delay: 0.08, ease: [0.21, 1.02, 0.49, 0.99] }
+          }}
+          whileHover={{ y: -3, transition: { duration: 0.2 } }}
+          className="p-4 sm:p-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] rounded-2xl shadow-xs hover:shadow-md transition-shadow group"
+        >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
@@ -477,9 +503,21 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
           <div className="mt-2 text-[11px] text-slate-400 font-medium">
             {filteredMutasi.filter(m => m.tipe === 'Keluar').length} Transaksi Keluar
           </div>
-        </div>
+        </motion.div>
 
-        <div className="p-4 sm:p-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] rounded-2xl shadow-xs hover:shadow-md transition-all group">
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.96, filter: 'blur(3px)' }}
+          animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+          transition={{
+            type: 'spring',
+            damping: 24,
+            stiffness: 260,
+            delay: 0.16,
+            opacity: { duration: 0.45, delay: 0.16, ease: [0.21, 1.02, 0.49, 0.99] }
+          }}
+          whileHover={{ y: -3, transition: { duration: 0.2 } }}
+          className="p-4 sm:p-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] rounded-2xl shadow-xs hover:shadow-md transition-shadow group"
+        >
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
@@ -495,8 +533,14 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
           <div className="mt-2 text-[11px] text-slate-400 font-medium">
             Total Akumulatif Periode Berjalan
           </div>
-        </div>
+        </motion.div>
       </div>
+
+      {/* KPI Visual Performance Summary Chart Banner (Recharts) */}
+      <DivisionKpiSummaryBanner
+        divisionId={2}
+        onNavigateToCharts={() => setActiveSubTab('grafik')}
+      />
 
       {/* Sub navigation tabs & Toolbar */}
       <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 dark:border-white/[0.06] pb-3">
