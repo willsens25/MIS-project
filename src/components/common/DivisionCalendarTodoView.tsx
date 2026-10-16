@@ -58,8 +58,9 @@ export interface CalendarTodoEvent {
     | 'Distribusi & Logistik'
     | 'Keuangan & Audit'
     | 'Dharma & Sosial';
-  priority: 'Tinggi' | 'Sedang' | 'Rendah';
+  priority: 'High' | 'Medium' | 'Low' | 'Tinggi' | 'Sedang' | 'Rendah';
   status: 'Belum Mulai' | 'Sedang Berjalan' | 'Selesai';
+  progress?: number; // 0 - 100 percentage
   picName: string; // Person-In-Charge (PIC) Utama
   picRole?: string;
   picDivisionId?: DivisionId;
@@ -68,7 +69,75 @@ export interface CalendarTodoEvent {
   createdAt: string;
 }
 
-const INDONESIAN_MONTHS = [
+export type PriorityLevel = 'High' | 'Medium' | 'Low';
+
+export const getPriorityTier = (p?: string): PriorityLevel => {
+  if (!p) return 'Medium';
+  const lower = p.toLowerCase();
+  if (lower === 'high' || lower === 'tinggi') return 'High';
+  if (lower === 'low' || lower === 'rendah') return 'Low';
+  return 'Medium';
+};
+
+export const PRIORITY_CONFIG: Record<
+  PriorityLevel,
+  {
+    key: PriorityLevel;
+    label: string;
+    sublabel: string;
+    dotClass: string;
+    glowDot: string;
+    badgeBg: string;
+    text: string;
+    border: string;
+    activeClass: string;
+  }
+> = {
+  High: {
+    key: 'High',
+    label: 'High',
+    sublabel: 'Tinggi (Mendesak / Strategis)',
+    dotClass: 'bg-rose-500',
+    glowDot: 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.65)]',
+    badgeBg: 'bg-rose-50 dark:bg-rose-950/60',
+    text: 'text-rose-700 dark:text-rose-300',
+    border: 'border-rose-200 dark:border-rose-800/80',
+    activeClass: 'bg-rose-500 text-white border-rose-600 shadow-sm'
+  },
+  Medium: {
+    key: 'Medium',
+    label: 'Medium',
+    sublabel: 'Sedang (Rutin Operasional)',
+    dotClass: 'bg-amber-500',
+    glowDot: 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.65)]',
+    badgeBg: 'bg-amber-50 dark:bg-amber-950/60',
+    text: 'text-amber-700 dark:text-amber-300',
+    border: 'border-amber-200 dark:border-amber-800/80',
+    activeClass: 'bg-amber-500 text-slate-950 border-amber-600 shadow-sm'
+  },
+  Low: {
+    key: 'Low',
+    label: 'Low',
+    sublabel: 'Rendah (Fleksibel / Longgar)',
+    dotClass: 'bg-emerald-500',
+    glowDot: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.65)]',
+    badgeBg: 'bg-emerald-50 dark:bg-emerald-950/60',
+    text: 'text-emerald-700 dark:text-emerald-300',
+    border: 'border-emerald-200 dark:border-emerald-800/80',
+    activeClass: 'bg-emerald-600 text-white border-emerald-700 shadow-sm'
+  }
+};
+
+const PRIORITY_BADGE: Record<string, string> = {
+  High: 'bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800',
+  Tinggi: 'bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800',
+  Medium: 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800',
+  Sedang: 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800',
+  Low: 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800',
+  Rendah: 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+};
+
+export const INDONESIAN_MONTHS = [
   'Januari',
   'Februari',
   'Maret',
@@ -83,54 +152,53 @@ const INDONESIAN_MONTHS = [
   'Desember'
 ];
 
-const SHORT_DAYS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+export const SHORT_DAYS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
-const CATEGORY_STYLES: Record<
+export const CATEGORY_STYLES: Record<
   CalendarTodoEvent['category'],
-  { bg: string; text: string; border: string; dot: string }
+  {
+    bg: string;
+    text: string;
+    border: string;
+    dot: string;
+  }
 > = {
   'Rapat & Pleno': {
     bg: 'bg-indigo-50 dark:bg-indigo-950/60',
     text: 'text-indigo-700 dark:text-indigo-300',
-    border: 'border-indigo-200 dark:border-indigo-800/70',
-    dot: 'bg-indigo-500'
+    border: 'border-indigo-200 dark:border-indigo-800',
+    dot: 'bg-indigo-600'
   },
   'Penerbitan & Cetak': {
     bg: 'bg-violet-50 dark:bg-violet-950/60',
     text: 'text-violet-700 dark:text-violet-300',
-    border: 'border-violet-200 dark:border-violet-800/70',
-    dot: 'bg-violet-500'
+    border: 'border-violet-200 dark:border-violet-800',
+    dot: 'bg-violet-600'
   },
   'Bazaar & Event': {
     bg: 'bg-amber-50 dark:bg-amber-950/60',
     text: 'text-amber-700 dark:text-amber-300',
-    border: 'border-amber-200 dark:border-amber-800/70',
+    border: 'border-amber-200 dark:border-amber-800',
     dot: 'bg-amber-500'
   },
   'Distribusi & Logistik': {
     bg: 'bg-cyan-50 dark:bg-cyan-950/60',
     text: 'text-cyan-700 dark:text-cyan-300',
-    border: 'border-cyan-200 dark:border-cyan-800/70',
-    dot: 'bg-cyan-500'
+    border: 'border-cyan-200 dark:border-cyan-800',
+    dot: 'bg-cyan-600'
   },
   'Keuangan & Audit': {
     bg: 'bg-emerald-50 dark:bg-emerald-950/60',
     text: 'text-emerald-700 dark:text-emerald-300',
-    border: 'border-emerald-200 dark:border-emerald-800/70',
-    dot: 'bg-emerald-500'
+    border: 'border-emerald-200 dark:border-emerald-800',
+    dot: 'bg-emerald-600'
   },
   'Dharma & Sosial': {
     bg: 'bg-rose-50 dark:bg-rose-950/60',
     text: 'text-rose-700 dark:text-rose-300',
-    border: 'border-rose-200 dark:border-rose-800/70',
-    dot: 'bg-rose-500'
+    border: 'border-rose-200 dark:border-rose-800',
+    dot: 'bg-rose-600'
   }
-};
-
-const PRIORITY_BADGE: Record<CalendarTodoEvent['priority'], string> = {
-  Tinggi: 'bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800',
-  Sedang: 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800',
-  Rendah: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700'
 };
 
 const DIVISION_META: Record<
@@ -252,7 +320,7 @@ export interface TaskCompletionProgressInfo {
 }
 
 export const getTaskCompletionProgress = (
-  evt: Pick<CalendarTodoEvent, 'status' | 'subtasks'>
+  evt: Pick<CalendarTodoEvent, 'status' | 'subtasks'> & { progress?: number }
 ): TaskCompletionProgressInfo => {
   const subtasks = evt.subtasks || [];
   const totalSubtasks = subtasks.length;
@@ -261,6 +329,8 @@ export const getTaskCompletionProgress = (
   let percent = 0;
   if (evt.status === 'Selesai') {
     percent = 100;
+  } else if (evt.progress !== undefined && evt.progress !== null) {
+    percent = Math.min(100, Math.max(0, evt.progress));
   } else if (totalSubtasks > 0) {
     const ratio = Math.round((doneSubtasks / totalSubtasks) * 100);
     if (evt.status === 'Sedang Berjalan' && ratio === 0) {
@@ -380,6 +450,56 @@ export const toggleStoredCalendarSubtask = (
       ...evt,
       subtasks: updatedSubtasks,
       status: autoStatus
+    };
+  });
+  try {
+    localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent('mis-calendar-events-updated'));
+  } catch {
+    // ignore
+  }
+  return updated;
+};
+
+export const updateStoredCalendarEventPriority = (
+  evtId: string,
+  newPriority: 'High' | 'Medium' | 'Low'
+): CalendarTodoEvent[] => {
+  const current = getStoredCalendarEvents();
+  const updated = current.map(evt => {
+    if (evt.id !== evtId) return evt;
+    return { ...evt, priority: newPriority };
+  });
+  try {
+    localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent('mis-calendar-events-updated'));
+  } catch {
+    // ignore
+  }
+  return updated;
+};
+
+export const updateStoredCalendarEventProgress = (
+  evtId: string,
+  newProgress: number
+): CalendarTodoEvent[] => {
+  const current = getStoredCalendarEvents();
+  const clamped = Math.min(100, Math.max(0, newProgress));
+  const updated = current.map(evt => {
+    if (evt.id !== evtId) return evt;
+    const autoStatus: CalendarTodoEvent['status'] =
+      clamped >= 100 ? 'Selesai' : clamped > 0 ? 'Sedang Berjalan' : 'Belum Mulai';
+    const updatedSubtasks =
+      clamped >= 100
+        ? evt.subtasks.map(s => ({ ...s, completed: true }))
+        : clamped <= 0
+        ? evt.subtasks.map(s => ({ ...s, completed: false }))
+        : evt.subtasks;
+    return {
+      ...evt,
+      progress: clamped,
+      status: autoStatus,
+      subtasks: updatedSubtasks
     };
   });
   try {
@@ -757,6 +877,7 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
   const [filterPic, setFilterPic] = useState<string>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterPriority, setFilterPriority] = useState<'all' | 'High' | 'Medium' | 'Low'>('all');
 
   // Toast feedback
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -1484,6 +1605,7 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
     category: CalendarTodoEvent['category'];
     priority: CalendarTodoEvent['priority'];
     status: CalendarTodoEvent['status'];
+    progress?: number;
     picName: string;
     picRole: string;
     picDivisionId: DivisionId;
@@ -1497,8 +1619,9 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
     time: '09:00 - 11:30 WIB',
     location: divMeta.defaultLocation,
     category: divMeta.defaultCategory,
-    priority: 'Tinggi',
+    priority: 'High',
     status: 'Belum Mulai',
+    progress: 0,
     picName: defaultPicForDivision.name,
     picRole: defaultPicForDivision.role,
     picDivisionId: divisionId,
@@ -1523,8 +1646,9 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
       time: defaultTime || '09:00 - 11:30 WIB',
       location: divMeta.defaultLocation,
       category: divMeta.defaultCategory,
-      priority: 'Tinggi',
+      priority: 'High',
       status: 'Belum Mulai',
+      progress: 0,
       picName: defaultPicForDivision.name,
       picRole: defaultPicForDivision.role,
       picDivisionId: divisionId,
@@ -1547,8 +1671,9 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
       time: evt.time || '',
       location: evt.location || '',
       category: evt.category,
-      priority: evt.priority,
+      priority: getPriorityTier(evt.priority),
       status: evt.status,
+      progress: getTaskCompletionProgress(evt).percent,
       picName: evt.picName,
       picRole: evt.picRole || '',
       picDivisionId: evt.picDivisionId || evt.divisionId || divisionId,
@@ -1710,9 +1835,49 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
             : nextStatus === 'Belum Mulai'
             ? evt.subtasks.map(s => ({ ...s, completed: false }))
             : evt.subtasks;
-        return { ...evt, status: nextStatus, subtasks: updatedSubtasks };
+        const nextProgress =
+          nextStatus === 'Selesai' ? 100 : nextStatus === 'Belum Mulai' ? 0 : 50;
+        return { ...evt, status: nextStatus, progress: nextProgress, subtasks: updatedSubtasks };
       })
     );
+  };
+
+  const handleUpdateEventPriority = (
+    evtId: string,
+    newPriority: 'High' | 'Medium' | 'Low'
+  ) => {
+    setEvents(prev =>
+      prev.map(evt => {
+        if (evt.id !== evtId) return evt;
+        return { ...evt, priority: newPriority };
+      })
+    );
+    const pLabel = newPriority === 'High' ? 'High (Tinggi)' : newPriority === 'Medium' ? 'Medium (Sedang)' : 'Low (Rendah)';
+    triggerToast(`Prioritas tugas diubah menjadi ${pLabel}.`);
+  };
+
+  const handleUpdateEventProgress = (evtId: string, newProgress: number) => {
+    const clamped = Math.min(100, Math.max(0, newProgress));
+    setEvents(prev =>
+      prev.map(evt => {
+        if (evt.id !== evtId) return evt;
+        const autoStatus: CalendarTodoEvent['status'] =
+          clamped >= 100 ? 'Selesai' : clamped > 0 ? 'Sedang Berjalan' : 'Belum Mulai';
+        const updatedSubtasks =
+          clamped >= 100
+            ? evt.subtasks.map(s => ({ ...s, completed: true }))
+            : clamped <= 0
+            ? evt.subtasks.map(s => ({ ...s, completed: false }))
+            : evt.subtasks;
+        return {
+          ...evt,
+          progress: clamped,
+          status: autoStatus,
+          subtasks: updatedSubtasks
+        };
+      })
+    );
+    triggerToast(`Progres penyelesaian diatur ke ${clamped}%.`);
   };
 
   const handleToggleSubtask = (evtId: string, subtaskId: string) => {
@@ -1770,11 +1935,12 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
 
         const matchCategory = filterCategory === 'all' || evt.category === filterCategory;
         const matchStatus = filterStatus === 'all' || evt.status === filterStatus;
+        const matchPriority = filterPriority === 'all' || getPriorityTier(evt.priority) === filterPriority;
 
-        return matchSearch && matchPic && matchCategory && matchStatus;
+        return matchSearch && matchPic && matchCategory && matchStatus && matchPriority;
       })
       .sort((a, b) => a.date.localeCompare(b.date));
-  }, [events, selectedYear, scopeFilter, divisionId, searchQuery, filterPic, filterCategory, filterStatus]);
+  }, [events, selectedYear, scopeFilter, divisionId, searchQuery, filterPic, filterCategory, filterStatus, filterPriority]);
 
   // Map events by YYYY-MM-DD for quick calendar lookup
   const eventsByDateMap = useMemo(() => {
@@ -2539,10 +2705,23 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
             <option value="Selesai">Selesai</option>
           </select>
 
+          {/* Filter by Priority Level (High, Medium, Low) with visual color dots */}
+          <select
+            value={filterPriority}
+            onChange={e => setFilterPriority(e.target.value as any)}
+            className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none cursor-pointer"
+          >
+            <option value="all">Semua Prioritas</option>
+            <option value="High">🔴 High (Tinggi)</option>
+            <option value="Medium">🟡 Medium (Sedang)</option>
+            <option value="Low">🟢 Low (Rendah)</option>
+          </select>
+
           {(searchQuery ||
             filterPic !== 'all' ||
             filterCategory !== 'all' ||
             filterStatus !== 'all' ||
+            filterPriority !== 'all' ||
             selectedDateStr) && (
             <button
               type="button"
@@ -2551,6 +2730,7 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                 setFilterPic('all');
                 setFilterCategory('all');
                 setFilterStatus('all');
+                setFilterPriority('all');
                 setSelectedDateStr(null);
               }}
               className="flex items-center space-x-1 px-2.5 py-2 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-300 hover:bg-rose-100 rounded-xl font-semibold transition-colors cursor-pointer"
@@ -2664,6 +2844,10 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                                 <span className={`font-mono font-extrabold ${st.text} shrink-0`}>
                                   Tgl {dayNum}
                                 </span>
+                                <span
+                                  className={`w-2 h-2 rounded-full shrink-0 ${PRIORITY_CONFIG[getPriorityTier(ev.priority)].dotClass}`}
+                                  title={`Prioritas: ${PRIORITY_CONFIG[getPriorityTier(ev.priority)].label}`}
+                                />
                                 <span
                                   className={`font-bold truncate max-w-[180px] sm:max-w-[240px] ${
                                     ev.status === 'Selesai'
@@ -2832,14 +3016,18 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                             <span className="leading-none">{cell.day}</span>
                             {hasEvents && (
                               <div className="flex items-center space-x-0.5 mt-0.5">
-                                {dayEvts.slice(0, 3).map(ev => (
-                                  <span
-                                    key={ev.id}
-                                    className={`w-1.5 h-1.5 rounded-full ${
-                                      isSelected ? 'bg-white' : CATEGORY_STYLES[ev.category]?.dot || 'bg-indigo-500'
-                                    }`}
-                                  />
-                                ))}
+                                {dayEvts.slice(0, 3).map(ev => {
+                                  const pCfg = PRIORITY_CONFIG[getPriorityTier(ev.priority)];
+                                  return (
+                                    <span
+                                      key={ev.id}
+                                      className={`w-1.5 h-1.5 rounded-full ${
+                                        isSelected ? 'bg-white' : pCfg.dotClass
+                                      }`}
+                                      title={`${ev.title} (Prioritas: ${pCfg.label})`}
+                                    />
+                                  );
+                                })}
                               </div>
                             )}
                           </button>
@@ -2908,6 +3096,7 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                             >
                               <div className="flex items-center justify-between gap-1.5">
                                 <div className="flex items-center space-x-1.5 min-w-0">
+                                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${PRIORITY_CONFIG[getPriorityTier(ev.priority)].dotClass}`} title={`Prioritas: ${PRIORITY_CONFIG[getPriorityTier(ev.priority)].label}`} />
                                   <span className={`font-extrabold ${st.text} shrink-0`}>{dayNum}:</span>
                                   <span
                                     className={`font-semibold truncate ${
@@ -3247,7 +3436,10 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                           className={`p-1.5 rounded-lg border text-[10px] space-y-1 ${st.bg} ${st.border} hover:brightness-95`}
                         >
                           <div className="flex items-center justify-between gap-1">
-                            <p className={`font-bold truncate ${st.text}`}>{ev.title}</p>
+                            <div className="flex items-center gap-1 min-w-0">
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${PRIORITY_CONFIG[getPriorityTier(ev.priority)].dotClass}`} title={`Prioritas: ${PRIORITY_CONFIG[getPriorityTier(ev.priority)].label}`} />
+                              <p className={`font-bold truncate ${st.text}`}>{ev.title}</p>
+                            </div>
                             <span className={`text-[9px] font-extrabold shrink-0 ${prog.textColor}`}>
                               {prog.percent}%
                             </span>
@@ -3699,11 +3891,70 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                                     >
                                       {ev.category}
                                     </span>
-                                    <span
-                                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${PRIORITY_BADGE[ev.priority]}`}
-                                    >
-                                      Prioritas {ev.priority}
-                                    </span>
+                                    {/* Interactive Priority Level with Color-Coded Dot */}
+                                    {(() => {
+                                      const pTier = getPriorityTier(ev.priority);
+                                      const pCfg = PRIORITY_CONFIG[pTier];
+                                      return (
+                                        <div className="inline-flex items-center gap-1">
+                                          <div className="relative inline-flex items-center group/prio">
+                                            <span
+                                              className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold border transition-all cursor-pointer hover:shadow-xs ${pCfg.badgeBg} ${pCfg.text} ${pCfg.border}`}
+                                              title="Klik untuk mengubah prioritas (High, Medium, Low)"
+                                            >
+                                              <span className={`w-2 h-2 rounded-full ${pCfg.glowDot}`} />
+                                              <span>Prioritas {pCfg.label}</span>
+                                              <ChevronDown className="w-2.5 h-2.5 opacity-60 ml-0.5" />
+                                            </span>
+                                            <select
+                                              value={pTier}
+                                              onChange={e => handleUpdateEventPriority(ev.id, e.target.value as PriorityLevel)}
+                                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-xs"
+                                              title="Ubah tingkat prioritas (High, Medium, Low)"
+                                            >
+                                              <option value="High">🔴 High (Tinggi - Mendesak)</option>
+                                              <option value="Medium">🟡 Medium (Sedang - Rutin)</option>
+                                              <option value="Low">🟢 Low (Rendah - Fleksibel)</option>
+                                            </select>
+                                          </div>
+                                          <div className="flex items-center gap-0.5 bg-white/80 dark:bg-slate-900/80 p-0.5 rounded-full border border-slate-200 dark:border-slate-700/80">
+                                            {(['High', 'Medium', 'Low'] as const).map(pKey => {
+                                              const isCur = pTier === pKey;
+                                              const cfg = PRIORITY_CONFIG[pKey];
+                                              return (
+                                                <button
+                                                  key={pKey}
+                                                  type="button"
+                                                  onClick={() => handleUpdateEventPriority(ev.id, pKey)}
+                                                  className={`w-3.5 h-3.5 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                                                    isCur ? 'ring-1.5 ring-slate-800 dark:ring-white scale-110' : 'opacity-40 hover:opacity-100'
+                                                  }`}
+                                                  title={`Set ke Prioritas ${cfg.label}`}
+                                                >
+                                                  <span className={`w-1.5 h-1.5 rounded-full ${cfg.dotClass}`} />
+                                                </button>
+                                              );
+                                            })}
+                                          </div>
+
+                                          {/* Visual Progress Bar alongside Priority Status */}
+                                          <div
+                                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 shadow-2xs"
+                                            title={`Progres Penyelesaian: ${prog.percent}% (${prog.statusLabel})`}
+                                          >
+                                            <div className="w-14 sm:w-16 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                              <div
+                                                className={`h-full rounded-full transition-all duration-300 ${prog.barColor}`}
+                                                style={{ width: `${prog.percent}%` }}
+                                              />
+                                            </div>
+                                            <span className={`text-[10px] font-extrabold ${prog.textColor}`}>
+                                              {prog.percent}%
+                                            </span>
+                                          </div>
+                                        </div>
+                                      );
+                                    })()}
                                     <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-white/80 dark:bg-slate-900/80 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                                       {dl.label}
                                     </span>
@@ -3954,6 +4205,52 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {/* Quick Priority Filter Pills with Color-Coded Dots */}
+            <div
+              className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs"
+              title="Filter tugas berdasarkan level prioritas (High, Medium, Low)"
+            >
+              <button
+                type="button"
+                onClick={() => setFilterPriority('all')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  filterPriority === 'all'
+                    ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'
+                }`}
+              >
+                Semua
+              </button>
+              {(['High', 'Medium', 'Low'] as const).map(pKey => {
+                const pCfg = PRIORITY_CONFIG[pKey];
+                const isActive = filterPriority === pKey;
+                const pCount = events.filter(e => {
+                  const evtYear = parseInt(e.date.split('-')[0], 10);
+                  if (evtYear !== selectedYear) return false;
+                  const evtDivId = e.divisionId || e.picDivisionId || 1;
+                  if (scopeFilter === 'current-division' && evtDivId !== divisionId) return false;
+                  return getPriorityTier(e.priority) === pKey;
+                }).length;
+                return (
+                  <button
+                    key={pKey}
+                    type="button"
+                    onClick={() => setFilterPriority(isActive ? 'all' : pKey)}
+                    className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs ring-1 ring-black/5'
+                        : 'text-slate-500 hover:text-slate-900 dark:text-slate-400'
+                    }`}
+                    title={`Filter: Prioritas ${pCfg.label}`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${pCfg.dotClass} ${isActive ? 'animate-pulse' : ''}`} />
+                    <span>{pCfg.label}</span>
+                    <span className="text-[10px] opacity-75 font-mono">({pCount})</span>
+                  </button>
+                );
+              })}
+            </div>
+
             {/* Inline Grid vs List Toggle on To-Do List Board */}
             <div
               className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs"
@@ -4094,11 +4391,55 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                         >
                           {evt.category}
                         </span>
-                        <span
-                          className={`px-1.5 py-0.2 rounded-full text-[9.5px] font-bold border ${PRIORITY_BADGE[evt.priority]}`}
-                        >
-                          {evt.priority}
-                        </span>
+                        {/* Interactive Priority Level with Color-Coded Dot & 1-Click Setters */}
+                        {(() => {
+                          const pTier = getPriorityTier(evt.priority);
+                          const pCfg = PRIORITY_CONFIG[pTier];
+                          return (
+                            <div className="inline-flex items-center gap-1">
+                              <div className="relative inline-flex items-center group/prio">
+                                <span
+                                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9.5px] font-bold border transition-all cursor-pointer hover:shadow-xs ${pCfg.badgeBg} ${pCfg.text} ${pCfg.border}`}
+                                  title="Klik untuk mengubah prioritas (High, Medium, Low)"
+                                >
+                                  <span className={`w-2 h-2 rounded-full ${pCfg.glowDot}`} />
+                                  <span>{pCfg.label}</span>
+                                  <ChevronDown className="w-2.5 h-2.5 opacity-60 ml-0.5" />
+                                </span>
+                                <select
+                                  value={pTier}
+                                  onChange={e => handleUpdateEventPriority(evt.id, e.target.value as PriorityLevel)}
+                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-xs"
+                                  title="Pilih tingkat prioritas (High, Medium, Low)"
+                                >
+                                  <option value="High">🔴 High (Tinggi - Mendesak)</option>
+                                  <option value="Medium">🟡 Medium (Sedang - Rutin)</option>
+                                  <option value="Low">🟢 Low (Rendah - Fleksibel)</option>
+                                </select>
+                              </div>
+
+                              <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-full border border-slate-200 dark:border-slate-700/80">
+                                {(['High', 'Medium', 'Low'] as const).map(pKey => {
+                                  const isCur = pTier === pKey;
+                                  const cfg = PRIORITY_CONFIG[pKey];
+                                  return (
+                                    <button
+                                      key={pKey}
+                                      type="button"
+                                      onClick={() => handleUpdateEventPriority(evt.id, pKey)}
+                                      className={`w-3.5 h-3.5 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                                        isCur ? 'ring-1.5 ring-slate-800 dark:ring-white scale-110' : 'opacity-40 hover:opacity-100'
+                                      }`}
+                                      title={`Set ke Prioritas ${cfg.label}`}
+                                    >
+                                      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dotClass}`} />
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })()}
                         {dl.state === 'overdue' && (
                           <span className="px-1.5 py-0.2 rounded-full text-[9.5px] font-extrabold bg-rose-600 text-white">
                             {dl.label}
@@ -4243,11 +4584,55 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                         >
                           {evt.category}
                         </span>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${PRIORITY_BADGE[evt.priority]}`}
-                        >
-                          Prioritas {evt.priority}
-                        </span>
+                        {/* Interactive Priority Selector with Color-Coded Dot & 1-Click Setters */}
+                        {(() => {
+                          const pTier = getPriorityTier(evt.priority);
+                          const pCfg = PRIORITY_CONFIG[pTier];
+                          return (
+                            <div className="inline-flex items-center gap-1">
+                              <div className="relative inline-flex items-center group/prio">
+                                <span
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-all cursor-pointer hover:shadow-xs ${pCfg.badgeBg} ${pCfg.text} ${pCfg.border}`}
+                                  title="Klik untuk mengubah prioritas (High, Medium, Low)"
+                                >
+                                  <span className={`w-2 h-2 rounded-full ${pCfg.glowDot}`} />
+                                  <span>Prioritas {pCfg.label}</span>
+                                  <ChevronDown className="w-2.5 h-2.5 opacity-60 ml-0.5" />
+                                </span>
+                                <select
+                                  value={pTier}
+                                  onChange={e => handleUpdateEventPriority(evt.id, e.target.value as PriorityLevel)}
+                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-xs"
+                                  title="Pilih tingkat prioritas (High, Medium, Low)"
+                                >
+                                  <option value="High">🔴 High (Tinggi - Mendesak)</option>
+                                  <option value="Medium">🟡 Medium (Sedang - Rutin)</option>
+                                  <option value="Low">🟢 Low (Rendah - Fleksibel)</option>
+                                </select>
+                              </div>
+
+                              <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-full border border-slate-200 dark:border-slate-700/80">
+                                {(['High', 'Medium', 'Low'] as const).map(pKey => {
+                                  const isCur = pTier === pKey;
+                                  const cfg = PRIORITY_CONFIG[pKey];
+                                  return (
+                                    <button
+                                      key={pKey}
+                                      type="button"
+                                      onClick={() => handleUpdateEventPriority(evt.id, pKey)}
+                                      className={`w-4 h-4 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                                        isCur ? 'ring-2 ring-slate-800 dark:ring-white scale-110' : 'opacity-40 hover:opacity-100'
+                                      }`}
+                                      title={`Set ke Prioritas ${cfg.label}`}
+                                    >
+                                      <span className={`w-2 h-2 rounded-full ${cfg.dotClass}`} />
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })()}
                         {(() => {
                           const dl = getDeadlineInfo(evt.date, evt.status);
                           if (dl.state === 'overdue') {
@@ -4766,23 +5151,59 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                   {/* Prioritas, Status & Deskripsi */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Tingkat Prioritas
+                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Tingkat Prioritas (Priority Level)
                       </label>
-                      <select
-                        value={formState.priority}
-                        onChange={e =>
-                          setFormState({
-                            ...formState,
-                            priority: e.target.value as CalendarTodoEvent['priority']
-                          })
-                        }
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl"
-                      >
-                        <option value="Tinggi">Tinggi (Mendesak / Strategis)</option>
-                        <option value="Sedang">Sedang (Rutin Operasional)</option>
-                        <option value="Rendah">Rendah (Fleksibel)</option>
-                      </select>
+                      <div className="grid grid-cols-3 gap-2">
+                        {(['High', 'Medium', 'Low'] as const).map(pKey => {
+                          const cfg = PRIORITY_CONFIG[pKey];
+                          const isSelected = getPriorityTier(formState.priority) === pKey;
+                          return (
+                            <button
+                              key={pKey}
+                              type="button"
+                              onClick={() =>
+                                setFormState({
+                                  ...formState,
+                                  priority: pKey
+                                })
+                              }
+                              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                                isSelected
+                                  ? `${cfg.badgeBg} ${cfg.border} ring-2 ring-offset-1 ${
+                                      pKey === 'High'
+                                        ? 'ring-rose-500'
+                                        : pKey === 'Medium'
+                                        ? 'ring-amber-500'
+                                        : 'ring-emerald-500'
+                                    }`
+                                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-400'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className={`w-2.5 h-2.5 rounded-full ${cfg.glowDot}`} />
+                                {isSelected && (
+                                  <span className="text-[10px] font-extrabold text-indigo-600 dark:text-indigo-400">
+                                    ✓ Aktif
+                                  </span>
+                                )}
+                              </div>
+                              <div className="mt-1.5">
+                                <p className={`font-bold text-xs ${isSelected ? cfg.text : 'text-slate-800 dark:text-slate-200'}`}>
+                                  {cfg.label}
+                                </p>
+                                <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5">
+                                  {pKey === 'High'
+                                    ? 'Tinggi / Urgent'
+                                    : pKey === 'Medium'
+                                    ? 'Sedang / Rutin'
+                                    : 'Rendah / Fleksibel'}
+                                </p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
 
                     <div>
