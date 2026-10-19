@@ -43,7 +43,8 @@ import {
   Sparkles,
   Layers,
   Keyboard,
-  BarChart3
+  BarChart3,
+  LogOut
 } from 'lucide-react';
 
 export interface SidebarSubMenuItem {
@@ -101,7 +102,9 @@ export const LeftSidebarNav: React.FC<LeftSidebarNavProps> = ({
     orders,
     books,
     donasiProyeks,
-    openPresentationMode
+    openPresentationMode,
+    logout,
+    isAuthenticated
   } = useApp();
 
   const [menuSearch, setMenuSearch] = useState('');
@@ -1029,6 +1032,58 @@ export const LeftSidebarNav: React.FC<LeftSidebarNavProps> = ({
                 </kbd>
               )}
             </motion.button>
+          )}
+
+          {/* User Profile Card & Quick Logout in Left Sidebar */}
+          {isAuthenticated && (
+            <motion.div
+              layout
+              className={`pt-2 mt-1 border-t border-slate-200/80 dark:border-slate-800/80 flex items-center ${
+                effectiveCollapsed ? 'justify-center flex-col gap-2' : 'justify-between gap-2'
+              }`}
+            >
+              <div className="flex items-center space-x-2 min-w-0">
+                <div className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs shrink-0 ring-1 ring-white/40">
+                  {currentUser.avatar ? (
+                    <img
+                      src={currentUser.avatar}
+                      alt={currentUser.name}
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <span>{currentUser.name.charAt(0).toUpperCase()}</span>
+                  )}
+                </div>
+                {!effectiveCollapsed && (
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                      {currentUser.name}
+                    </p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">
+                      {currentUser.role}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.92 }}
+                onClick={() => {
+                  logout();
+                  if (forMobile) onCloseMobile();
+                }}
+                className={`p-1.5 rounded-lg text-rose-500 hover:text-rose-700 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer shrink-0 ${
+                  effectiveCollapsed ? 'w-full flex justify-center' : ''
+                }`}
+                title="Keluar (Logout)"
+                aria-label="Logout"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </motion.button>
+            </motion.div>
           )}
         </motion.div>
       </div>

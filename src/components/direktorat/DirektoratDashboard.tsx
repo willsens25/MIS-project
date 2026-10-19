@@ -33,6 +33,7 @@ import { ConfirmModal } from '../modals/ConfirmModal';
 import { DirektoratCharts } from '../charts/DirektoratCharts';
 import { ProductivityStatsView } from '../charts/ProductivityStatsView';
 import { DivisionKpiSummaryBanner } from '../charts/DivisionKpiSummaryBanner';
+import { TaskCompletionTrendsSummaryCard } from '../charts/TaskCompletionTrendsSummaryCard';
 import { AnnualReportModal } from '../modals/AnnualReportModal';
 import { DataImportExportModal } from '../modals/DataImportExportModal';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
@@ -543,6 +544,11 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
               <span>Buka Laporan Tahunan</span>
             </button>
           </motion.div>
+
+          {/* Consolidated Task Completion Trends Across All 6 Divisions (Recharts Line Chart Summary Card) */}
+          <TaskCompletionTrendsSummaryCard
+            onNavigateSubTab={tab => setActiveSubTab(tab as any)}
+          />
 
           {/* Performance & Financial Metrics Visualizations */}
           <DirektoratCharts

@@ -4437,6 +4437,22 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                                   );
                                 })}
                               </div>
+
+                              {/* Visual Progress Bar alongside Priority Status */}
+                              <div
+                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-2xs"
+                                title={`Progres Penyelesaian: ${progressPct}% (${prog.statusLabel})`}
+                              >
+                                <div className="w-14 sm:w-16 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full transition-all duration-300 ${prog.barColor}`}
+                                    style={{ width: `${progressPct}%` }}
+                                  />
+                                </div>
+                                <span className={`text-[10px] font-extrabold ${prog.textColor}`}>
+                                  {progressPct}%
+                                </span>
+                              </div>
                             </div>
                           );
                         })()}
@@ -4491,28 +4507,31 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                       </span>
                     </div>
 
-                    {/* Quick Status Selector */}
+                    {/* Quick Completion Percentage Selector */}
                     <div className="flex items-center gap-1">
                       {(
                         [
-                          { label: '0%', val: 'Belum Mulai' as const },
-                          { label: '50%', val: 'Sedang Berjalan' as const },
-                          { label: '100%', val: 'Selesai' as const }
+                          { label: '0%', pct: 0 },
+                          { label: '25%', pct: 25 },
+                          { label: '50%', pct: 50 },
+                          { label: '75%', pct: 75 },
+                          { label: '100%', pct: 100 }
                         ]
                       ).map(opt => (
                         <button
-                          key={opt.val}
+                          key={opt.pct}
                           type="button"
-                          onClick={() => handleToggleEventStatus(evt.id, opt.val)}
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-all cursor-pointer ${
-                            evt.status === opt.val
-                              ? opt.val === 'Selesai'
+                          onClick={() => handleUpdateEventProgress(evt.id, opt.pct)}
+                          className={`px-1.5 sm:px-2 py-0.5 rounded text-[10px] font-bold border transition-all cursor-pointer ${
+                            progressPct === opt.pct
+                              ? opt.pct === 100
                                 ? 'bg-emerald-600 text-white border-emerald-600'
-                                : opt.val === 'Sedang Berjalan'
+                                : opt.pct > 0
                                 ? 'bg-amber-500 text-slate-950 border-amber-500'
                                 : 'bg-slate-700 text-white border-slate-700'
                               : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
                           }`}
+                          title={`Ubah progres ke ${opt.pct}%`}
                         >
                           {opt.label}
                         </button>
@@ -4629,6 +4648,22 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                                     </button>
                                   );
                                 })}
+                              </div>
+
+                              {/* Visual Progress Bar alongside Priority Status */}
+                              <div
+                                className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-2xs"
+                                title={`Progres Penyelesaian: ${progressPct}% (${prog.statusLabel})`}
+                              >
+                                <div className="w-16 sm:w-20 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full transition-all duration-300 ${prog.barColor}`}
+                                    style={{ width: `${progressPct}%` }}
+                                  />
+                                </div>
+                                <span className={`text-[10.5px] font-extrabold ${prog.textColor}`}>
+                                  {progressPct}%
+                                </span>
                               </div>
                             </div>
                           );
@@ -4835,24 +4870,27 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                         <div className="flex items-center gap-1">
                           {(
                             [
-                              { label: '0% Belum', val: 'Belum Mulai' as const },
-                              { label: '50% Berjalan', val: 'Sedang Berjalan' as const },
-                              { label: '100% Selesai', val: 'Selesai' as const }
+                              { label: '0%', pct: 0 },
+                              { label: '25%', pct: 25 },
+                              { label: '50%', pct: 50 },
+                              { label: '75%', pct: 75 },
+                              { label: '100%', pct: 100 }
                             ]
                           ).map(opt => (
                             <button
-                              key={opt.val}
+                              key={opt.pct}
                               type="button"
-                              onClick={() => handleToggleEventStatus(evt.id, opt.val)}
+                              onClick={() => handleUpdateEventProgress(evt.id, opt.pct)}
                               className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-all cursor-pointer ${
-                                evt.status === opt.val
-                                  ? opt.val === 'Selesai'
+                                progressPct === opt.pct
+                                  ? opt.pct === 100
                                     ? 'bg-emerald-600 text-white border-emerald-600'
-                                    : opt.val === 'Sedang Berjalan'
+                                    : opt.pct > 0
                                     ? 'bg-amber-500 text-slate-950 border-amber-500'
                                     : 'bg-slate-700 text-white border-slate-700'
                                   : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
                               }`}
+                              title={`Ubah progres ke ${opt.pct}%`}
                             >
                               {opt.label}
                             </button>
@@ -5207,22 +5245,82 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                     </div>
 
                     <div>
-                      <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Status Pelaksanaan
-                      </label>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block font-bold text-slate-700 dark:text-slate-300">
+                          Status & Progres Penyelesaian
+                        </label>
+                        <span className="text-xs font-extrabold text-indigo-600 dark:text-indigo-400">
+                          {formState.progress ?? (formState.status === 'Selesai' ? 100 : formState.status === 'Sedang Berjalan' ? 50 : 0)}%
+                        </span>
+                      </div>
+
+                      {/* Visual Progress Bar preview in Modal */}
+                      <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden mb-2">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            (formState.progress ?? (formState.status === 'Selesai' ? 100 : formState.status === 'Sedang Berjalan' ? 50 : 0)) >= 100
+                              ? 'bg-emerald-500'
+                              : (formState.progress ?? (formState.status === 'Selesai' ? 100 : formState.status === 'Sedang Berjalan' ? 50 : 0)) >= 50
+                              ? 'bg-indigo-600'
+                              : (formState.progress ?? (formState.status === 'Selesai' ? 100 : formState.status === 'Sedang Berjalan' ? 50 : 0)) > 0
+                              ? 'bg-amber-500'
+                              : 'bg-slate-400'
+                          }`}
+                          style={{
+                            width: `${formState.progress ?? (formState.status === 'Selesai' ? 100 : formState.status === 'Sedang Berjalan' ? 50 : 0)}%`
+                          }}
+                        />
+                      </div>
+
+                      {/* Quick 5-step percentage buttons */}
+                      <div className="grid grid-cols-5 gap-1 mb-2">
+                        {[0, 25, 50, 75, 100].map(pct => {
+                          const curPct = formState.progress ?? (formState.status === 'Selesai' ? 100 : formState.status === 'Sedang Berjalan' ? 50 : 0);
+                          const isCur = curPct === pct;
+                          return (
+                            <button
+                              key={pct}
+                              type="button"
+                              onClick={() => {
+                                const newStatus: CalendarTodoEvent['status'] =
+                                  pct >= 100 ? 'Selesai' : pct > 0 ? 'Sedang Berjalan' : 'Belum Mulai';
+                                setFormState({
+                                  ...formState,
+                                  progress: pct,
+                                  status: newStatus
+                                });
+                              }}
+                              className={`py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
+                                isCur
+                                  ? pct === 100
+                                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                                    : pct > 0
+                                    ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-xs'
+                                    : 'bg-slate-700 text-white border-slate-700 shadow-xs'
+                                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                              }`}
+                            >
+                              {pct}%
+                            </button>
+                          );
+                        })}
+                      </div>
+
                       <select
                         value={formState.status}
-                        onChange={e =>
+                        onChange={e => {
+                          const st = e.target.value as CalendarTodoEvent['status'];
                           setFormState({
                             ...formState,
-                            status: e.target.value as CalendarTodoEvent['status']
-                          })
-                        }
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl"
+                            status: st,
+                            progress: st === 'Selesai' ? 100 : st === 'Belum Mulai' ? 0 : 50
+                          });
+                        }}
+                        className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold"
                       >
-                        <option value="Belum Mulai">Belum Mulai</option>
-                        <option value="Sedang Berjalan">Sedang Berjalan</option>
-                        <option value="Selesai">Selesai</option>
+                        <option value="Belum Mulai">Belum Mulai (0%)</option>
+                        <option value="Sedang Berjalan">Sedang Berjalan (50%)</option>
+                        <option value="Selesai">Selesai (100%)</option>
                       </select>
                     </div>
                   </div>

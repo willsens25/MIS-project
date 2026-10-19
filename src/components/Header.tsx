@@ -113,7 +113,6 @@ export const Header: React.FC<HeaderProps> = ({
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showDivisiMenu, setShowDivisiMenu] = useState(false);
   const [showPlenoMenu, setShowPlenoMenu] = useState(false);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showSwitchUserModal, setShowSwitchUserModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showUserSettingsModal, setShowUserSettingsModal] = useState(false);
@@ -130,18 +129,15 @@ export const Header: React.FC<HeaderProps> = ({
   const activeColorPreset = getColorPreset(colorPreset);
 
   useEffect(() => {
-    if (showMobileMenu) {
-      document.body.style.overflow = 'hidden';
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') setShowMobileMenu(false);
-      };
-      window.addEventListener('keydown', handleKeyDown);
-      return () => {
-        document.body.style.overflow = '';
-        window.removeEventListener('keydown', handleKeyDown);
-      };
-    }
-  }, [showMobileMenu]);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowProfileMenu(false);
+        setShowPlenoMenu(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleLoadDemoWithToast = () => {
     loadDemoData();
@@ -1059,22 +1055,50 @@ export const Header: React.FC<HeaderProps> = ({
                 onOpenPersetujuan={onOpenPersetujuan}
               />
 
-              {/* Mobile Hamburger Menu Toggle Button */}
+              {/* Mobile Theme Toggle Button */}
               <motion.button
-                id="btn-mobile-menu-toggle"
+                id="btn-mobile-theme-toggle"
                 type="button"
-                onClick={() => setShowMobileMenu(true)}
+                onClick={toggleTheme}
                 whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.94 }}
-                aria-label="Buka Menu Navigasi Modul"
-                aria-expanded={showMobileMenu}
-                className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 shadow-xs cursor-pointer transition-colors"
+                whileTap={{ scale: 0.92 }}
+                className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 shadow-xs cursor-pointer flex items-center justify-center"
+                title={theme === 'dark' ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
+                aria-label="Ganti Tema Tampilan"
               >
-                <Menu className="w-5 h-5" />
-                {pendingPengajuansCount > 0 && (
-                  <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-white dark:ring-slate-900 animate-pulse" />
+                {theme === 'dark' ? (
+                  <Moon className="w-4 h-4 text-cyan-400" />
+                ) : (
+                  <Sun className="w-4 h-4 text-amber-500" />
                 )}
               </motion.button>
+
+              {/* Mobile User Profile Avatar Trigger */}
+              {isAuthenticated ? (
+                <button
+                  id="btn-mobile-profile-avatar"
+                  type="button"
+                  onClick={() => setShowProfileMenu(prev => !prev)}
+                  className="flex items-center justify-center w-8 h-8 rounded-full overflow-hidden bg-gradient-to-tr from-indigo-500 to-purple-500 text-white font-bold text-xs ring-1 ring-slate-300 dark:ring-slate-700 shadow-xs cursor-pointer"
+                  title="Menu Profil Saya"
+                  aria-label="Buka Menu Profil"
+                >
+                  {currentUser.avatar ? (
+                    <img src={currentUser.avatar} alt={currentUser.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  ) : (
+                    <span>{currentUser.name.charAt(0).toUpperCase()}</span>
+                  )}
+                </button>
+              ) : (
+                <button
+                  id="btn-mobile-login"
+                  type="button"
+                  onClick={openLoginModal}
+                  className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs"
+                >
+                  Masuk
+                </button>
+              )}
             </div>
 
           </div>
@@ -1227,470 +1251,6 @@ export const Header: React.FC<HeaderProps> = ({
         initialDataType={dataImportExportInitialDataType}
       />
 
-      {/* Mobile Navigation Drawer Portal (Small Screens < lg) */}
-      {showMobileMenu && createPortal(
-        <div className="fixed inset-0 z-50 lg:hidden flex justify-end">
-          {/* Backdrop Overlay */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={() => setShowMobileMenu(false)}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs cursor-pointer"
-            aria-hidden="true"
-          />
-
-          {/* Drawer Slide-in Panel */}
-          <motion.div
-            id="mobile-navigation-drawer"
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-            className="relative w-full max-w-sm h-full bg-white dark:bg-[#15181C] border-l border-slate-200 dark:border-slate-800 shadow-2xl z-10 flex flex-col overflow-hidden text-slate-800 dark:text-slate-100"
-          >
-            {/* Top Bar with Logo & Close */}
-            <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 shrink-0">
-              <div className="flex items-center space-x-2.5">
-                <img
-                  src="/img/logo-lamrimnesia.png"
-                  alt="Logo Lamrimnesia"
-                  className="h-8 w-auto object-contain rounded-lg shadow-xs"
-                />
-                <div>
-                  <h2 className="text-sm font-bold text-slate-900 dark:text-white tracking-wide">SAPA-ALL MIS</h2>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400">Navigasi Modul & Operasional</p>
-                </div>
-              </div>
-
-              <button
-                id="btn-close-mobile-menu"
-                onClick={() => setShowMobileMenu(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                title="Tutup Menu"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Scrollable Drawer Body */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {/* User Account / Auth Card */}
-              {isAuthenticated ? (
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-xs">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-xs shrink-0 ring-2 ring-indigo-500/20">
-                      {currentUser.avatar ? (
-                        <img
-                          src={currentUser.avatar}
-                          alt={currentUser.name}
-                          className="w-full h-full object-cover rounded-full"
-                          referrerPolicy="no-referrer"
-                        />
-                      ) : (
-                        currentUser.name.charAt(0).toUpperCase()
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{currentUser.name}</p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{currentUser.email}</p>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300">
-                          {currentUser.role}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-mono">
-                          {divisiList.find(d => d.id === currentUser.divisi_id)?.kode}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-200 dark:border-slate-800">
-                    <button
-                      id="btn-mobile-switch-user"
-                      onClick={() => {
-                        setShowMobileMenu(false);
-                        setShowSwitchUserModal(true);
-                      }}
-                      className="flex items-center justify-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium hover:bg-slate-100 dark:hover:bg-slate-750 transition-colors cursor-pointer"
-                    >
-                      <Users className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                      <span>Ganti Akun</span>
-                    </button>
-                    <button
-                      id="btn-mobile-edit-profile"
-                      onClick={() => {
-                        setShowMobileMenu(false);
-                        setShowEditProfileModal(true);
-                      }}
-                      className="flex items-center justify-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium hover:bg-slate-100 dark:hover:bg-slate-750 transition-colors cursor-pointer"
-                    >
-                      <UserCog className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
-                      <span>Edit Profil</span>
-                    </button>
-                    <button
-                      id="btn-mobile-user-settings"
-                      onClick={() => {
-                        setShowMobileMenu(false);
-                        setShowUserSettingsModal(true);
-                      }}
-                      className="flex items-center justify-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300 text-xs font-medium hover:bg-teal-100 dark:hover:bg-teal-900/60 transition-colors cursor-pointer"
-                      title="Pengaturan Balon Kata & Maskot AI"
-                    >
-                      <SlidersHorizontal className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
-                      <span>Pengaturan AI</span>
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 flex items-center gap-2">
-                  <button
-                    id="btn-mobile-login"
-                    onClick={() => {
-                      setShowMobileMenu(false);
-                      openLoginModal();
-                    }}
-                    className="flex-1 flex items-center justify-center space-x-1.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-                  >
-                    <LogIn className="w-3.5 h-3.5" />
-                    <span>Masuk</span>
-                  </button>
-                  <button
-                    id="btn-mobile-register"
-                    onClick={() => {
-                      setShowMobileMenu(false);
-                      openRegisterModal();
-                    }}
-                    className="flex-1 flex items-center justify-center space-x-1.5 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-teal-700 dark:text-teal-300 border border-teal-500/30 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
-                  >
-                    <UserPlus className="w-3.5 h-3.5" />
-                    <span>Daftar</span>
-                  </button>
-                </div>
-              )}
-
-              {/* Modul Divisi Navigasi Section */}
-              <div>
-                <div className="flex items-center justify-between px-1 mb-2">
-                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                    Modul Divisi Operasional ({divisiList.length})
-                  </span>
-                  <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium">
-                    Sentuh untuk buka
-                  </span>
-                </div>
-
-                <div className="space-y-1.5">
-                  {divisiList.map((div) => {
-                    const isActive = currentUser.divisi_id === div.id;
-                    return (
-                      <button
-                        key={div.id}
-                        id={`btn-mobile-nav-div-${div.kode.toLowerCase()}`}
-                        onClick={() => {
-                          switchDivision(div.id);
-                          setShowMobileMenu(false);
-                        }}
-                        className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-all cursor-pointer ${
-                          isActive
-                            ? 'bg-indigo-600 text-white shadow-md'
-                            : 'bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-850'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-3 min-w-0">
-                          <div
-                            className={`p-2 rounded-lg shrink-0 ${
-                              isActive
-                                ? 'bg-white/20 text-white'
-                                : 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                            }`}
-                          >
-                            {getDivisionIcon(div.id)}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold leading-tight truncate">{div.nama_divisi}</p>
-                            <p className={`text-[10px] truncate ${isActive ? 'text-indigo-100' : 'text-slate-500 dark:text-slate-400'}`}>
-                              {div.deskripsi}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center space-x-2 shrink-0 ml-2">
-                          {div.id === 2 && pendingPengajuansCount > 0 && (
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                              isActive ? 'bg-amber-400 text-slate-950 font-bold' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 animate-pulse'
-                            }`}>
-                              {pendingPengajuansCount}
-                            </span>
-                          )}
-                          <span
-                            className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
-                              isActive
-                                ? 'bg-indigo-700/60 text-white'
-                                : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                            }`}
-                          >
-                            {div.kode}
-                          </span>
-                          <ChevronRight className={`w-3.5 h-3.5 ${isActive ? 'text-white/80' : 'text-slate-400'}`} />
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Quick Action Tools & Services */}
-              <div>
-                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider px-1 mb-2 block">
-                  Layanan & Laporan MIS
-                </span>
-                <div className="grid grid-cols-2 gap-2">
-                  {/* Tanya AI Assistant */}
-                  <button
-                    id="btn-mobile-ai-assistant"
-                    onClick={() => {
-                      setShowMobileMenu(false);
-                      onOpenAI();
-                    }}
-                    className="flex items-center space-x-2 p-2.5 rounded-xl bg-teal-50/80 dark:bg-teal-950/40 border border-teal-300/70 dark:border-teal-700/60 text-teal-900 dark:text-teal-200 text-xs font-semibold hover:bg-teal-100 dark:hover:bg-teal-900/60 transition-colors text-left cursor-pointer"
-                  >
-                    <MascotAvatar size="xs" variant="badge" interactive={false} className="w-5 h-5 shrink-0" />
-                    <span className="truncate">Tanya AI MIS</span>
-                  </button>
-
-                  {/* Unduh Laporan PDF Divisi */}
-                  <button
-                    id="btn-mobile-pdf-report"
-                    onClick={() => {
-                      setShowMobileMenu(false);
-                      setShowReportModal(true);
-                    }}
-                    className="flex items-center space-x-2 p-2.5 rounded-xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-300/70 dark:border-indigo-700/60 text-indigo-900 dark:text-indigo-200 text-xs font-semibold hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-colors text-left cursor-pointer"
-                  >
-                    <FileDown className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                    <span className="truncate">Laporan PDF</span>
-                  </button>
-
-                  {/* Laporan Tahunan PDF */}
-                  <button
-                    id="btn-mobile-annual-report"
-                    onClick={() => {
-                      setShowMobileMenu(false);
-                      setShowAnnualReportModal(true);
-                    }}
-                    className="flex items-center space-x-2 p-2.5 rounded-xl bg-slate-100/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors text-left cursor-pointer"
-                  >
-                    <Award className="w-4 h-4 text-amber-500 shrink-0" />
-                    <span className="truncate">Laporan Tahunan</span>
-                  </button>
-
-                  {/* Mode Rapat Pleno Mobile */}
-                  <button
-                    id="btn-mobile-pleno-mode"
-                    onClick={() => {
-                      setShowMobileMenu(false);
-                      openPresentationMode();
-                    }}
-                    className="flex items-center space-x-2 p-2.5 rounded-xl bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs font-semibold hover:bg-amber-500/20 transition-colors text-left cursor-pointer"
-                  >
-                    <Tv className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                    <span className="truncate">Mode Rapat Pleno</span>
-                  </button>
-
-                  {/* Toggle Sensor Privasi Mobile */}
-                  <button
-                    id="btn-mobile-toggle-privacy"
-                    onClick={() => {
-                      togglePrivacyMode();
-                      setShowMobileMenu(false);
-                    }}
-                    className={`flex items-center space-x-2 p-2.5 rounded-xl border text-xs font-semibold transition-colors text-left cursor-pointer ${
-                      isPrivacyMode
-                        ? 'bg-amber-500 text-slate-950 border-amber-400'
-                        : 'bg-slate-100/80 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
-                    }`}
-                  >
-                    {isPrivacyMode ? (
-                      <EyeOff className="w-4 h-4 text-slate-950 shrink-0" />
-                    ) : (
-                      <Eye className="w-4 h-4 text-slate-500 shrink-0" />
-                    )}
-                    <span className="truncate">{isPrivacyMode ? 'Sensor Aktif' : 'Sensor Layar'}</span>
-                  </button>
-
-                  {/* Excel / CSV Spreadsheet Import Export */}
-                  <button
-                    id="btn-mobile-excel-import-export"
-                    onClick={() => {
-                      setShowMobileMenu(false);
-                      setDataImportExportInitialTab('import');
-                      setShowDataImportExportModal(true);
-                    }}
-                    className="col-span-2 flex items-center justify-between p-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-semibold hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors text-left cursor-pointer"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                      <span>Impor & Ekspor Excel (.xlsx)</span>
-                    </div>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-200 dark:bg-emerald-900 text-emerald-900 dark:text-emerald-200 font-mono">
-                      XLSX/CSV
-                    </span>
-                  </button>
-
-                  {/* Backup & Restore Database */}
-                  <button
-                    id="btn-mobile-backup-restore"
-                    onClick={() => {
-                      setShowMobileMenu(false);
-                      setBackupRestoreInitialTab('backup');
-                      setShowBackupRestoreModal(true);
-                    }}
-                    className="flex items-center space-x-2 p-2.5 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-medium hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-colors text-left cursor-pointer"
-                  >
-                    <Database className="w-4 h-4 text-indigo-500 shrink-0" />
-                    <span className="truncate">Cadangan (JSON)</span>
-                  </button>
-
-                  {/* Dummy Database Seeder */}
-                  <button
-                    id="btn-mobile-database-seeder"
-                    onClick={() => {
-                      setShowMobileMenu(false);
-                      setBackupRestoreInitialTab('seeder');
-                      setShowBackupRestoreModal(true);
-                    }}
-                    className="flex items-center space-x-2 p-2.5 rounded-xl bg-purple-50/70 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 text-xs font-medium hover:bg-purple-100 dark:hover:bg-purple-900/60 transition-colors text-left cursor-pointer"
-                  >
-                    <Sparkles className="w-4 h-4 text-purple-500 shrink-0" />
-                    <span className="truncate">Data Dummy (Seeder)</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Pengaturan Tampilan & Sistem */}
-              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 space-y-3">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-600 dark:text-slate-300 flex items-center gap-2 font-medium">
-                    {theme === 'dark' ? (
-                      <Moon className="w-4 h-4 text-cyan-400" />
-                    ) : (
-                      <Sun className="w-4 h-4 text-amber-500" />
-                    )}
-                    <span>Mode Tampilan</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={toggleTheme}
-                    className="px-2.5 py-1 text-[11px] font-semibold rounded-md bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 cursor-pointer transition-colors shadow-xs"
-                  >
-                    {themeMode === 'system-synced'
-                      ? `Auto 🌅 (${theme === 'dark' ? 'Gelap' : 'Terang'})`
-                      : theme === 'dark'
-                      ? 'Mode Gelap 🌙'
-                      : 'Mode Terang ☀️'}
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200 dark:border-slate-800">
-                  <span className="text-slate-600 dark:text-slate-300 flex items-center gap-2 font-medium">
-                    <Moon className={`w-4 h-4 ${isNightShiftActive ? 'text-amber-500 fill-amber-400/30' : 'text-slate-400'}`} />
-                    <span>Night Shift (Lembur)</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={toggleNightShift}
-                    className={`px-2.5 py-1 text-[11px] font-semibold rounded-md border cursor-pointer transition-colors shadow-xs ${
-                      isNightShiftActive
-                        ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700 font-bold'
-                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700'
-                    }`}
-                  >
-                    {isNightShiftActive ? `Aktif (${nightShift.warmth}%)` : 'Nonaktif'}
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200 dark:border-slate-800">
-                  <span className="text-slate-600 dark:text-slate-300 flex items-center gap-2 font-medium">
-                    <Palette className="w-4 h-4 text-indigo-500" />
-                    <span>Preset Warna Aksen</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowMobileMenu(false);
-                      setShowThemePresetModal(true);
-                    }}
-                    className="flex items-center space-x-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-md bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 cursor-pointer transition-colors shadow-xs"
-                  >
-                    <span
-                      className="w-2.5 h-2.5 rounded-full inline-block"
-                      style={{ backgroundColor: activeColorPreset.primaryHex }}
-                    />
-                    <span>{activeColorPreset.name}</span>
-                  </button>
-                </div>
-
-                {SHOW_DUMMY_BUTTON && (
-                  <button
-                    id="btn-mobile-load-dummy"
-                    onClick={() => {
-                      setShowMobileMenu(false);
-                      handleLoadDemoWithToast();
-                    }}
-                    className="w-full flex items-center justify-between p-2 text-xs font-semibold rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-300/70 dark:border-amber-700/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <Database className="w-4 h-4 text-amber-500 shrink-0" />
-                      <span>Muat Data Demo / Sampel</span>
-                    </div>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-200/80 dark:bg-amber-900 text-amber-800 dark:text-amber-200 font-mono">
-                      DEV
-                    </span>
-                  </button>
-                )}
-
-                <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-1.5">
-                  <button
-                    id="btn-mobile-clear-all"
-                    onClick={() => {
-                      setShowMobileMenu(false);
-                      handleClearDataWithToast();
-                    }}
-                    className="w-full flex items-center px-2 py-1.5 text-xs text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2 shrink-0" />
-                    <span>Kosongkan Semua Data (0 Data)</span>
-                  </button>
-
-                  {isAuthenticated && (
-                    <button
-                      id="btn-mobile-logout"
-                      onClick={() => {
-                        setShowMobileMenu(false);
-                        logout();
-                      }}
-                      className="w-full flex items-center px-2 py-1.5 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-                    >
-                      <LogOut className="w-4 h-4 mr-2 shrink-0" />
-                      <span>Keluar (Logout)</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom Footer */}
-            <div className="px-4 py-2.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 text-center shrink-0">
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
-                SAPA-ALL MIS v4.0 • Yayasan Lamrimnesia
-              </p>
-            </div>
-          </motion.div>
-        </div>,
-        document.body
-      )}
     </header>
   );
 };
