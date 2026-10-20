@@ -20,6 +20,32 @@ export interface User {
   created_at?: string;
 }
 
+export type AttachmentCategory =
+  | 'Bukti Transaksi & Nota'
+  | 'Draft Naskah & Editorial'
+  | 'Surat Jalan & Logistik'
+  | 'Notulensi & Berita Acara'
+  | 'Kontrak & MoU'
+  | 'Dokumen Tugas & TOR'
+  | 'Lainnya';
+
+export interface DocumentAttachment {
+  id: string;
+  name: string;
+  size: number; // in bytes
+  type: string; // e.g. 'image/jpeg', 'image/png', 'application/pdf', 'application/docx', 'text/plain'
+  category: AttachmentCategory;
+  divisionId: DivisionId; // 1: Direktorat, 2: Finance, 3: Penerbitan, 4: Marketing, 5: Produksi, 6: Logistik
+  uploadedAt: string; // YYYY-MM-DD HH:mm or ISO string
+  uploadedBy: string;
+  description?: string;
+  referenceNumber?: string; // e.g. 'NOTA-2026-004', 'SJ-LOG-102', 'NSK-02'
+  relatedEntityType?: 'mutasi' | 'pengajuan' | 'buku' | 'surat_jalan' | 'todo_task' | 'general';
+  relatedEntityId?: string | number;
+  fileData?: string; // Data URL for preview/download
+  tags?: string[];
+}
+
 export interface Book {
   id: number;
   judul: string;
@@ -321,6 +347,34 @@ export interface BankReconciliationRecord {
   updated_at?: string;
 }
 
+export interface BudgetPagu {
+  id: number;
+  divisi_id: DivisionId; // 1: Direktorat, 2: Finance, 3: Penerbitan, 4: Marketing, 5: Produksi, 6: Logistik
+  tahun: number; // e.g. 2026, 2025
+  periode: 'Tahunan' | 'Semester 1' | 'Semester 2' | 'Q1' | 'Q2' | 'Q3' | 'Q4' | 'Bulanan';
+  bulan?: number; // 1-12 optional
+  kategori_id?: number;
+  nama_pos_anggaran: string;
+  pagu_anggaran: number; // IDR total allocation ceiling
+  realisasi_manual?: number; // Optional baseline realization
+  keterangan?: string;
+  penanggung_jawab?: string;
+  status?: 'Aktif' | 'Tercapai' | 'Overbudget' | 'Draft';
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface BudgetSummaryItem {
+  budget: BudgetPagu;
+  divisiName: string;
+  divisiKode: string;
+  pagu: number;
+  realisasi: number;
+  sisa: number;
+  persentase: number;
+  status: 'Aman' | 'Waspada' | 'Kritis' | 'Overbudget';
+}
+
 export interface PengajuanCetak {
   id: number;
   buku_id: number;
@@ -568,6 +622,8 @@ export interface BackupData {
     userSettings?: UserSettings;
     colorPreset?: ColorPresetId;
     theme?: 'light' | 'dark';
+    attachments?: DocumentAttachment[];
+    budgets?: BudgetPagu[];
   };
 }
 

@@ -21,6 +21,7 @@ import { AnnualReportModal } from './components/modals/AnnualReportModal';
 import { ExecutivePresentationModal } from './components/modals/ExecutivePresentationModal';
 import { GlobalHotkeyMapModal } from './components/modals/GlobalHotkeyMapModal';
 import { GlobalCommandPaletteModal } from './components/modals/GlobalCommandPaletteModal';
+import { DocumentArchiveModal } from './components/modals/DocumentArchiveModal';
 import { ToastContainer } from './components/common/ToastContainer';
 import { UserSettingsModal } from './components/profile/UserSettingsModal';
 import { NightShiftFloatingWidget } from './components/theme/NightShiftFloatingWidget';
@@ -1240,6 +1241,9 @@ const AppContent: React.FC = () => {
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
       />
+
+      {/* Global Document Archive & File Attachments Modal */}
+      <DocumentArchiveModal />
 
       {/* Floating Privacy Mode Indicator Banner when screen is mirrored to projector */}
       <AnimatePresence>

@@ -39,7 +39,9 @@ import {
   NightShiftPreset,
   NightShiftScheduleType,
   BankStatementItem,
-  BankReconciliationRecord
+  BankReconciliationRecord,
+  DocumentAttachment,
+  AttachmentCategory
 } from '../types';
 import { SeedOptions, generateSeedData } from '../lib/dummySeeder';
 import { DEFAULT_COLOR_PRESET } from '../lib/themePresets';
@@ -104,7 +106,9 @@ import {
   DEMO_DONASI_PROYEK,
   DEMO_DONASI_SPONSOR,
   DEMO_ROYALTI_PENULIS,
-  DEMO_ROYALTI_STATEMENT
+  DEMO_ROYALTI_STATEMENT,
+  INITIAL_ATTACHMENTS,
+  DEMO_ATTACHMENTS
 } from '../lib/initialData';
 import {
   hashPasswordServer,
@@ -336,6 +340,18 @@ interface AppContextType {
   dismissToast: (id: string) => void;
   clearAllToasts: () => void;
   simulateToastNotification: (category?: ToastCategory) => void;
+
+  // Document Archive & Attachment System
+  attachments: DocumentAttachment[];
+  addAttachment: (att: Omit<DocumentAttachment, 'id' | 'uploadedAt'>) => DocumentAttachment;
+  deleteAttachment: (id: string) => void;
+  updateAttachment: (id: string, updates: Partial<DocumentAttachment>) => void;
+  getAttachmentsForEntity: (entityType: string, entityId: string | number) => DocumentAttachment[];
+  isDocumentArchiveOpen: boolean;
+  setIsDocumentArchiveOpen: (open: boolean) => void;
+  openDocumentArchive: (categoryFilter?: AttachmentCategory, divisionFilter?: DivisionId) => void;
+  activeArchiveCategoryFilter?: AttachmentCategory;
+  activeArchiveDivisionFilter?: DivisionId;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -713,9 +729,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return [...fixedStored, ...missingInitials];
   });
 
+  const [attachments, setAttachments] = useState<DocumentAttachment[]>(() => {
+    const stored = getStoredItem<DocumentAttachment[]>('mis_document_attachments', DEMO_ATTACHMENTS);
+    return stored && stored.length > 0 ? stored : DEMO_ATTACHMENTS;
+  });
+  const [isDocumentArchiveOpen, setIsDocumentArchiveOpen] = useState(false);
+  const [activeArchiveCategoryFilter, setActiveArchiveCategoryFilter] = useState<AttachmentCategory | undefined>(undefined);
+  const [activeArchiveDivisionFilter, setActiveArchiveDivisionFilter] = useState<DivisionId | undefined>(undefined);
+
   // Sync to localStorage
   useEffect(() => { setStoredItem('mis_users', usersList); }, [usersList]);
   useEffect(() => { setStoredItem('mis_current_user', currentUser); }, [currentUser]);
+  useEffect(() => { setStoredItem('mis_document_attachments', attachments); }, [attachments]);
 
   // Transparently upgrade any legacy plain-text passwords to bcrypt hashes in background
   useEffect(() => {
@@ -3019,6 +3044,74 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     recordActivity('Hapus Massal User', 'User', `Menghapus ${safeIds.length} pengguna sistem: [${names}]`);
   };
 
+  // Document Archive & Attachment System
+  const openDocumentArchive = useCallback((categoryFilter?: AttachmentCategory, divisionFilter?: DivisionId) => {
+    setActiveArchiveCategoryFilter(categoryFilter);
+    setActiveArchiveDivisionFilter(divisionFilter);
+    setIsDocumentArchiveOpen(true);
+  }, []);
+
+  const addAttachment = useCallback((attData: Omit<DocumentAttachment, 'id' | 'uploadedAt'>) => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const uploadedAt = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const newAtt: DocumentAttachment = {
+      ...attData,
+      id: `att-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      uploadedAt
+    };
+    setAttachments(prev => {
+      const updated = [newAtt, ...prev];
+      setStoredItem('mis_document_attachments', updated);
+      return updated;
+    });
+    recordActivity(
+      'Unggah Dokumen',
+      'Arsip Dokumen',
+      `Mengunggah dokumen "${newAtt.name}" (${newAtt.category})`,
+      newAtt.divisionId,
+      newAtt.uploadedBy
+    );
+    showToast(`Dokumen "${newAtt.name}" berhasil diarsipkan ke sistem!`, 'success');
+    return newAtt;
+  }, [recordActivity, showToast]);
+
+  const deleteAttachment = useCallback((id: string) => {
+    setAttachments(prev => {
+      const target = prev.find(a => a.id === id);
+      const updated = prev.filter(a => a.id !== id);
+      setStoredItem('mis_document_attachments', updated);
+      if (target) {
+        recordActivity(
+          'Hapus Dokumen',
+          'Arsip Dokumen',
+          `Menghapus dokumen "${target.name}" dari arsip`,
+          target.divisionId
+        );
+      }
+      return updated;
+    });
+    showToast('Dokumen berhasil dihapus dari arsip.', 'info');
+  }, [recordActivity, showToast]);
+
+  const updateAttachment = useCallback((id: string, updates: Partial<DocumentAttachment>) => {
+    setAttachments(prev => {
+      const updated = prev.map(a => (a.id === id ? { ...a, ...updates } : a));
+      setStoredItem('mis_document_attachments', updated);
+      return updated;
+    });
+    showToast('Informasi dokumen berhasil diperbarui.', 'success');
+  }, [showToast]);
+
+  const getAttachmentsForEntity = useCallback(
+    (entityType: string, entityId: string | number) => {
+      return attachments.filter(
+        a => a.relatedEntityType === entityType && String(a.relatedEntityId) === String(entityId)
+      );
+    },
+    [attachments]
+  );
+
   const clearAllData = () => {
     setBooks([]);
     setPromos([]);
@@ -3031,6 +3124,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLogisticLogs([]);
     setProductionLogs([]);
     setActivityLogs([]);
+    setAttachments(INITIAL_ATTACHMENTS);
     setPreOrderCampaigns(INITIAL_PRE_ORDERS);
     setBookBundles(INITIAL_BOOK_BUNDLES);
     setDonasiProyeks(INITIAL_DONASI_PROYEK);
@@ -3063,6 +3157,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.removeItem('mis_bank_reconciliations');
       localStorage.removeItem('mis_users');
       localStorage.removeItem('mis_bazaar_events');
+      localStorage.removeItem('mis_document_attachments');
       localStorage.removeItem('mis_current_user');
       localStorage.setItem('mis_is_auth', 'false');
       localStorage.setItem('mis_data_version', CLEAN_STORAGE_VERSION);
@@ -3083,6 +3178,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLogisticLogs(DEMO_LOGISTIC_LOGS);
     setProductionLogs(DEMO_PRODUCTION_LOGS);
     setActivityLogs(DEMO_ACTIVITY_LOGS);
+    setAttachments(DEMO_ATTACHMENTS);
     setAccounts(DEMO_ACCOUNTS);
     setUsersList(DEMO_USERS);
     setBazaarEvents(DEMO_BAZAAR_EVENTS);
@@ -3112,6 +3208,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem('mis_logistic_logs', JSON.stringify(DEMO_LOGISTIC_LOGS));
       localStorage.setItem('mis_production_logs', JSON.stringify(DEMO_PRODUCTION_LOGS));
       localStorage.setItem('mis_activity_logs', JSON.stringify(DEMO_ACTIVITY_LOGS));
+      localStorage.setItem('mis_document_attachments', JSON.stringify(DEMO_ATTACHMENTS));
       localStorage.setItem('mis_accounts', JSON.stringify(DEMO_ACCOUNTS));
       localStorage.setItem('mis_users', JSON.stringify(DEMO_USERS));
       localStorage.setItem('mis_bazaar_events', JSON.stringify(DEMO_BAZAAR_EVENTS));
@@ -3156,7 +3253,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           expeditions: expeditions.length,
           bazaarEvents: bazaarEvents.length,
           activityLogs: activityLogs.length,
-          users: usersList.length
+          users: usersList.length,
+          attachments: attachments.length
         },
         system_note: systemNote || 'Pencadangan data lengkap operasional seluruh divisi MIS Yayasan Lamrimnesia.'
       },
@@ -3180,7 +3278,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         categories,
         userSettings,
         colorPreset,
-        theme
+        theme,
+        attachments
       }
     };
 
@@ -3188,7 +3287,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       'Backup Data',
       'System',
       `Mengekspor cadangan database lengkap (Total item: ${
-        books.length + orders.length + mutasis.length + identitasList.length
+        books.length + orders.length + mutasis.length + identitasList.length + attachments.length
       } entri data)`
     );
 
@@ -3224,6 +3323,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       let newActivityLogs = activityLogs;
       let newPenjualans = penjualans;
       let newPenyalurans = penyalurans;
+      let newAttachments = attachments;
 
       if (mode === 'replace') {
         newBooks = Array.isArray(d.books) ? d.books : [];
@@ -3241,10 +3341,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         newActivityLogs = Array.isArray(d.activityLogs) ? d.activityLogs : [];
         newPenjualans = Array.isArray(d.penjualans) ? d.penjualans : [];
         newPenyalurans = Array.isArray(d.penyalurans) ? d.penyalurans : [];
+        newAttachments = Array.isArray(d.attachments) ? d.attachments : [];
       } else {
         // Merge mode: deduplicate based on id
         const mergeById = <T extends { id: number }>(existing: T[], incoming: T[] = []): T[] => {
           const map = new Map<number, T>();
+          existing.forEach(item => map.set(item.id, item));
+          incoming.forEach(item => map.set(item.id, item));
+          return Array.from(map.values());
+        };
+
+        const mergeAttachmentsById = (existing: DocumentAttachment[], incoming: DocumentAttachment[] = []): DocumentAttachment[] => {
+          const map = new Map<string, DocumentAttachment>();
           existing.forEach(item => map.set(item.id, item));
           incoming.forEach(item => map.set(item.id, item));
           return Array.from(map.values());
@@ -3265,6 +3373,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         newActivityLogs = mergeById(activityLogs, d.activityLogs);
         newPenjualans = mergeById(penjualans, d.penjualans);
         newPenyalurans = mergeById(penyalurans, d.penyalurans);
+        newAttachments = mergeAttachmentsById(attachments, d.attachments);
       }
 
       // Apply React states
@@ -3283,6 +3392,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setActivityLogs(newActivityLogs);
       setPenjualans(newPenjualans);
       setPenyalurans(newPenyalurans);
+      setAttachments(newAttachments);
 
       // Restore user settings if present
       if (d.userSettings) {
@@ -3306,6 +3416,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setStoredItem('mis_activity_logs', newActivityLogs);
       setStoredItem('mis_penjualans', newPenjualans);
       setStoredItem('mis_penyalurans', newPenyalurans);
+      setStoredItem('mis_document_attachments', newAttachments);
 
       const summary: RestoreSummary = {
         booksRestored: newBooks.length,
@@ -3581,7 +3692,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateNightShift,
         toggleNightShift,
         setNightShiftPreset,
-        evaluateNightShift
+        evaluateNightShift,
+
+        // Document Archive & Attachment System
+        attachments,
+        addAttachment,
+        deleteAttachment,
+        updateAttachment,
+        getAttachmentsForEntity,
+        isDocumentArchiveOpen,
+        setIsDocumentArchiveOpen,
+        openDocumentArchive,
+        activeArchiveCategoryFilter,
+        activeArchiveDivisionFilter
       }}
     >
       {children}

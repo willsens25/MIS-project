@@ -24,8 +24,11 @@ import {
   DonasiProyekCetak,
   DonasiSponsorRecord,
   RoyaltiPenulis,
-  RoyaltiStatement
+  RoyaltiStatement,
+  DocumentAttachment,
+  BudgetPagu
 } from '../types';
+import { createSampleReceiptSvg, createSampleDocumentSvg } from '../utils/attachmentHelper';
 
 export const INITIAL_DIVISI: Divisi[] = [
   { id: 1, nama_divisi: 'Direktorat & HRD', kode: 'DIR', deskripsi: 'Pusat Manajemen, Keanggotaan & Regulasi Organisasi' },
@@ -76,6 +79,8 @@ export const INITIAL_LOGISTIC_LOGS: LogisticLog[] = [];
 export const INITIAL_PRODUCTION_LOGS: ProductionLog[] = [];
 export const INITIAL_ACTIVITY_LOGS: ActivityLog[] = [];
 export const INITIAL_BAZAAR_EVENTS: BazaarEvent[] = [];
+export const INITIAL_ATTACHMENTS: DocumentAttachment[] = [];
+export const INITIAL_BUDGETS: BudgetPagu[] = [];
 
 // ==========================================
 // DEMO / SAMPLE DATA (Available on request)
@@ -1077,4 +1082,343 @@ export const DEMO_ROYALTI_STATEMENT: RoyaltiStatement[] = [
     created_at: '2026-07-01 10:00:00'
   }
 ];
+
+export const DEMO_ATTACHMENTS: DocumentAttachment[] = [
+  {
+    id: 'att-1',
+    name: 'Bukti_Transfer_Royalti_Q1_2026_BCA.png',
+    size: 245800,
+    type: 'image/png',
+    category: 'Bukti Transaksi & Nota',
+    divisionId: 2,
+    uploadedAt: '2026-07-10 15:30',
+    uploadedBy: 'Siti Rahmawati (Bendahara)',
+    description: 'Bukti transfer resmi via KlikBCA Yayasan untuk pembayaran royalti penulis naskah Dharma semester 1.',
+    referenceNumber: 'TRF-BCA-20260710-881',
+    relatedEntityType: 'mutasi',
+    relatedEntityId: 1,
+    tags: ['Royalti', 'BCA', 'Lunas', 'Finance'],
+    fileData: createSampleReceiptSvg(
+      'BUKTI TRANSFER ROYALTI PENULIS',
+      'TRF-BCA-20260710-881',
+      'Rp 2.450.000',
+      'Transfer pembayaran royalti penerbitan semester 1 tahun 2026 atas buku "Pembebasan di Tangan Kita" karya Pabongka Rinpoche via Rekening Bank BCA Yayasan Lamrimnesia.'
+    )
+  },
+  {
+    id: 'att-2',
+    name: 'Nota_Kwitansi_Pembelian_Kertas_Bookpaper.png',
+    size: 182400,
+    type: 'image/png',
+    category: 'Bukti Transaksi & Nota',
+    divisionId: 2,
+    uploadedAt: '2026-06-18 11:15',
+    uploadedBy: 'Siti Rahmawati (Bendahara)',
+    description: 'Kwitansi asli stempel basah pembelian 50 rim kertas Bookpaper 72gsm untuk cetak ulang buku Dharma.',
+    referenceNumber: 'NOTA-CV-KERTAS-042',
+    relatedEntityType: 'mutasi',
+    relatedEntityId: 2,
+    tags: ['Kertas', 'Percetakan', 'Kwitansi'],
+    fileData: createSampleReceiptSvg(
+      'KWITANSI PEMBELIAN KERTAS BOOKPAPER',
+      'NOTA-CV-KERTAS-042',
+      'Rp 4.750.000',
+      'Pembelian 50 rim kertas Bookpaper Premium 72gsm untuk cetak ulang katalog buku klasik. Diterbitkan oleh CV Kertas Mulia Abadi.'
+    )
+  },
+  {
+    id: 'att-3',
+    name: 'Draft_Naskah_Final_Pembebasan_Di_Tangan_Kita_Bab4.pdf',
+    size: 1420000,
+    type: 'application/pdf',
+    category: 'Draft Naskah & Editorial',
+    divisionId: 3,
+    uploadedAt: '2026-06-05 09:20',
+    uploadedBy: 'Budi Santoso (Penerbitan)',
+    description: 'Hasil penyuntingan editorial tahap 3 dengan catatan anotasi transliterasi Sanskerta dan glosarium istilah Dharma.',
+    referenceNumber: 'NSK-PNB-2026-001',
+    relatedEntityType: 'buku',
+    relatedEntityId: 1,
+    tags: ['Editorial', 'Naskah', 'Lamrim', 'Revisi-3'],
+    fileData: createSampleDocumentSvg(
+      'Pembebasan di Tangan Kita (Bab 4)',
+      'Naskah Terjemahan & Ulasan Lamrim Chenmo Nusantara',
+      'Divisi Penerbitan & Editorial',
+      'Naskah ini menguraikan tahapan latihan pikiran praktis bagi praktisi pemula dan madya. Tim editorial telah menyelaraskan terminologi dengan kamus Buddhis klasik dan menyelesaikan layout halaman standar ISO B5.'
+    )
+  },
+  {
+    id: 'att-4',
+    name: 'Cover_Buku_Pembebasan_Di_Tangan_Kita_PrintReady.png',
+    size: 890000,
+    type: 'image/png',
+    category: 'Draft Naskah & Editorial',
+    divisionId: 3,
+    uploadedAt: '2026-06-12 14:00',
+    uploadedBy: 'Budi Santoso (Penerbitan)',
+    description: 'Desain cover resolusi tinggi 300dpi lengkap dengan punggung buku, ISBN barcode, dan finishing foil emas.',
+    referenceNumber: 'COV-PNB-01',
+    relatedEntityType: 'buku',
+    relatedEntityId: 1,
+    tags: ['Cover', 'Desain', 'Print-Ready'],
+    fileData: createSampleDocumentSvg(
+      'Master Cover: Pembebasan di Tangan Kita',
+      'Spesifikasi Cetak: Hardcover, Foil Emas, Spot UV',
+      'Divisi Penerbitan & Grafis',
+      'File master sampul cetak siap proses separasi warna CMYK. Telah lolos uji proofing warna dengan toleransi Delta-E di bawah 2%.'
+    )
+  },
+  {
+    id: 'att-5',
+    name: 'Scan_Surat_Jalan_Logistik_SJ2026_042_Surabaya.png',
+    size: 320000,
+    type: 'image/png',
+    category: 'Surat Jalan & Logistik',
+    divisionId: 6,
+    uploadedAt: '2026-07-02 16:45',
+    uploadedBy: 'Hendra Gunawan (Logistik)',
+    description: 'Surat jalan bermaterai dan stempel basah penerimaan 200 eksemplar buku di Vihara Surabaya.',
+    referenceNumber: 'SJ-LOG-2026-042',
+    relatedEntityType: 'surat_jalan',
+    relatedEntityId: 1,
+    tags: ['Surat Jalan', 'Logistik', 'Ekspedisi', 'Surabaya'],
+    fileData: createSampleReceiptSvg(
+      'SURAT JALAN & RESI PENERIMAAN BARANG',
+      'SJ-LOG-2026-042',
+      '200 Eksemplar Buku',
+      'Pengiriman paket buku Dharma via Ekspedisi Kargo Cepat ke Vihara Dharmakirti Surabaya. Paket telah diterima dalam kondisi utuh dan tersegel rapi.'
+    )
+  },
+  {
+    id: 'att-6',
+    name: 'Notulensi_Rapat_Pleno_Direktorat_Q1_2026.pdf',
+    size: 540000,
+    type: 'application/pdf',
+    category: 'Notulensi & Berita Acara',
+    divisionId: 1,
+    uploadedAt: '2026-04-15 17:00',
+    uploadedBy: 'Direktur Utama (Admin)',
+    description: 'Berita acara resmi rapat evaluasi kuartal 1, penetapan target penjualan, dan persetujuan anggaran produksi.',
+    referenceNumber: 'BA-DIR-2026-Q1',
+    relatedEntityType: 'general',
+    tags: ['Pleno', 'Direktorat', 'SK-Yayasan'],
+    fileData: createSampleDocumentSvg(
+      'Berita Acara Rapat Pleno Direktur Q1 2026',
+      'Keputusan Dewan Pengurus Yayasan Lamrimnesia',
+      'Direktorat & SDM',
+      'Rapat dihadiri oleh seluruh pimpinan divisi. Menyepakati alokasi dana cetak buku baru sebesar Rp 45.000.000 dan penambahan armada logistik pengiriman.'
+    )
+  },
+  {
+    id: 'att-7',
+    name: 'Proposal_Bazaar_Vesak_Fair_2026.pdf',
+    size: 780000,
+    type: 'application/pdf',
+    category: 'Dokumen Tugas & TOR',
+    divisionId: 4,
+    uploadedAt: '2026-05-10 10:30',
+    uploadedBy: 'Diana Wijaya (Marketing)',
+    description: 'Proposal alokasi booth, target penjualan merchandise, dan jadwal rotasi panitia bazaar pameran Waisak.',
+    referenceNumber: 'TOR-MKT-2026-03',
+    relatedEntityType: 'general',
+    tags: ['Bazaar', 'Event', 'Marketing', 'Waisak'],
+    fileData: createSampleDocumentSvg(
+      'Term of Reference (TOR) Bazaar Waisak 2026',
+      'Rencana Operasional Stan & Alokasi Buku',
+      'Divisi Marketing & Sales',
+      'Menetapkan kuota 500 eksemplar buku terpopuler untuk dipamerkan dengan program bundling bundling diskon 15% bagi pemegang kartu membership.'
+    )
+  },
+  {
+    id: 'att-8',
+    name: 'Form_QC_Proofing_Percetakan_Batch12.png',
+    size: 210000,
+    type: 'image/png',
+    category: 'Dokumen Tugas & TOR',
+    divisionId: 5,
+    uploadedAt: '2026-06-25 13:10',
+    uploadedBy: 'Agus Priyono (Produksi)',
+    description: 'Lembar persetujuan cetak sample proof dummy buku sebelum masuk mesin cetak web offset.',
+    referenceNumber: 'QC-PRD-2026-12',
+    relatedEntityType: 'general',
+    tags: ['QC', 'Produksi', 'Proofing', 'Approved'],
+    fileData: createSampleReceiptSvg(
+      'LEMBAR QUALITY CONTROL PERCETAKAN',
+      'QC-PRD-2026-12',
+      'Status: PASSED / LOLOS QC',
+      'Pengecekan register warna, ketebalan punggung lem panas, dan kerapian potong tiga sisi telah memenuhi standar mutu produksi yayasan.'
+    )
+  }
+];
+
+export const DEMO_BUDGETS: BudgetPagu[] = [
+  // 1. Direktorat & HRD
+  {
+    id: 1,
+    divisi_id: 1,
+    tahun: 2026,
+    periode: 'Tahunan',
+    nama_pos_anggaran: 'Operasional Sekretariat & Legalitas Organisasi',
+    pagu_anggaran: 25000000,
+    realisasi_manual: 14500000,
+    penanggung_jawab: 'Direktur Utama (Admin)',
+    keterangan: 'Perizinan Kemenkumham, notariat yayasan, dan sewa ruang sekretariat pusat.',
+    status: 'Aktif',
+    created_at: '2026-01-05 09:00:00'
+  },
+  {
+    id: 2,
+    divisi_id: 1,
+    tahun: 2026,
+    periode: 'Tahunan',
+    nama_pos_anggaran: 'Pelatihan Relawan & Pembinaan SDM Dharma',
+    pagu_anggaran: 15000000,
+    realisasi_manual: 8200000,
+    penanggung_jawab: 'HRD & Personalia',
+    keterangan: 'Retreat kepemimpinan internal, workshop fasilitator kelas dharma dan refreshment pengurus.',
+    status: 'Aktif',
+    created_at: '2026-01-05 09:15:00'
+  },
+
+  // 2. Bendahara / Finance
+  {
+    id: 3,
+    divisi_id: 2,
+    tahun: 2026,
+    periode: 'Tahunan',
+    nama_pos_anggaran: 'Audit Keuangan Independen & Kepatuhan Pajak (PSAK 35)',
+    pagu_anggaran: 18000000,
+    realisasi_manual: 12000000,
+    penanggung_jawab: 'Siti Rahmawati (Bendahara)',
+    keterangan: 'Jasa Kantor Akuntan Publik (KAP), pelaporan SPT tahunan badan, dan langganan software perbankan.',
+    status: 'Aktif',
+    created_at: '2026-01-06 10:00:00'
+  },
+  {
+    id: 4,
+    divisi_id: 2,
+    tahun: 2026,
+    periode: 'Tahunan',
+    nama_pos_anggaran: 'Dana Kontinjensi & Cadangan Kas Darurat',
+    pagu_anggaran: 30000000,
+    realisasi_manual: 19500000,
+    penanggung_jawab: 'Siti Rahmawati (Bendahara)',
+    keterangan: 'Penyangga likuiditas untuk kebutuhan mendesak dan fluktuasi biaya operasional.',
+    status: 'Aktif',
+    created_at: '2026-01-06 10:30:00'
+  },
+
+  // 3. Penerbitan
+  {
+    id: 5,
+    divisi_id: 3,
+    tahun: 2026,
+    periode: 'Tahunan',
+    nama_pos_anggaran: 'Lisensi Hak Cipta Naskah & Pengurusan ISBN',
+    pagu_anggaran: 40000000,
+    realisasi_manual: 34500000,
+    penanggung_jawab: 'Budi Santoso (Penerbitan)',
+    keterangan: 'Royalti lisensi penerbit internasional (Wisdom/FPMT), pendaftaran barcode ISBN & KDT Perpusnas.',
+    status: 'Aktif',
+    created_at: '2026-01-08 11:00:00'
+  },
+  {
+    id: 6,
+    divisi_id: 3,
+    tahun: 2026,
+    periode: 'Tahunan',
+    nama_pos_anggaran: 'Honorarium Penerjemah, Editor & Desain Naskah',
+    pagu_anggaran: 35000000,
+    realisasi_manual: 29500000,
+    penanggung_jawab: 'Budi Santoso (Penerbitan)',
+    keterangan: 'Alih bahasa teks Sansekerta/Tibet/Inggris ke Indonesia, proofreading, dan layout interior naskah.',
+    status: 'Aktif',
+    created_at: '2026-01-08 11:30:00'
+  },
+
+  // 4. Marketing & Distribution
+  {
+    id: 7,
+    divisi_id: 4,
+    tahun: 2026,
+    periode: 'Tahunan',
+    nama_pos_anggaran: 'Kampanye Media Sosial, Iklan Digital & Promosi Buku',
+    pagu_anggaran: 28000000,
+    realisasi_manual: 26800000,
+    penanggung_jawab: 'Diana Wijaya (Marketing)',
+    keterangan: 'Iklan Meta Ads, Google Ads, pembuatan konten visual reels/tiktok, dan newsletter bulanan.',
+    status: 'Aktif',
+    created_at: '2026-01-10 14:00:00'
+  },
+  {
+    id: 8,
+    divisi_id: 4,
+    tahun: 2026,
+    periode: 'Tahunan',
+    nama_pos_anggaran: 'Operasional Stan Bazar Dharma & Roadshow Buku',
+    pagu_anggaran: 20000000,
+    realisasi_manual: 21600000,
+    penanggung_jawab: 'Diana Wijaya (Marketing)',
+    keterangan: 'Sewa booth bazaar Waisak, pameran buku di vihara, dekorasi stan, dan akomodasi tim bazar (Overbudget!).',
+    status: 'Overbudget',
+    created_at: '2026-01-10 14:30:00'
+  },
+
+  // 5. Produksi
+  {
+    id: 9,
+    divisi_id: 5,
+    tahun: 2026,
+    periode: 'Tahunan',
+    nama_pos_anggaran: 'Biaya Cetak Naskah & Kertas Percetakan Utama',
+    pagu_anggaran: 120000000,
+    realisasi_manual: 86400000,
+    penanggung_jawab: 'Agus Priyono (Produksi)',
+    keterangan: 'Pembelian kertas bookpaper krem, cetak mesin web/sheet fed untuk seri Lamrim & teks doa.',
+    status: 'Aktif',
+    created_at: '2026-01-12 15:00:00'
+  },
+  {
+    id: 10,
+    divisi_id: 5,
+    tahun: 2026,
+    periode: 'Tahunan',
+    nama_pos_anggaran: 'Finishing Khusus, Foil Emas & Pembungkus Shrinkwrap',
+    pagu_anggaran: 25000000,
+    realisasi_manual: 16800000,
+    penanggung_jawab: 'Agus Priyono (Produksi)',
+    keterangan: 'Hardcover embossed emas, pita pembatas buku suci, dan plastik pelindung kelembapan.',
+    status: 'Aktif',
+    created_at: '2026-01-12 15:30:00'
+  },
+
+  // 6. Logistik & Gudang
+  {
+    id: 11,
+    divisi_id: 6,
+    tahun: 2026,
+    periode: 'Tahunan',
+    nama_pos_anggaran: 'Ekspedisi Nusantara, Cargo & Ongkos Kirim Buku',
+    pagu_anggaran: 35000000,
+    realisasi_manual: 27500000,
+    penanggung_jawab: 'Hendra Gunawan (Logistik)',
+    keterangan: 'Ongkos kirim ekspedisi JNE/J&T/Wahana/Kargo untuk pesanan umat dan mitra vihara se-Indonesia.',
+    status: 'Aktif',
+    created_at: '2026-01-15 16:00:00'
+  },
+  {
+    id: 12,
+    divisi_id: 6,
+    tahun: 2026,
+    periode: 'Tahunan',
+    nama_pos_anggaran: 'Perlengkapan Packing & Pemeliharaan Gudang Buku',
+    pagu_anggaran: 12000000,
+    realisasi_manual: 7900000,
+    penanggung_jawab: 'Hendra Gunawan (Logistik)',
+    keterangan: 'Kardus corugated tebal, bubble wrap, lakban coklat kuat, dan silica gel pengendali kelembapan.',
+    status: 'Aktif',
+    created_at: '2026-01-15 16:30:00'
+  }
+];
+
 

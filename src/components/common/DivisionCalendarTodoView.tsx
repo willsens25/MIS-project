@@ -31,7 +31,9 @@ import {
   List,
   GripVertical,
   ArrowUpDown,
-  BarChart3
+  BarChart3,
+  Filter,
+  Activity
 } from 'lucide-react';
 import { ProductivityStatsView } from '../charts/ProductivityStatsView';
 
@@ -77,6 +79,22 @@ export const getPriorityTier = (p?: string): PriorityLevel => {
   if (lower === 'high' || lower === 'tinggi') return 'High';
   if (lower === 'low' || lower === 'rendah') return 'Low';
   return 'Medium';
+};
+
+export type TaskStatusKey = 'all' | 'Pending' | 'In Progress' | 'Completed';
+
+export const isMatchingTaskStatus = (evtStatus: string, filter: string): boolean => {
+  if (!filter || filter === 'all' || filter === 'All') return true;
+  if (filter === 'Pending' || filter === 'Belum Mulai') {
+    return evtStatus === 'Belum Mulai' || evtStatus === 'Pending';
+  }
+  if (filter === 'In Progress' || filter === 'Sedang Berjalan') {
+    return evtStatus === 'Sedang Berjalan' || evtStatus === 'In Progress';
+  }
+  if (filter === 'Completed' || filter === 'Selesai') {
+    return evtStatus === 'Selesai' || evtStatus === 'Completed';
+  }
+  return evtStatus.toLowerCase() === filter.toLowerCase();
 };
 
 export const PRIORITY_CONFIG: Record<
@@ -1903,8 +1921,8 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
     );
   };
 
-  // Filtered events for the selected year and division scope
-  const yearEvents = useMemo(() => {
+  // Filtered events for the selected year and division scope (without status filter, to calculate accurate status counts)
+  const yearEventsWithoutStatus = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     return events
       .filter(evt => {
@@ -1934,13 +1952,17 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
           evt.subtasks.some(s => s.picName === filterPic);
 
         const matchCategory = filterCategory === 'all' || evt.category === filterCategory;
-        const matchStatus = filterStatus === 'all' || evt.status === filterStatus;
         const matchPriority = filterPriority === 'all' || getPriorityTier(evt.priority) === filterPriority;
 
-        return matchSearch && matchPic && matchCategory && matchStatus && matchPriority;
+        return matchSearch && matchPic && matchCategory && matchPriority;
       })
       .sort((a, b) => a.date.localeCompare(b.date));
-  }, [events, selectedYear, scopeFilter, divisionId, searchQuery, filterPic, filterCategory, filterStatus, filterPriority]);
+  }, [events, selectedYear, scopeFilter, divisionId, searchQuery, filterPic, filterCategory, filterPriority]);
+
+  // Year events filtered by status for calendar view lookups and visualizations
+  const yearEvents = useMemo(() => {
+    return yearEventsWithoutStatus.filter(evt => isMatchingTaskStatus(evt.status, filterStatus));
+  }, [yearEventsWithoutStatus, filterStatus]);
 
   // Map events by YYYY-MM-DD for quick calendar lookup
   const eventsByDateMap = useMemo(() => {
@@ -2176,17 +2198,40 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
     setDragOverDailyHour(null);
   };
 
-  // Events to display in the To-Do detail panel
-  const displayedTodoEvents = useMemo(() => {
+  // Base events for the To-Do section (unfiltered by status, for accurate status counts)
+  const baseTodoEvents = useMemo(() => {
+    let list = yearEventsWithoutStatus;
     if (selectedDateStr) {
-      return yearEvents.filter(e => e.date === selectedDateStr);
-    }
-    if (viewMode === 'single-month') {
+      list = list.filter(e => e.date === selectedDateStr);
+    } else if (viewMode === 'single-month') {
       const prefix = `${selectedYear}-${String(focusedMonth + 1).padStart(2, '0')}`;
-      return yearEvents.filter(e => e.date.startsWith(prefix));
+      list = list.filter(e => e.date.startsWith(prefix));
     }
-    return yearEvents;
-  }, [yearEvents, selectedDateStr, viewMode, selectedYear, focusedMonth]);
+    return list;
+  }, [yearEventsWithoutStatus, selectedDateStr, viewMode, selectedYear, focusedMonth]);
+
+  // Status counts for the status filter bar
+  const taskStatusCounts = useMemo(() => {
+    let pending = 0;
+    let inProgress = 0;
+    let completed = 0;
+    for (const evt of baseTodoEvents) {
+      if (isMatchingTaskStatus(evt.status, 'Pending')) pending++;
+      else if (isMatchingTaskStatus(evt.status, 'In Progress')) inProgress++;
+      else if (isMatchingTaskStatus(evt.status, 'Completed')) completed++;
+    }
+    return {
+      all: baseTodoEvents.length,
+      pending,
+      inProgress,
+      completed
+    };
+  }, [baseTodoEvents]);
+
+  // Events to display in the To-Do detail panel (filtered by status)
+  const displayedTodoEvents = useMemo(() => {
+    return baseTodoEvents.filter(evt => isMatchingTaskStatus(evt.status, filterStatus));
+  }, [baseTodoEvents, filterStatus]);
 
   // Available years for quick selector
   const yearChoices = useMemo(() => {
@@ -2695,14 +2740,22 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
 
           {/* Filter by Status */}
           <select
-            value={filterStatus}
+            value={
+              filterStatus === 'Pending' || filterStatus === 'Belum Mulai'
+                ? 'Pending'
+                : filterStatus === 'In Progress' || filterStatus === 'Sedang Berjalan'
+                ? 'In Progress'
+                : filterStatus === 'Completed' || filterStatus === 'Selesai'
+                ? 'Completed'
+                : 'all'
+            }
             onChange={e => setFilterStatus(e.target.value)}
             className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none cursor-pointer"
           >
-            <option value="all">Semua Status</option>
-            <option value="Belum Mulai">Belum Mulai</option>
-            <option value="Sedang Berjalan">Sedang Berjalan</option>
-            <option value="Selesai">Selesai</option>
+            <option value="all">Semua Status (All)</option>
+            <option value="Pending">⏳ Pending (Belum Mulai)</option>
+            <option value="In Progress">⚡ In Progress (Sedang Berjalan)</option>
+            <option value="Completed">✅ Completed (Selesai)</option>
           </select>
 
           {/* Filter by Priority Level (High, Medium, Low) with visual color dots */}
@@ -4312,6 +4365,137 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
           </div>
         </div>
 
+        {/* STATUS FILTER BAR ABOVE TASK LIST */}
+        <div
+          id="task-status-filter-bar"
+          className="p-2 sm:p-2.5 bg-slate-50/90 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-700/70 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 shadow-2xs"
+        >
+          {/* Status Toggle Buttons: 'All', 'Pending', 'In Progress', and 'Completed' */}
+          <div className="flex items-center flex-wrap gap-1.5 sm:gap-2">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 mr-1 flex items-center gap-1.5">
+              <Filter className="w-3.5 h-3.5 text-indigo-500" />
+              <span>Status:</span>
+            </span>
+
+            {/* 'All' Toggle Button */}
+            <button
+              id="filter-status-all"
+              type="button"
+              onClick={() => setFilterStatus('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                filterStatus === 'all' || filterStatus === 'All'
+                  ? 'bg-indigo-600 text-white shadow-xs ring-2 ring-indigo-400/30'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700'
+              }`}
+              title="Tampilkan semua tugas tanpa memandang status"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>All</span>
+              <span
+                className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold ${
+                  filterStatus === 'all' || filterStatus === 'All'
+                    ? 'bg-white/25 text-white'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                {taskStatusCounts.all}
+              </span>
+            </button>
+
+            {/* 'Pending' Toggle Button */}
+            <button
+              id="filter-status-pending"
+              type="button"
+              onClick={() => setFilterStatus('Pending')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                filterStatus === 'Pending' || filterStatus === 'Belum Mulai'
+                  ? 'bg-amber-500 text-white shadow-xs ring-2 ring-amber-400/30'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-amber-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700'
+              }`}
+              title="Filter tugas yang masih Pending / Belum Mulai"
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>Pending</span>
+              <span
+                className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold ${
+                  filterStatus === 'Pending' || filterStatus === 'Belum Mulai'
+                    ? 'bg-white/25 text-white'
+                    : 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300'
+                }`}
+              >
+                {taskStatusCounts.pending}
+              </span>
+            </button>
+
+            {/* 'In Progress' Toggle Button */}
+            <button
+              id="filter-status-in-progress"
+              type="button"
+              onClick={() => setFilterStatus('In Progress')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                filterStatus === 'In Progress' || filterStatus === 'Sedang Berjalan'
+                  ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-400/30'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700'
+              }`}
+              title="Filter tugas yang sedang berjalan (In Progress)"
+            >
+              <Activity className="w-3.5 h-3.5" />
+              <span>In Progress</span>
+              <span
+                className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold ${
+                  filterStatus === 'In Progress' || filterStatus === 'Sedang Berjalan'
+                    ? 'bg-white/25 text-white'
+                    : 'bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300'
+                }`}
+              >
+                {taskStatusCounts.inProgress}
+              </span>
+            </button>
+
+            {/* 'Completed' Toggle Button */}
+            <button
+              id="filter-status-completed"
+              type="button"
+              onClick={() => setFilterStatus('Completed')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                filterStatus === 'Completed' || filterStatus === 'Selesai'
+                  ? 'bg-emerald-600 text-white shadow-xs ring-2 ring-emerald-400/30'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700'
+              }`}
+              title="Filter tugas yang telah selesai (Completed)"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Completed</span>
+              <span
+                className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold ${
+                  filterStatus === 'Completed' || filterStatus === 'Selesai'
+                    ? 'bg-white/25 text-white'
+                    : 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300'
+                }`}
+              >
+                {taskStatusCounts.completed}
+              </span>
+            </button>
+          </div>
+
+          {/* Quick status summary info */}
+          <div className="flex items-center justify-between sm:justify-end gap-2 text-xs">
+            {filterStatus !== 'all' && (
+              <button
+                type="button"
+                onClick={() => setFilterStatus('all')}
+                className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer flex items-center gap-1"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Tampilkan Semua</span>
+              </button>
+            )}
+            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+              <strong className="text-slate-800 dark:text-slate-200">{displayedTodoEvents.length}</strong> dari {taskStatusCounts.all} item
+            </span>
+          </div>
+        </div>
+
         {displayedTodoEvents.length === 0 ? (
           <div className="text-center py-12 px-4 space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
@@ -4319,20 +4503,35 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
             </div>
             <div>
               <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                Belum Ada Event atau To-Do List pada Periode Ini
+                {filterStatus !== 'all'
+                  ? `Tidak Ada Tugas dengan Status "${filterStatus === 'Pending' ? 'Pending (Belum Mulai)' : filterStatus === 'In Progress' ? 'In Progress (Sedang Berjalan)' : filterStatus === 'Completed' ? 'Completed (Selesai)' : filterStatus}" pada Periode Ini`
+                  : 'Belum Ada Event atau To-Do List pada Periode Ini'}
               </p>
               <p className="text-xs text-slate-500 mt-1">
-                Klik tombol &ldquo;Create Event Baru&rdquo; untuk menambahkan jadwal beserta penetapan PIC.
+                {filterStatus !== 'all'
+                  ? 'Klik tombol "All" di atas untuk melihat seluruh tugas atau ubah kriteria filter.'
+                  : 'Klik tombol &ldquo;Create Event Baru&rdquo; untuk menambahkan jadwal beserta penetapan PIC.'}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => openCreateModal(selectedDateStr || undefined)}
-              className="inline-flex items-center space-x-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Create Event Pertama</span>
-            </button>
+            {filterStatus !== 'all' ? (
+              <button
+                type="button"
+                onClick={() => setFilterStatus('all')}
+                className="inline-flex items-center space-x-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold cursor-pointer shadow-xs"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>Tampilkan Semua Status (All)</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => openCreateModal(selectedDateStr || undefined)}
+                className="inline-flex items-center space-x-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Event Pertama</span>
+              </button>
+            )}
           </div>
         ) : layoutMode === 'list' ? (
           <div className="divide-y divide-slate-200/70 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-900">

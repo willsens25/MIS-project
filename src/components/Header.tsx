@@ -56,7 +56,8 @@ import {
   MonitorPlay,
   PanelLeft,
   Keyboard,
-  Search
+  Search,
+  Paperclip
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -107,7 +108,9 @@ export const Header: React.FC<HeaderProps> = ({
     openPresentationMode,
     nightShift,
     isNightShiftActive,
-    toggleNightShift
+    toggleNightShift,
+    openDocumentArchive,
+    attachments
   } = useApp();
 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -427,6 +430,23 @@ export const Header: React.FC<HeaderProps> = ({
                 </kbd>
               </motion.button>
             )}
+
+            {/* Digital Document Archive & File Attachments Button */}
+            <motion.button
+              id="btn-document-archive"
+              onClick={() => openDocumentArchive()}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-100 hover:bg-indigo-50 dark:bg-slate-800/90 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer group"
+              title="Pusat Arsip Dokumen & Lampiran Bukti Transaksi"
+            >
+              <Paperclip className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
+              <span className="hidden xl:inline">Arsip Dokumen</span>
+              <span className="xl:hidden hidden sm:inline">Arsip</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300">
+                {attachments.length}
+              </span>
+            </motion.button>
 
             {/* Download PDF Report Button */}
             <motion.button
@@ -1048,6 +1068,18 @@ export const Header: React.FC<HeaderProps> = ({
                 title="Tanya Asisten AI MIS Lamrimnesia"
               >
                 <MascotAvatar size="xs" variant="badge" interactive={false} className="w-5 h-5" />
+              </motion.button>
+
+              {/* Mobile Document Archive Trigger */}
+              <motion.button
+                id="btn-mobile-doc-archive"
+                onClick={() => openDocumentArchive()}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.93 }}
+                className="flex items-center justify-center p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 shadow-xs cursor-pointer"
+                title="Buka Arsip Dokumen"
+              >
+                <Paperclip className="w-4 h-4" />
               </motion.button>
 
               {/* Mobile Notification Bell */}
