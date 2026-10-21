@@ -517,7 +517,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
         aria-label={`Notifikasi Divisi ${currentDivisi?.nama_divisi || ''}`}
         aria-expanded={isOpen}
         title={`Alert & Notifikasi Divisi ${currentDivisi?.nama_divisi || ''} (${unreadAlerts.length} belum dibaca)`}
-        className={`relative p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-100 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/80 hover:border-slate-400 dark:hover:border-slate-600 transition-colors cursor-pointer group shadow-sm ${
+        className={`relative h-8.5 w-8.5 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-100/90 dark:bg-white/[0.06] hover:bg-slate-200/80 dark:hover:bg-white/[0.1] border border-slate-200/90 dark:border-white/[0.08] transition-colors cursor-pointer group shadow-2xs ${
           isOpen ? 'ring-2 ring-indigo-500/50 text-indigo-600 dark:text-indigo-400' : ''
         }`}
       >

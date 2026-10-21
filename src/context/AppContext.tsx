@@ -41,7 +41,8 @@ import {
   BankStatementItem,
   BankReconciliationRecord,
   DocumentAttachment,
-  AttachmentCategory
+  AttachmentCategory,
+  BudgetPagu
 } from '../types';
 import { SeedOptions, generateSeedData } from '../lib/dummySeeder';
 import { DEFAULT_COLOR_PRESET } from '../lib/themePresets';
@@ -108,7 +109,9 @@ import {
   DEMO_ROYALTI_PENULIS,
   DEMO_ROYALTI_STATEMENT,
   INITIAL_ATTACHMENTS,
-  DEMO_ATTACHMENTS
+  DEMO_ATTACHMENTS,
+  INITIAL_BUDGETS,
+  DEMO_BUDGETS
 } from '../lib/initialData';
 import {
   hashPasswordServer,
@@ -352,6 +355,13 @@ interface AppContextType {
   openDocumentArchive: (categoryFilter?: AttachmentCategory, divisionFilter?: DivisionId) => void;
   activeArchiveCategoryFilter?: AttachmentCategory;
   activeArchiveDivisionFilter?: DivisionId;
+
+  // Budget & Pagu Anggaran
+  budgets: BudgetPagu[];
+  addBudget: (budget: Omit<BudgetPagu, 'id' | 'created_at'>) => void;
+  updateBudget: (id: number, budget: Partial<BudgetPagu>) => void;
+  deleteBudget: (id: number) => void;
+  bulkDeleteBudgets: (ids: number[]) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -733,6 +743,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const stored = getStoredItem<DocumentAttachment[]>('mis_document_attachments', DEMO_ATTACHMENTS);
     return stored && stored.length > 0 ? stored : DEMO_ATTACHMENTS;
   });
+  const [budgets, setBudgets] = useState<BudgetPagu[]>(() => {
+    const stored = getStoredItem<BudgetPagu[]>('mis_budgets', DEMO_BUDGETS);
+    return stored && stored.length > 0 ? stored : DEMO_BUDGETS;
+  });
   const [isDocumentArchiveOpen, setIsDocumentArchiveOpen] = useState(false);
   const [activeArchiveCategoryFilter, setActiveArchiveCategoryFilter] = useState<AttachmentCategory | undefined>(undefined);
   const [activeArchiveDivisionFilter, setActiveArchiveDivisionFilter] = useState<DivisionId | undefined>(undefined);
@@ -741,6 +755,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => { setStoredItem('mis_users', usersList); }, [usersList]);
   useEffect(() => { setStoredItem('mis_current_user', currentUser); }, [currentUser]);
   useEffect(() => { setStoredItem('mis_document_attachments', attachments); }, [attachments]);
+  useEffect(() => { setStoredItem('mis_budgets', budgets); }, [budgets]);
 
   // Transparently upgrade any legacy plain-text passwords to bcrypt hashes in background
   useEffect(() => {
@@ -3112,6 +3127,74 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     [attachments]
   );
 
+  const addBudget = useCallback((budgetData: Omit<BudgetPagu, 'id' | 'created_at'>) => {
+    setBudgets(prev => {
+      const newId = prev.length > 0 ? Math.max(...prev.map(b => b.id)) + 1 : 1;
+      const newBudget: BudgetPagu = {
+        ...budgetData,
+        id: newId,
+        created_at: new Date().toISOString()
+      };
+      const updated = [newBudget, ...prev];
+      setStoredItem('mis_budgets', updated);
+      return updated;
+    });
+    recordActivity(
+      'Tambah Pagu Anggaran',
+      'Finance',
+      `Menetapkan pagu anggaran "${budgetData.nama_pos_anggaran}" sebesar Rp ${(budgetData.pagu_anggaran || 0).toLocaleString('id-ID')} untuk Divisi ${budgetData.divisi_id}`
+    );
+    showToast(`Pagu anggaran "${budgetData.nama_pos_anggaran}" berhasil ditetapkan.`, 'success');
+  }, [recordActivity, showToast]);
+
+  const updateBudget = useCallback((id: number, updates: Partial<BudgetPagu>) => {
+    setBudgets(prev => {
+      const target = prev.find(b => b.id === id);
+      const updated = prev.map(b => (b.id === id ? { ...b, ...updates, updated_at: new Date().toISOString() } : b));
+      setStoredItem('mis_budgets', updated);
+      if (target) {
+        recordActivity(
+          'Perbarui Pagu Anggaran',
+          'Finance',
+          `Memperbarui alokasi anggaran "${target.nama_pos_anggaran}" (ID: ${id})`
+        );
+      }
+      return updated;
+    });
+    showToast('Data pagu anggaran berhasil diperbarui.', 'success');
+  }, [recordActivity, showToast]);
+
+  const deleteBudget = useCallback((id: number) => {
+    setBudgets(prev => {
+      const target = prev.find(b => b.id === id);
+      const updated = prev.filter(b => b.id !== id);
+      setStoredItem('mis_budgets', updated);
+      if (target) {
+        recordActivity(
+          'Hapus Pagu Anggaran',
+          'Finance',
+          `Menghapus pagu anggaran "${target.nama_pos_anggaran}" (ID: ${id})`
+        );
+      }
+      return updated;
+    });
+    showToast('Pagu anggaran berhasil dihapus.', 'info');
+  }, [recordActivity, showToast]);
+
+  const bulkDeleteBudgets = useCallback((ids: number[]) => {
+    setBudgets(prev => {
+      const updated = prev.filter(b => !ids.includes(b.id));
+      setStoredItem('mis_budgets', updated);
+      recordActivity(
+        'Hapus Massal Pagu Anggaran',
+        'Finance',
+        `Menghapus ${ids.length} pos pagu anggaran terpilih.`
+      );
+      return updated;
+    });
+    showToast(`${ids.length} pagu anggaran berhasil dihapus.`, 'info');
+  }, [recordActivity, showToast]);
+
   const clearAllData = () => {
     setBooks([]);
     setPromos([]);
@@ -3125,6 +3208,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setProductionLogs([]);
     setActivityLogs([]);
     setAttachments(INITIAL_ATTACHMENTS);
+    setBudgets(INITIAL_BUDGETS);
     setPreOrderCampaigns(INITIAL_PRE_ORDERS);
     setBookBundles(INITIAL_BOOK_BUNDLES);
     setDonasiProyeks(INITIAL_DONASI_PROYEK);
@@ -3158,6 +3242,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.removeItem('mis_users');
       localStorage.removeItem('mis_bazaar_events');
       localStorage.removeItem('mis_document_attachments');
+      localStorage.removeItem('mis_budgets');
       localStorage.removeItem('mis_current_user');
       localStorage.setItem('mis_is_auth', 'false');
       localStorage.setItem('mis_data_version', CLEAN_STORAGE_VERSION);
@@ -3179,6 +3264,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setProductionLogs(DEMO_PRODUCTION_LOGS);
     setActivityLogs(DEMO_ACTIVITY_LOGS);
     setAttachments(DEMO_ATTACHMENTS);
+    setBudgets(DEMO_BUDGETS);
     setAccounts(DEMO_ACCOUNTS);
     setUsersList(DEMO_USERS);
     setBazaarEvents(DEMO_BAZAAR_EVENTS);
@@ -3209,6 +3295,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem('mis_production_logs', JSON.stringify(DEMO_PRODUCTION_LOGS));
       localStorage.setItem('mis_activity_logs', JSON.stringify(DEMO_ACTIVITY_LOGS));
       localStorage.setItem('mis_document_attachments', JSON.stringify(DEMO_ATTACHMENTS));
+      localStorage.setItem('mis_budgets', JSON.stringify(DEMO_BUDGETS));
       localStorage.setItem('mis_accounts', JSON.stringify(DEMO_ACCOUNTS));
       localStorage.setItem('mis_users', JSON.stringify(DEMO_USERS));
       localStorage.setItem('mis_bazaar_events', JSON.stringify(DEMO_BAZAAR_EVENTS));
@@ -3254,7 +3341,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           bazaarEvents: bazaarEvents.length,
           activityLogs: activityLogs.length,
           users: usersList.length,
-          attachments: attachments.length
+          attachments: attachments.length,
+          budgets: budgets.length
         },
         system_note: systemNote || 'Pencadangan data lengkap operasional seluruh divisi MIS Yayasan Lamrimnesia.'
       },
@@ -3279,7 +3367,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         userSettings,
         colorPreset,
         theme,
-        attachments
+        attachments,
+        budgets
       }
     };
 
@@ -3287,7 +3376,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       'Backup Data',
       'System',
       `Mengekspor cadangan database lengkap (Total item: ${
-        books.length + orders.length + mutasis.length + identitasList.length + attachments.length
+        books.length + orders.length + mutasis.length + identitasList.length + attachments.length + budgets.length
       } entri data)`
     );
 
@@ -3324,6 +3413,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       let newPenjualans = penjualans;
       let newPenyalurans = penyalurans;
       let newAttachments = attachments;
+      let newBudgets = budgets;
 
       if (mode === 'replace') {
         newBooks = Array.isArray(d.books) ? d.books : [];
@@ -3342,6 +3432,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         newPenjualans = Array.isArray(d.penjualans) ? d.penjualans : [];
         newPenyalurans = Array.isArray(d.penyalurans) ? d.penyalurans : [];
         newAttachments = Array.isArray(d.attachments) ? d.attachments : [];
+        newBudgets = Array.isArray(d.budgets) ? d.budgets : [];
       } else {
         // Merge mode: deduplicate based on id
         const mergeById = <T extends { id: number }>(existing: T[], incoming: T[] = []): T[] => {
@@ -3374,6 +3465,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         newPenjualans = mergeById(penjualans, d.penjualans);
         newPenyalurans = mergeById(penyalurans, d.penyalurans);
         newAttachments = mergeAttachmentsById(attachments, d.attachments);
+        newBudgets = mergeById(budgets, d.budgets);
       }
 
       // Apply React states
@@ -3393,6 +3485,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setPenjualans(newPenjualans);
       setPenyalurans(newPenyalurans);
       setAttachments(newAttachments);
+      setBudgets(newBudgets);
 
       // Restore user settings if present
       if (d.userSettings) {
@@ -3417,6 +3510,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setStoredItem('mis_penjualans', newPenjualans);
       setStoredItem('mis_penyalurans', newPenyalurans);
       setStoredItem('mis_document_attachments', newAttachments);
+      setStoredItem('mis_budgets', newBudgets);
 
       const summary: RestoreSummary = {
         booksRestored: newBooks.length,
@@ -3704,7 +3798,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsDocumentArchiveOpen,
         openDocumentArchive,
         activeArchiveCategoryFilter,
-        activeArchiveDivisionFilter
+        activeArchiveDivisionFilter,
+
+        // Budget & Pagu Anggaran
+        budgets,
+        addBudget,
+        updateBudget,
+        deleteBudget,
+        bulkDeleteBudgets
       }}
     >
       {children}

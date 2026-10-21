@@ -9,6 +9,10 @@ import {
   toggleStoredCalendarSubtask
 } from './DivisionCalendarTodoView';
 import {
+  ElegantTaskProgressBar,
+  fireTaskCelebrationConfetti
+} from './ElegantTaskProgressBar';
+import {
   Search,
   X,
   Calendar,
@@ -1188,16 +1192,12 @@ export const DivisionQuickSearchBar: React.FC<DivisionQuickSearchBarProps> = ({
               </div>
 
               {/* Overall Division Progress Bar */}
-              <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    avgDivProgress >= 100
-                      ? 'bg-emerald-500'
-                      : avgDivProgress >= 60
-                      ? 'bg-indigo-600'
-                      : 'bg-amber-500'
-                  }`}
-                  style={{ width: `${avgDivProgress}%` }}
+              <div className="w-full">
+                <ElegantTaskProgressBar
+                  percent={avgDivProgress}
+                  height="sm"
+                  showGlow={true}
+                  triggerConfettiOnComplete={false}
                 />
               </div>
 
@@ -1261,10 +1261,13 @@ export const DivisionQuickSearchBar: React.FC<DivisionQuickSearchBarProps> = ({
                                   {prog.doneSubtasks}/{prog.totalSubtasks}
                                 </span>
                               )}
-                              <div className="w-20 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full transition-all duration-300 ${prog.barColor}`}
-                                  style={{ width: `${prog.percent}%` }}
+                              <div className="w-20">
+                                <ElegantTaskProgressBar
+                                  percent={prog.percent}
+                                  height="xs"
+                                  showGlow={prog.percent >= 100}
+                                  triggerConfettiOnComplete={false}
+                                  compact={true}
                                 />
                               </div>
                               <span
@@ -1287,6 +1290,9 @@ export const DivisionQuickSearchBar: React.FC<DivisionQuickSearchBarProps> = ({
                                   type="button"
                                   onClick={() => {
                                     updateStoredCalendarEventStatus(ev.id, opt.val);
+                                    if (opt.val === 'Selesai' && ev.status !== 'Selesai') {
+                                      fireTaskCelebrationConfetti();
+                                    }
                                     setCalendarVersion(v => v + 1);
                                   }}
                                   className={`px-1.5 py-0.5 rounded text-[9px] font-bold border transition-colors cursor-pointer ${
@@ -1382,10 +1388,13 @@ export const DivisionQuickSearchBar: React.FC<DivisionQuickSearchBarProps> = ({
                                 {prog.percent}%
                               </span>
                             </div>
-                            <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full transition-all duration-300 ${prog.barColor}`}
-                                style={{ width: `${prog.percent}%` }}
+                            <div className="w-full">
+                              <ElegantTaskProgressBar
+                                percent={prog.percent}
+                                height="sm"
+                                showGlow={prog.percent >= 100}
+                                triggerConfettiOnComplete={false}
+                                compact={true}
                               />
                             </div>
                           </div>
@@ -1403,7 +1412,11 @@ export const DivisionQuickSearchBar: React.FC<DivisionQuickSearchBarProps> = ({
                                       type="checkbox"
                                       checked={st.completed}
                                       onChange={() => {
-                                        toggleStoredCalendarSubtask(ev.id, st.id);
+                                        const updated = toggleStoredCalendarSubtask(ev.id, st.id);
+                                        const targetEvt = updated.find(x => x.id === ev.id);
+                                        if (targetEvt && targetEvt.status === 'Selesai' && ev.status !== 'Selesai') {
+                                          fireTaskCelebrationConfetti();
+                                        }
                                         setCalendarVersion(v => v + 1);
                                       }}
                                       className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"

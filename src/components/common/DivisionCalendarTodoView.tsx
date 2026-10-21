@@ -36,6 +36,10 @@ import {
   Activity
 } from 'lucide-react';
 import { ProductivityStatsView } from '../charts/ProductivityStatsView';
+import {
+  ElegantTaskProgressBar,
+  fireTaskCelebrationConfetti
+} from './ElegantTaskProgressBar';
 
 export interface TodoSubtask {
   id: string;
@@ -1837,16 +1841,20 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
   };
 
   const handleToggleEventStatus = (evtId: string, explicitStatus?: CalendarTodoEvent['status']) => {
+    const currentEvt = events.find(e => e.id === evtId);
+    if (!currentEvt) return;
+
+    const nextStatus: CalendarTodoEvent['status'] =
+      explicitStatus ||
+      (currentEvt.status === 'Belum Mulai'
+        ? 'Sedang Berjalan'
+        : currentEvt.status === 'Sedang Berjalan'
+        ? 'Selesai'
+        : 'Belum Mulai');
+
     setEvents(prev =>
       prev.map(evt => {
         if (evt.id !== evtId) return evt;
-        const nextStatus: CalendarTodoEvent['status'] =
-          explicitStatus ||
-          (evt.status === 'Belum Mulai'
-            ? 'Sedang Berjalan'
-            : evt.status === 'Sedang Berjalan'
-            ? 'Selesai'
-            : 'Belum Mulai');
         const updatedSubtasks =
           nextStatus === 'Selesai'
             ? evt.subtasks.map(s => ({ ...s, completed: true }))
@@ -1858,6 +1866,15 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
         return { ...evt, status: nextStatus, progress: nextProgress, subtasks: updatedSubtasks };
       })
     );
+
+    if (nextStatus === 'Selesai') {
+      fireTaskCelebrationConfetti();
+      triggerToast(`🎉 Luar biasa! Agenda "${currentEvt.title}" tuntas diselesaikan (100%).`);
+    } else if (nextStatus === 'Sedang Berjalan') {
+      triggerToast('⏳ Status tugas diubah ke Sedang Berjalan (50%).');
+    } else {
+      triggerToast('○ Status tugas diubah kembali ke Belum Mulai (0%).');
+    }
   };
 
   const handleUpdateEventPriority = (
@@ -1876,6 +1893,8 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
 
   const handleUpdateEventProgress = (evtId: string, newProgress: number) => {
     const clamped = Math.min(100, Math.max(0, newProgress));
+    const currentEvt = events.find(e => e.id === evtId);
+
     setEvents(prev =>
       prev.map(evt => {
         if (evt.id !== evtId) return evt;
@@ -1895,10 +1914,18 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
         };
       })
     );
-    triggerToast(`Progres penyelesaian diatur ke ${clamped}%.`);
+
+    if (clamped >= 100) {
+      fireTaskCelebrationConfetti();
+      triggerToast(`🎉 Selamat! Progres "${currentEvt?.title || 'Tugas'}" mencapai 100% (Tuntas)!`);
+    } else {
+      triggerToast(`Progres penyelesaian diatur ke ${clamped}%.`);
+    }
   };
 
   const handleToggleSubtask = (evtId: string, subtaskId: string) => {
+    const currentEvt = events.find(e => e.id === evtId);
+
     setEvents(prev =>
       prev.map(evt => {
         if (evt.id !== evtId) return evt;
@@ -1919,6 +1946,14 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
         };
       })
     );
+
+    if (currentEvt) {
+      const willBeAllDone = currentEvt.subtasks.length > 0 && currentEvt.subtasks.every(s => s.id === subtaskId ? !s.completed : s.completed);
+      if (willBeAllDone && currentEvt.status !== 'Selesai') {
+        fireTaskCelebrationConfetti();
+        triggerToast(`🎉 Hebat! Semua checklist "${currentEvt.title}" selesai 100%!`);
+      }
+    }
   };
 
   // Filtered events for the selected year and division scope (without status filter, to calculate accurate status counts)
@@ -2668,16 +2703,12 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
               </span>
             </div>
           </div>
-          <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${
-                stats.avgProgressPct >= 100
-                  ? 'bg-emerald-500'
-                  : stats.avgProgressPct >= 60
-                  ? 'bg-indigo-600'
-                  : 'bg-amber-500'
-              }`}
-              style={{ width: `${stats.avgProgressPct}%` }}
+          <div className="w-full">
+            <ElegantTaskProgressBar
+              percent={stats.avgProgressPct}
+              height="md"
+              showGlow={true}
+              triggerConfettiOnComplete={false}
             />
           </div>
         </div>
@@ -3995,10 +4026,13 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                                             className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700 shadow-2xs"
                                             title={`Progres Penyelesaian: ${prog.percent}% (${prog.statusLabel})`}
                                           >
-                                            <div className="w-14 sm:w-16 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                                              <div
-                                                className={`h-full rounded-full transition-all duration-300 ${prog.barColor}`}
-                                                style={{ width: `${prog.percent}%` }}
+                                            <div className="w-14 sm:w-16">
+                                              <ElegantTaskProgressBar
+                                                percent={prog.percent}
+                                                height="xs"
+                                                showGlow={prog.percent >= 100}
+                                                triggerConfettiOnComplete={false}
+                                                compact={true}
                                               />
                                             </div>
                                             <span className={`text-[10px] font-extrabold ${prog.textColor}`}>
@@ -4121,10 +4155,13 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                                     </div>
                                   </div>
 
-                                  <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                                    <div
-                                      className={`h-full rounded-full transition-all duration-300 ${prog.barColor}`}
-                                      style={{ width: `${prog.percent}%` }}
+                                  <div className="w-full">
+                                    <ElegantTaskProgressBar
+                                      percent={prog.percent}
+                                      height="sm"
+                                      showGlow={prog.percent >= 100}
+                                      triggerConfettiOnComplete={false}
+                                      compact={true}
                                     />
                                   </div>
 
@@ -4642,10 +4679,13 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                                 className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-2xs"
                                 title={`Progres Penyelesaian: ${progressPct}% (${prog.statusLabel})`}
                               >
-                                <div className="w-14 sm:w-16 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                                  <div
-                                    className={`h-full rounded-full transition-all duration-300 ${prog.barColor}`}
-                                    style={{ width: `${progressPct}%` }}
+                                <div className="w-14 sm:w-16">
+                                  <ElegantTaskProgressBar
+                                    percent={progressPct}
+                                    height="xs"
+                                    showGlow={progressPct >= 100}
+                                    triggerConfettiOnComplete={false}
+                                    compact={true}
                                   />
                                 </div>
                                 <span className={`text-[10px] font-extrabold ${prog.textColor}`}>
@@ -4693,10 +4733,13 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                   <div className="flex flex-wrap items-center justify-between xl:justify-end gap-3 pt-2 xl:pt-0 border-t xl:border-t-0 border-slate-100 dark:border-slate-800/80 shrink-0">
                     {/* Instant Progress Bar */}
                     <div className="flex items-center gap-2 min-w-[150px]">
-                      <div className="w-24 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-300 ${prog.barColor}`}
-                          style={{ width: `${progressPct}%` }}
+                      <div className="w-24">
+                        <ElegantTaskProgressBar
+                          percent={progressPct}
+                          height="sm"
+                          showGlow={progressPct >= 100}
+                          triggerConfettiOnComplete={false}
+                          compact={true}
                         />
                       </div>
                       <span
@@ -4854,10 +4897,13 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                                 className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-2xs"
                                 title={`Progres Penyelesaian: ${progressPct}% (${prog.statusLabel})`}
                               >
-                                <div className="w-16 sm:w-20 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                                  <div
-                                    className={`h-full rounded-full transition-all duration-300 ${prog.barColor}`}
-                                    style={{ width: `${progressPct}%` }}
+                                <div className="w-16 sm:w-20">
+                                  <ElegantTaskProgressBar
+                                    percent={progressPct}
+                                    height="xs"
+                                    showGlow={progressPct >= 100}
+                                    triggerConfettiOnComplete={false}
+                                    compact={true}
                                   />
                                 </div>
                                 <span className={`text-[10.5px] font-extrabold ${prog.textColor}`}>
@@ -5054,10 +5100,12 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                       </div>
 
                       {/* Visual Progress Bar */}
-                      <div className="w-full h-2.5 bg-slate-200/90 dark:bg-slate-700 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-300 ${prog.barColor}`}
-                          style={{ width: `${progressPct}%` }}
+                      <div className="w-full">
+                        <ElegantTaskProgressBar
+                          percent={progressPct}
+                          height="md"
+                          showGlow={progressPct >= 100}
+                          triggerConfettiOnComplete={false}
                         />
                       </div>
 

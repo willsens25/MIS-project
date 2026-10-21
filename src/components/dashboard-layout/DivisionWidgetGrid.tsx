@@ -57,8 +57,13 @@ import {
 import {
   getStoredCalendarEvents,
   getTaskCompletionProgress,
-  getDeadlineInfo
+  getDeadlineInfo,
+  updateStoredCalendarEventStatus
 } from '../common/DivisionCalendarTodoView';
+import {
+  ElegantTaskProgressBar,
+  fireTaskCelebrationConfetti
+} from '../common/ElegantTaskProgressBar';
 import { ShareDashboardViewButton } from '../common/ShareDashboardViewButton';
 
 export interface DivisionWidgetItem {
@@ -1404,13 +1409,36 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
     [divEvents]
   );
 
+  const handleWidgetToggleTask = (e: React.MouseEvent, evtId: string, currentStatus: string) => {
+    e.stopPropagation();
+    const nextStatus = currentStatus === 'Selesai' ? 'Belum Mulai' : 'Selesai';
+    const updated = updateStoredCalendarEventStatus(evtId, nextStatus);
+    setCalendarEvents(updated);
+    if (nextStatus === 'Selesai') {
+      fireTaskCelebrationConfetti(e.clientX, e.clientY);
+      showToast({
+        title: 'Tugas Tuntas! 🎉',
+        message: 'Tugas divisi berhasil diselesaikan. Progres divisi telah diperbarui.',
+        type: 'success',
+        category: 'system'
+      });
+    } else {
+      showToast({
+        title: 'Status Diperbarui',
+        message: 'Tugas ditandai belum selesai.',
+        type: 'info',
+        category: 'system'
+      });
+    }
+  };
+
   const renderWidgetBody = (widget: DivisionWidgetItem) => {
     // Task progress widget shared pattern for `*-w-tugas` or `dir-w-agenda`
     if (widget.id.endsWith('-w-tugas') || widget.id === 'dir-w-agenda') {
       return (
         <div className="flex flex-col justify-between h-full space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
+            <div className="flex-1 min-w-[200px]">
               <div className="flex items-center gap-2">
                 <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
                   {avgDivProgress}%
@@ -1425,17 +1453,19 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
                   </span>
                 )}
               </div>
-              <div className="w-full max-w-md h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden mt-2">
-                <div
-                  className="h-full bg-indigo-600 dark:bg-indigo-400 rounded-full transition-all duration-300"
-                  style={{ width: `${avgDivProgress}%` }}
+              <div className="w-full max-w-md mt-2">
+                <ElegantTaskProgressBar
+                  percent={avgDivProgress}
+                  height="sm"
+                  showGlow={true}
+                  triggerConfettiOnComplete={false}
                 />
               </div>
             </div>
             <button
               type="button"
               onClick={() => navigateToTab('kalender')}
-              className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+              className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors shrink-0"
             >
               <Calendar className="w-3.5 h-3.5" />
               <span>Buka Kalender & Daily Planner</span>
@@ -1443,26 +1473,56 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
             {divEvents.slice(0, 3).map(ev => {
               const prog = getTaskCompletionProgress(ev);
+              const isCompleted = ev.status === 'Selesai';
               return (
                 <div
                   key={ev.id}
                   onClick={() => navigateToTab('kalender')}
-                  className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/70 hover:border-indigo-300 cursor-pointer transition-all"
+                  className={`p-2.5 rounded-xl border transition-all cursor-pointer relative group flex flex-col justify-between ${
+                    isCompleted
+                      ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60'
+                      : 'bg-slate-50 dark:bg-slate-800/70 border-slate-200/80 dark:border-slate-700/70 hover:border-indigo-300 dark:hover:border-indigo-700'
+                  }`}
                 >
-                  <div className="flex items-center justify-between gap-1 text-[10px]">
-                    <span className="font-bold text-slate-500 truncate">👤 {ev.picName}</span>
-                    <span className={`font-extrabold ${prog.textColor}`}>{prog.percent}%</span>
+                  <div>
+                    <div className="flex items-center justify-between gap-1 text-[10px]">
+                      <span className="font-bold text-slate-500 truncate">👤 {ev.picName}</span>
+                      <div className="flex items-center gap-1">
+                        <span className={`font-extrabold ${prog.textColor}`}>{prog.percent}%</span>
+                        <button
+                          type="button"
+                          onClick={e => handleWidgetToggleTask(e, ev.id, ev.status)}
+                          className={`p-0.5 rounded-md border transition-all cursor-pointer ${
+                            isCompleted
+                              ? 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700'
+                              : 'bg-white dark:bg-slate-900 text-slate-400 hover:text-emerald-600 border-slate-200 dark:border-slate-700'
+                          }`}
+                          title={isCompleted ? 'Tandai belum selesai' : 'Tandai selesai sekarang'}
+                        >
+                          <CheckCircle2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                    <p
+                      className={`text-xs font-bold truncate mt-1 ${
+                        isCompleted
+                          ? 'line-through text-slate-400 dark:text-slate-500'
+                          : 'text-slate-800 dark:text-slate-100'
+                      }`}
+                    >
+                      {ev.title}
+                    </p>
                   </div>
-                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate mt-0.5">
-                    {ev.title}
-                  </p>
-                  <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden mt-1.5">
-                    <div
-                      className={`h-full rounded-full ${prog.barColor}`}
-                      style={{ width: `${prog.percent}%` }}
+                  <div className="mt-2">
+                    <ElegantTaskProgressBar
+                      percent={prog.percent}
+                      height="xs"
+                      showGlow={isCompleted}
+                      triggerConfettiOnComplete={false}
+                      compact={true}
                     />
                   </div>
                 </div>

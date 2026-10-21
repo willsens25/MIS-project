@@ -594,6 +594,8 @@ export interface BackupMetadata {
     bazaarEvents: number;
     activityLogs: number;
     users: number;
+    attachments?: number;
+    budgets?: number;
   };
   system_note?: string;
 }

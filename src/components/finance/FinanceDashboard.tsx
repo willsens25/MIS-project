@@ -25,7 +25,8 @@ import {
   Check,
   Scale,
   RefreshCw,
-  Calendar
+  Calendar,
+  PieChart
 } from 'lucide-react';
 import { FinanceCharts } from '../charts/FinanceCharts';
 import { SixMonthCashFlowBarChart } from '../charts/SixMonthCashFlowBarChart';
@@ -41,12 +42,13 @@ import { formatLogDateTime } from '../../utils/greetingUtils';
 import { RupiahInput } from '../common/RupiahInput';
 import { BankReconciliationView } from './BankReconciliationView';
 import { FinancialReportsView } from './FinancialReportsView';
+import { BudgetVsActualView } from './BudgetVsActualView';
 import { DivisionCalendarTodoView } from '../common/DivisionCalendarTodoView';
 import { DivisionQuickSearchBar } from '../common/DivisionQuickSearchBar';
 import { DivisionWidgetGrid } from '../dashboard-layout/DivisionWidgetGrid';
 
 interface FinanceDashboardProps {
-  initialSubTab?: 'grafik' | 'mutasi' | 'persetujuan' | 'penjualan' | 'akun' | 'rekonsiliasi' | 'laporan' | 'kalender';
+  initialSubTab?: 'grafik' | 'mutasi' | 'persetujuan' | 'penjualan' | 'akun' | 'rekonsiliasi' | 'laporan' | 'kalender' | 'anggaran';
 }
 
 export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTab }) => {
@@ -72,10 +74,10 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
     setCurrentSubTab
   } = useApp();
 
-  const activeSubTab = (['grafik', 'mutasi', 'persetujuan', 'penjualan', 'akun', 'rekonsiliasi', 'laporan', 'kalender'].includes(currentSubTab)
+  const activeSubTab = (['grafik', 'mutasi', 'persetujuan', 'penjualan', 'akun', 'rekonsiliasi', 'laporan', 'kalender', 'anggaran'].includes(currentSubTab)
     ? currentSubTab
-    : 'grafik') as 'grafik' | 'mutasi' | 'persetujuan' | 'penjualan' | 'akun' | 'rekonsiliasi' | 'laporan' | 'kalender';
-  const setActiveSubTab = (tab: 'grafik' | 'mutasi' | 'persetujuan' | 'penjualan' | 'akun' | 'rekonsiliasi' | 'laporan' | 'kalender') => setCurrentSubTab(tab);
+    : 'grafik') as 'grafik' | 'mutasi' | 'persetujuan' | 'penjualan' | 'akun' | 'rekonsiliasi' | 'laporan' | 'kalender' | 'anggaran';
+  const setActiveSubTab = (tab: 'grafik' | 'mutasi' | 'persetujuan' | 'penjualan' | 'akun' | 'rekonsiliasi' | 'laporan' | 'kalender' | 'anggaran') => setCurrentSubTab(tab);
 
   useEffect(() => {
     if (initialSubTab) {
@@ -655,6 +657,18 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
           >
             <Calendar className="w-3.5 h-3.5" />
             <span>Kalender & To-Do</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('anggaran')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              activeSubTab === 'anggaran'
+                ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
+            }`}
+          >
+            <PieChart className="w-3.5 h-3.5" />
+            <span>Pagu Anggaran</span>
           </button>
         </div>
 
@@ -1403,6 +1417,11 @@ export const FinanceDashboard: React.FC<FinanceDashboardProps> = ({ initialSubTa
       {/* KALENDER & TO-DO LIST FINANCE SUB TAB */}
       {activeSubTab === 'kalender' && (
         <DivisionCalendarTodoView divisionId={2} />
+      )}
+
+      {/* PAGU ANGGARAN & BUDGET VS ACTUAL TRACKING SUB TAB */}
+      {activeSubTab === 'anggaran' && (
+        <BudgetVsActualView />
       )}
 
       {/* Mutasi Modal */}

@@ -71,10 +71,10 @@ export const NightShiftHeaderButton: React.FC<NightShiftHeaderButtonProps> = ({
         onClick={() => setIsOpen(!isOpen)}
         whileHover={{ scale: 1.05, y: -1 }}
         whileTap={{ scale: 0.95 }}
-        className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer border ${
+        className={`flex items-center space-x-1.5 h-8.5 px-2.5 rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer border ${
           isNightShiftActive
             ? 'bg-amber-100/90 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700/80 ring-2 ring-amber-400/30 font-bold'
-            : 'bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
+            : 'bg-slate-100/90 dark:bg-slate-800/80 hover:bg-slate-200/80 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-300 border-slate-200/90 dark:border-slate-700/80'
         }`}
         title={`Night Shift Mode (${isNightShiftActive ? 'Aktif' : 'Standby'}) — Penyesuaian intensitas warna & kontras ramah mata saat lembur`}
         aria-label="Night Shift Mode"
@@ -91,7 +91,7 @@ export const NightShiftHeaderButton: React.FC<NightShiftHeaderButtonProps> = ({
           )}
         </div>
 
-        <span className="hidden sm:inline">
+        <span className="hidden 2xl:inline">
           {isNightShiftActive ? 'Lembur' : 'Night Shift'}
         </span>
 
