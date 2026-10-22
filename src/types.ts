@@ -508,6 +508,8 @@ export type MascotPersonality = 'professional' | 'casual' | 'motivational';
 
 export type MascotSpeechFrequency = 'frequent' | 'normal' | 'minimal';
 
+export type AIResponseTone = 'professional' | 'concise' | 'casual' | 'analytical';
+
 export interface UserSettings {
   mascotSpeechBubbleEnabled: boolean; // Toggle mascot speech bubbles on/off globally
   mascotPersonality?: MascotPersonality; // Tone of speech bubble greetings ('professional' | 'casual' | 'motivational')
@@ -524,6 +526,9 @@ export interface UserSettings {
     name?: string;
   };
   nightShift?: NightShiftConfig; // Night Shift Mode settings for overtime comfort
+  aiSystemPromptPrefix?: string; // Global custom system prompt prefix for AI assistant
+  aiDivisionPromptPrefixes?: Partial<Record<DivisionId, string>>; // Division-tailored system prompt prefixes
+  aiResponseTone?: AIResponseTone; // Global AI response tone influencing persona across all divisions ('professional' | 'concise' | 'casual' | 'analytical')
 }
 
 export interface BoardResolutionItem {

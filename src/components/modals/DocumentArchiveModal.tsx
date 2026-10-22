@@ -90,8 +90,6 @@ export const DocumentArchiveModal: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (!isDocumentArchiveOpen) return null;
-
   // Filter attachments
   const filteredAttachments = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
@@ -179,6 +177,8 @@ export const DocumentArchiveModal: React.FC = () => {
     deleteAttachment(id);
     setDeletingId(null);
   };
+
+  if (!isDocumentArchiveOpen) return null;
 
   const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md">

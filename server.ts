@@ -193,8 +193,11 @@ PANDUAN UTAMA MENJAWAB:
    - Anda bebas mengekstrak, menghitung, memfilter, atau mengelompokkan data yang tersedia untuk menjawab pertanyaan pengguna.`;
 
 // Helper function for calling Gemini with fast model fallback
-async function generateWithFallback(ai: GoogleGenAI, contents: any) {
+async function generateWithFallback(ai: GoogleGenAI, contents: any, customPrefix?: string) {
   let lastError: any = null;
+  const effectiveSystemInstruction = customPrefix
+    ? `${customPrefix.trim()}\n\n${GEMINI_SYSTEM_INSTRUCTION}`
+    : GEMINI_SYSTEM_INSTRUCTION;
 
   for (const model of FAST_GEMINI_MODELS) {
     try {
@@ -202,7 +205,7 @@ async function generateWithFallback(ai: GoogleGenAI, contents: any) {
         model,
         contents,
         config: {
-          systemInstruction: GEMINI_SYSTEM_INSTRUCTION,
+          systemInstruction: effectiveSystemInstruction,
           temperature: 0.75,
         }
       });
@@ -397,7 +400,7 @@ Wajib balas HANYA dalam format JSON valid tanpa markdown, tanpa penjelasan:
 // Real-time streaming endpoint (Server-Sent Events) for immediate response
 app.post("/api/gemini/stream", async (req: Request, res: Response) => {
   try {
-    const { prompt, systemContext, history } = req.body;
+    const { prompt, systemContext, history, customPrefix } = req.body;
     if (!prompt) {
       return res.status(400).json({ success: false, message: "Prompt is required" });
     }
@@ -418,6 +421,9 @@ Untuk mengaktifkan kecerdasan penuh Gemini AI agar dapat menganalisis data dan m
     }
 
     const contents = buildConversationContents(prompt, systemContext, history);
+    const effectiveSystemInstruction = customPrefix
+      ? `${String(customPrefix).trim()}\n\n${GEMINI_SYSTEM_INSTRUCTION}`
+      : GEMINI_SYSTEM_INSTRUCTION;
     let streamStarted = false;
 
     for (const model of FAST_GEMINI_MODELS) {
@@ -426,7 +432,7 @@ Untuk mengaktifkan kecerdasan penuh Gemini AI agar dapat menganalisis data dan m
           model,
           contents,
           config: {
-            systemInstruction: GEMINI_SYSTEM_INSTRUCTION,
+            systemInstruction: effectiveSystemInstruction,
             temperature: 0.75,
           }
         });
@@ -473,7 +479,7 @@ Namun data operasional MIS Anda tetap aman dan dapat diakses langsung melalui mo
 
 app.post("/api/gemini", async (req: Request, res: Response) => {
   try {
-    const { prompt, systemContext, history } = req.body;
+    const { prompt, systemContext, history, customPrefix } = req.body;
     if (!prompt) {
       return res.status(400).json({ success: false, message: "Prompt is required" });
     }
@@ -489,7 +495,7 @@ app.post("/api/gemini", async (req: Request, res: Response) => {
     const contents = buildConversationContents(prompt, systemContext, history);
 
     try {
-      const result = await generateWithFallback(ai, contents);
+      const result = await generateWithFallback(ai, contents, customPrefix);
       return res.json({
         success: true,
         output: result.text,

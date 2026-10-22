@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../../context/AppContext';
@@ -41,7 +41,19 @@ import {
   Smile,
   HeartHandshake,
   Lightbulb,
-  LightbulbOff
+  LightbulbOff,
+  Bot,
+  BookOpen,
+  ShoppingBag,
+  Building2,
+  FileText,
+  Wand2,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Save,
+  Info,
+  BarChart3
 } from 'lucide-react';
 import { MascotAvatar } from '../MascotAvatar';
 import { PRESET_LOCATIONS, LocationCoordinates } from '../../lib/solarCalculator';
@@ -54,7 +66,9 @@ import {
   NightShiftPreset,
   NightShiftScheduleType,
   MascotPersonality,
-  MascotSpeechFrequency
+  MascotSpeechFrequency,
+  DivisionId,
+  AIResponseTone
 } from '../../types';
 import {
   MASCOT_PERSONALITY_CONFIGS,
@@ -62,6 +76,12 @@ import {
   getDivisionGreetingOptions,
   getWelcomeSalutation
 } from '../../utils/greetingUtils';
+import {
+  DIVISION_PROMPT_PRESETS,
+  GLOBAL_STYLE_MODIFIERS,
+  getEffectivePromptPrefix,
+  AI_RESPONSE_TONE_CONFIGS
+} from '../../lib/aiSystemPromptPresets';
 
 interface UserSettingsModalProps {
   isOpen: boolean;
@@ -125,7 +145,25 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
     showToast(`🔔 Filter Toast diperbarui: ${filterNames[filterKey] || filterKey}`);
   };
 
-  if (!isOpen) return null;
+  // Division AI Custom Prompt Prefix States
+  const [activePromptDivision, setActivePromptDivision] = useState<DivisionId>(
+    () => (currentUser.divisi_id || 1) as DivisionId
+  );
+  const [promptDraftText, setPromptDraftText] = useState<string>('');
+  const [showPromptPreview, setShowPromptPreview] = useState<boolean>(false);
+  const [copiedPromptFeedback, setCopiedPromptFeedback] = useState<boolean>(false);
+
+  // Synchronize draft text whenever activePromptDivision or userSettings changes
+  useEffect(() => {
+    const savedCustom = userSettings?.aiDivisionPromptPrefixes?.[activePromptDivision];
+    if (savedCustom !== undefined) {
+      setPromptDraftText(savedCustom);
+    } else if (userSettings?.aiSystemPromptPrefix) {
+      setPromptDraftText(userSettings.aiSystemPromptPrefix);
+    } else {
+      setPromptDraftText(DIVISION_PROMPT_PRESETS[activePromptDivision]?.defaultPrompt || '');
+    }
+  }, [activePromptDivision, userSettings?.aiDivisionPromptPrefixes, userSettings?.aiSystemPromptPrefix]);
 
   const showToast = (msg: string) => {
     setToastNotice(msg);
@@ -299,10 +337,87 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
       mascotShortcutHintsEnabled: true,
       mascotIdleAnimationEnabled: true,
       themeMode: 'system-synced',
+      aiSystemPromptPrefix: '',
+      aiDivisionPromptPrefixes: {},
+      aiResponseTone: 'professional'
     });
     updateNightShift(DEFAULT_NIGHT_SHIFT_CONFIG);
-    showToast('🔄 Preferensi Maskot AI, Kepribadian, Tema, & Night Shift dikembalikan ke setelan default');
+    showToast('🔄 Preferensi Maskot AI, Kepribadian, Tema, Night Shift, & Prompt AI dikembalikan ke setelan default');
   };
+
+  const activeTone: AIResponseTone = userSettings?.aiResponseTone || 'professional';
+
+  const handleSelectResponseTone = (tone: AIResponseTone) => {
+    updateUserSettings({ aiResponseTone: tone });
+    showToast(`🎭 Response Tone Asisten AI diatur ke "${AI_RESPONSE_TONE_CONFIGS[tone].label}"`);
+  };
+
+  const handleSaveDivisionPrompt = (overrideText?: string) => {
+    const textToSave = (overrideText !== undefined ? overrideText : promptDraftText).trim();
+    const currentPrefixes = { ...(userSettings?.aiDivisionPromptPrefixes || {}) };
+    currentPrefixes[activePromptDivision] = textToSave;
+
+    updateUserSettings({
+      aiDivisionPromptPrefixes: currentPrefixes
+    });
+    showToast(`✅ Prefiks AI untuk divisi ${DIVISION_PROMPT_PRESETS[activePromptDivision]?.divisionName} berhasil disimpan!`);
+  };
+
+  const handleResetCurrentDivisionPrompt = () => {
+    const defaultText = DIVISION_PROMPT_PRESETS[activePromptDivision]?.defaultPrompt || '';
+    setPromptDraftText(defaultText);
+    const currentPrefixes = { ...(userSettings?.aiDivisionPromptPrefixes || {}) };
+    delete currentPrefixes[activePromptDivision];
+    updateUserSettings({
+      aiDivisionPromptPrefixes: currentPrefixes
+    });
+    showToast(`🔄 Prefiks divisi ${DIVISION_PROMPT_PRESETS[activePromptDivision]?.divisionCode} dikembalikan ke template standar.`);
+  };
+
+  const handleApplyToAllDivisions = () => {
+    const textToSave = promptDraftText.trim();
+    const allPrefixes: Partial<Record<DivisionId, string>> = {
+      1: textToSave,
+      2: textToSave,
+      3: textToSave,
+      4: textToSave,
+      5: textToSave,
+      6: textToSave
+    };
+    updateUserSettings({
+      aiDivisionPromptPrefixes: allPrefixes,
+      aiSystemPromptPrefix: textToSave
+    });
+    showToast(`🌐 Prefiks diterapkan ke seluruh 6 divisi MIS!`);
+  };
+
+  const handleAppendSnippet = (snippetText: string) => {
+    setPromptDraftText((prev) => {
+      const cleanPrev = prev.trim();
+      if (!cleanPrev) return snippetText;
+      if (cleanPrev.endsWith('.') || cleanPrev.endsWith('!') || cleanPrev.endsWith('?')) {
+        return `${cleanPrev} ${snippetText}`;
+      }
+      return `${cleanPrev}. ${snippetText}`;
+    });
+    showToast(`✨ Cuplikan ditambahkan ke draf instruksi`);
+  };
+
+  const handleCopyPromptPreview = () => {
+    try {
+      const preset = DIVISION_PROMPT_PRESETS[activePromptDivision];
+      const toneConfig = AI_RESPONSE_TONE_CONFIGS[activeTone];
+      const previewText = `[${toneConfig.directive}]\n\n[Prefiks Khusus Divisi ${preset?.divisionName || ''}]:\n${promptDraftText.trim()}\n\n[Instruksi Inti Asisten MIS SAPA-ALL Lamrimnesia]:\nBertindaklah sebagai asisten cerdas sistem ERP MIS Yayasan Pelestarian Budaya Mahayana (Lamrimnesia)...`;
+      navigator.clipboard.writeText(previewText);
+      setCopiedPromptFeedback(true);
+      setTimeout(() => setCopiedPromptFeedback(false), 2000);
+      showToast('📋 Pratinjau instruksi disalin ke clipboard');
+    } catch {
+      showToast('⚠️ Gagal menyalin ke clipboard');
+    }
+  };
+
+  if (!isOpen) return null;
 
   return createPortal(
     <div
@@ -1615,7 +1730,368 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
               </button>
             </div>
 
-            {/* SECTION 4: Toast Notifications & Status Filter Preferences */}
+            {/* SECTION 4: Division Custom AI System Prompt Prefixes & Reporting Style */}
+            <div className="pt-2 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="p-1.5 rounded-lg bg-teal-100 dark:bg-teal-950/80 text-teal-600 dark:text-teal-400">
+                    <Bot className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                      Gaya Laporan & Prefiks Prompt Asisten AI
+                    </h4>
+                  </div>
+                </div>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-850 flex items-center gap-1">
+                  <Sparkles className="w-2.5 h-2.5 text-teal-500" />
+                  Tailored per Divisi
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Sesuaikan persona dan instruksi awal (<em>system prompt prefix</em>) Gemini AI agar gaya bahasa, kedalaman data, dan format laporan otomatis selaras dengan kebutuhan spesifik divisi Anda.
+              </p>
+
+              {/* Response Tone Selector (Cross-Division) */}
+              <div className="bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-3.5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">
+                      <Sliders className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <h5 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                        <span>Response Tone Asisten AI</span>
+                        <span className="text-[9px] font-semibold text-slate-400">(Semua Divisi)</span>
+                      </h5>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                        Pilih nada bicara dasar yang mempengaruhi persona asisten AI di seluruh 6 divisi
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${AI_RESPONSE_TONE_CONFIGS[activeTone].badgeClass}`}>
+                    {AI_RESPONSE_TONE_CONFIGS[activeTone].shortLabel}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {(['professional', 'concise', 'casual', 'analytical'] as AIResponseTone[]).map((toneKey) => {
+                    const toneCfg = AI_RESPONSE_TONE_CONFIGS[toneKey];
+                    const isSelected = activeTone === toneKey;
+
+                    const getToneIcon = (id: AIResponseTone) => {
+                      switch (id) {
+                        case 'professional': return <Briefcase className="w-3.5 h-3.5" />;
+                        case 'concise': return <Zap className="w-3.5 h-3.5" />;
+                        case 'casual': return <Smile className="w-3.5 h-3.5" />;
+                        case 'analytical': return <BarChart3 className="w-3.5 h-3.5" />;
+                      }
+                    };
+
+                    return (
+                      <button
+                        key={toneKey}
+                        type="button"
+                        onClick={() => handleSelectResponseTone(toneKey)}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between relative ${
+                          isSelected
+                            ? 'bg-white dark:bg-slate-900 border-indigo-500 shadow-xs ring-2 ring-indigo-500/20'
+                            : 'bg-white/70 dark:bg-slate-900/40 border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div
+                            className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                              isSelected
+                                ? 'bg-indigo-600 text-white'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                            }`}
+                          >
+                            {getToneIcon(toneKey)}
+                          </div>
+                          {isSelected && (
+                            <div className="w-3.5 h-3.5 rounded-full bg-indigo-600 text-white flex items-center justify-center">
+                              <Check className="w-2.5 h-2.5 stroke-[3]" />
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <div className="text-[11px] font-bold text-slate-900 dark:text-white truncate">
+                            {toneCfg.shortLabel}
+                          </div>
+                          <div className="text-[9px] text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5 leading-tight">
+                            {toneCfg.description}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 6 Division Selector Tabs */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {([1, 2, 3, 4, 5, 6] as DivisionId[]).map((divId) => {
+                  const preset = DIVISION_PROMPT_PRESETS[divId];
+                  const isSelected = activePromptDivision === divId;
+                  const isUserDivision = currentUser.divisi_id === divId;
+                  const hasCustom = Boolean(userSettings?.aiDivisionPromptPrefixes?.[divId]?.trim());
+
+                  const getDivIcon = (id: DivisionId) => {
+                    switch (id) {
+                      case 1: return <Building2 className="w-3.5 h-3.5" />;
+                      case 2: return <Wallet className="w-3.5 h-3.5" />;
+                      case 3: return <BookOpen className="w-3.5 h-3.5" />;
+                      case 4: return <ShoppingBag className="w-3.5 h-3.5" />;
+                      case 5: return <Printer className="w-3.5 h-3.5" />;
+                      case 6: return <Truck className="w-3.5 h-3.5" />;
+                    }
+                  };
+
+                  return (
+                    <button
+                      key={divId}
+                      type="button"
+                      onClick={() => setActivePromptDivision(divId)}
+                      className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between relative group ${
+                        isSelected
+                          ? 'bg-teal-50/80 dark:bg-teal-950/50 border-teal-500 dark:border-teal-500 shadow-xs ring-2 ring-teal-500/20'
+                          : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className={`w-7 h-7 rounded-xl flex items-center justify-center ${
+                          isSelected ? 'bg-teal-600 text-white shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                        }`}>
+                          {getDivIcon(divId)}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {hasCustom && (
+                            <span className="w-2 h-2 rounded-full bg-teal-500" title="Ada prefiks kustom tersimpan" />
+                          )}
+                          {isUserDivision && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                              Anda
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-bold text-slate-900 dark:text-white flex items-center gap-1 truncate">
+                          <span className="font-mono text-teal-600 dark:text-teal-400 font-extrabold">{preset.divisionCode}</span>
+                          <span className="truncate">{preset.divisionName.split('&')[0].trim()}</span>
+                        </div>
+                        <div className="text-[9px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">
+                          {hasCustom ? 'Kustom aktif' : 'Standar'}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Active Division Prompt Editor Card */}
+              <div className="bg-white dark:bg-slate-900/90 border border-teal-200/80 dark:border-teal-900/60 rounded-2xl p-4 shadow-xs space-y-3.5">
+                {/* Header of Active Division */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2.5">
+                    <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border ${DIVISION_PROMPT_PRESETS[activePromptDivision].badgeClass}`}>
+                      {DIVISION_PROMPT_PRESETS[activePromptDivision].divisionCode}
+                    </span>
+                    <div>
+                      <h5 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <span>{DIVISION_PROMPT_PRESETS[activePromptDivision].divisionName}</span>
+                        {userSettings?.aiDivisionPromptPrefixes?.[activePromptDivision]?.trim() ? (
+                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                            Prefiks Kustom
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                            Template Standar
+                          </span>
+                        )}
+                      </h5>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        {DIVISION_PROMPT_PRESETS[activePromptDivision].styleDescription}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleResetCurrentDivisionPrompt}
+                      className="px-2.5 py-1 rounded-lg text-[10px] font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors flex items-center gap-1 cursor-pointer"
+                      title="Kembalikan ke template instruksi awal divisi ini"
+                    >
+                      <RotateCcw className="w-3 h-3 text-slate-500" />
+                      <span>Standar Divisi</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPromptDraftText('')}
+                      className="px-2.5 py-1 rounded-lg text-[10px] font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                      title="Kosongkan teks prefiks"
+                    >
+                      Kosongkan
+                    </button>
+                  </div>
+                </div>
+
+                {/* Textarea for Prompt Prefix */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <label htmlFor="prompt-prefix-textarea" className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                      Instruksi Awal / Gaya Respon Asisten AI:
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {promptDraftText.length} karakter
+                    </span>
+                  </div>
+
+                  <textarea
+                    id="prompt-prefix-textarea"
+                    rows={4}
+                    value={promptDraftText}
+                    onChange={(e) => setPromptDraftText(e.target.value)}
+                    placeholder="Tuliskan persona AI, panduan nada bicara, fokus evaluasi KPI, atau format respon yang diharapkan untuk divisi ini..."
+                    className="w-full text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 transition-all font-sans leading-relaxed resize-y"
+                  />
+                </div>
+
+                {/* Quick Snippets & Modifiers Section */}
+                <div className="space-y-2 pt-1">
+                  <div className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                    <Wand2 className="w-3 h-3 text-teal-500" />
+                    Sisipkan Cuplikan Gaya & Nada Laporan:
+                  </div>
+
+                  {/* Division-Specific Suggestions */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {DIVISION_PROMPT_PRESETS[activePromptDivision].suggestedSnippets.map((snip, sIdx) => (
+                      <button
+                        key={sIdx}
+                        type="button"
+                        onClick={() => handleAppendSnippet(snip.text)}
+                        className="px-2 py-1 rounded-lg text-[10px] font-medium bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/60 dark:hover:bg-teal-900/60 text-teal-800 dark:text-teal-200 border border-teal-200/80 dark:border-teal-800/80 transition-colors flex items-center gap-1 cursor-pointer"
+                        title={snip.text}
+                      >
+                        <span>+ {snip.label}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Global Tone Modifiers */}
+                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                    {GLOBAL_STYLE_MODIFIERS.map((mod) => (
+                      <button
+                        key={mod.id}
+                        type="button"
+                        onClick={() => handleAppendSnippet(mod.snippet)}
+                        className="px-2 py-1 rounded-lg text-[10px] font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-750 transition-colors cursor-pointer"
+                        title={mod.snippet}
+                      >
+                        {mod.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Collapsible Full AI Prompt Preview */}
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowPromptPreview((prev) => !prev)}
+                    className="w-full flex items-center justify-between p-2 rounded-xl bg-slate-100/70 hover:bg-slate-100 dark:bg-slate-800/40 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-300 text-[11px] font-semibold transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                      <span>Pratinjau Integrasi Instruksi Gemini AI</span>
+                    </div>
+                    {showPromptPreview ? (
+                      <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                    )}
+                  </button>
+
+                  <AnimatePresence>
+                    {showPromptPreview && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="mt-2 p-3 bg-slate-950 text-slate-300 rounded-xl text-[10px] font-mono leading-relaxed space-y-2 border border-slate-800 relative">
+                          <button
+                            type="button"
+                            onClick={handleCopyPromptPreview}
+                            className="absolute top-2.5 right-2.5 p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[10px] flex items-center gap-1 transition-colors cursor-pointer"
+                            title="Salin pratinjau"
+                          >
+                            {copiedPromptFeedback ? (
+                              <>
+                                <Check className="w-3 h-3 text-emerald-400" />
+                                <span className="text-emerald-400 font-sans">Tersalin</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3" />
+                                <span className="font-sans">Salin</span>
+                              </>
+                            )}
+                          </button>
+                          <div className="text-cyan-400 font-bold">
+                            // 1. Response Tone (Lintas Divisi): {AI_RESPONSE_TONE_CONFIGS[activeTone].label}
+                          </div>
+                          <div className="text-cyan-200 whitespace-pre-wrap pl-2 border-l border-cyan-500/30">
+                            {AI_RESPONSE_TONE_CONFIGS[activeTone].directive}
+                          </div>
+                          <div className="text-emerald-400 font-bold pt-1">
+                            // 2. Prefiks Divisi {DIVISION_PROMPT_PRESETS[activePromptDivision].divisionCode} ({DIVISION_PROMPT_PRESETS[activePromptDivision].divisionName}):
+                          </div>
+                          <div className="text-amber-200 whitespace-pre-wrap pl-2 border-l border-amber-500/30">
+                            {promptDraftText.trim() || '(Tidak ada prefiks kustom, menggunakan instruksi standar sistem)'}
+                          </div>
+                          <div className="text-indigo-400 font-bold pt-1">
+                            // 3. Instruksi Inti Asisten MIS SAPA-ALL:
+                          </div>
+                          <div className="text-slate-400 pl-2 border-l border-slate-700 text-[9px]">
+                            Bertindaklah sebagai asisten cerdas sistem ERP MIS Yayasan Pelestarian Budaya Mahayana (Lamrimnesia)...
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Primary Action Buttons for Division Prompt */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={handleApplyToAllDivisions}
+                    className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    title="Salin instruksi ini ke semua 6 divisi sekaligus"
+                  >
+                    <span>Terapkan ke Semua Divisi</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSaveDivisionPrompt()}
+                    className="px-4 py-1.5 rounded-xl text-xs font-bold text-white bg-teal-600 hover:bg-teal-500 shadow-sm shadow-teal-600/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    <span>Simpan Prefiks Divisi Ini</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 5: Toast Notifications & Status Filter Preferences */}
             <div className="pt-2 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">

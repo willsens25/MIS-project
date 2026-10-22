@@ -497,7 +497,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       longitude: autoThemeLocation.longitude,
       name: autoThemeLocation.name
     },
-    nightShift: DEFAULT_NIGHT_SHIFT_CONFIG
+    nightShift: DEFAULT_NIGHT_SHIFT_CONFIG,
+    aiSystemPromptPrefix: '',
+    aiDivisionPromptPrefixes: {},
+    aiResponseTone: 'professional'
   };
 
   const [userSettings, setUserSettings] = useState<UserSettings>(() => {

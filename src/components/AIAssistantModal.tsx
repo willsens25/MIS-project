@@ -18,6 +18,12 @@ import {
   Trash2
 } from 'lucide-react';
 import { useWebSpeech } from '../hooks/useWebSpeech';
+import { DivisionId } from '../types';
+import {
+  getEffectivePromptPrefix,
+  DIVISION_PROMPT_PRESETS,
+  AI_RESPONSE_TONE_CONFIGS
+} from '../lib/aiSystemPromptPresets';
 
 const RECENT_QUERIES_STORAGE_KEY = 'mis_ai_recent_queries_v1';
 const MAX_RECENT_QUERIES = 5;
@@ -183,6 +189,14 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({ isOpen, onCl
 
   const currentDivisi = divisiList.find(d => d.id === currentUser.divisi_id);
   const currentDivisiName = currentDivisi?.nama_divisi || 'Direktorat';
+  const userDivisionId = (currentUser.divisi_id || 1) as DivisionId;
+  const activeCustomPrefix = getEffectivePromptPrefix(
+    userDivisionId,
+    userSettings?.aiDivisionPromptPrefixes,
+    userSettings?.aiSystemPromptPrefix,
+    userSettings?.aiResponseTone
+  );
+  const activeToneConfig = AI_RESPONSE_TONE_CONFIGS[userSettings?.aiResponseTone || 'professional'];
 
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([
     {
@@ -342,7 +356,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({ isOpen, onCl
     const kategoriSummary = Object.entries(identitasKategoriCount).map(([k, v]) => `${k}: ${v}`).join(', ');
 
     const systemContext = `
-[DIVISI & PENGGUNA AKTIF SAAT INI]:
+${activeCustomPrefix ? `[GAYA LAPORAN & PREFIKS SISTEM DIVISI ${currentDivisiName.toUpperCase()}]:\n${activeCustomPrefix}\n\n` : ''}[DIVISI & PENGGUNA AKTIF SAAT INI]:
 - Divisi yang Sedang Dibuka Pengguna: Divisi ${currentUser.divisi_id} (${currentDivisiName})
 - Modul/Sub-Tab Aktif: ${currentSubTab}
 - Pengguna yang Sedang Aktif: ${currentUser.name} (Jabatan: ${currentUser.role})
@@ -388,7 +402,8 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
         body: JSON.stringify({
           prompt: textToSend,
           systemContext,
-          history: conversationHistory
+          history: conversationHistory,
+          customPrefix: activeCustomPrefix
         })
       });
 
@@ -458,7 +473,8 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
           body: JSON.stringify({
             prompt: textToSend,
             systemContext,
-            history: conversationHistory
+            history: conversationHistory,
+            customPrefix: activeCustomPrefix
           })
         });
         const data = await fallbackRes.json();
@@ -532,6 +548,15 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
                     <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-800/90 text-slate-300 border border-slate-700/80 hidden xs:inline-flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                       {currentDivisiName}
+                    </span>
+                    <span
+                      className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hidden md:inline-flex items-center gap-1.5"
+                      title={`Gaya: ${DIVISION_PROMPT_PRESETS[userDivisionId]?.styleDescription || 'Kustom'} • Tone: ${activeToneConfig?.label || 'Profesional'}`}
+                    >
+                      <Sparkles className="w-2.5 h-2.5 text-indigo-300" />
+                      <span>Gaya: {DIVISION_PROMPT_PRESETS[userDivisionId]?.divisionCode || 'Kustom'}</span>
+                      <span className="text-indigo-400/60">•</span>
+                      <span className="text-teal-300 font-semibold">{activeToneConfig?.shortLabel || 'Profesional'}</span>
                     </span>
                     {isRecognitionSupported && (
                       <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-300 border border-teal-500/30 hidden sm:inline-flex items-center gap-1">
