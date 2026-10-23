@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ToastNotification, ToastType, ToastCategory } from '../../types';
+import { ToastNotification, ToastType, ToastCategory, SnoozeDuration } from '../../types';
 import { useApp } from '../../context/AppContext';
 import {
   CheckCircle2,
@@ -24,29 +24,43 @@ import {
   Printer,
   Eye,
   EyeOff,
-  CalendarClock
+  CalendarClock,
+  Clock
 } from 'lucide-react';
 import { playPleasantClickSound } from '../../utils/soundEffects';
+import {
+  snoozeDeadlineReminder,
+  getStoredSnoozedReminders,
+  cancelSnoozedReminder,
+  checkAndPopDueSnoozedReminders,
+  formatSnoozeRemainingTime,
+  SnoozedDeadlineReminder,
+  SNOOZE_PRESETS
+} from '../../lib/snoozeHelper';
 
 export type ToastFilterOption = 'all' | 'deadline' | 'stock' | 'finance' | 'order' | 'production' | 'logistic' | 'system';
 
 interface ToastItemProps {
   toast: ToastNotification;
   onDismiss: (id: string) => void;
+  onSnooze?: (toast: ToastNotification, duration: SnoozeDuration) => void;
 }
 
-const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
+const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss, onSnooze }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [isSnoozeOpen, setIsSnoozeOpen] = useState(false);
   const [progress, setProgress] = useState(100);
   const duration = toast.duration || 5000;
   const onDismissRef = useRef(onDismiss);
+  const isDeadline = toast.category === 'deadline' || toast.snoozable === true;
 
   useEffect(() => {
     onDismissRef.current = onDismiss;
   }, [onDismiss]);
 
   useEffect(() => {
-    if (isHovered) return;
+    // Pause auto-dismiss countdown if user is hovering or choosing snooze duration
+    if (isHovered || isSnoozeOpen) return;
 
     const startTime = Date.now();
     const initialProgress = progress;
@@ -72,7 +86,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
       clearTimeout(dismissTimeout);
       clearInterval(progressInterval);
     };
-  }, [isHovered, duration, toast.id]);
+  }, [isHovered, isSnoozeOpen, duration, toast.id]);
 
   const getIcon = () => {
     switch (toast.type) {
@@ -212,21 +226,99 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
         </div>
       </div>
 
-      {/* Action button if provided */}
-      {toast.actionLabel && (
-        <div className="flex justify-end pt-1">
-          <button
-            onClick={() => {
-              if (toast.onAction) {
-                toast.onAction();
-              }
-              onDismiss(toast.id);
-            }}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/80 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition-colors cursor-pointer shadow-2xs"
-          >
-            <span>{toast.actionLabel}</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
+      {/* Action button & Snooze control row */}
+      {(isDeadline || toast.actionLabel) && (
+        <div className="flex flex-col gap-1.5 pt-1">
+          <div className="flex items-center justify-between gap-1.5 flex-wrap">
+            {/* Snooze Trigger Button (only for deadline / snoozable notifications) */}
+            {isDeadline ? (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsSnoozeOpen(prev => !prev)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer border shadow-2xs ${
+                    isSnoozeOpen
+                      ? 'bg-amber-500 text-white border-amber-600 shadow-amber-500/20'
+                      : 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/70 dark:hover:bg-amber-900/80 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-700/70'
+                  }`}
+                  title="Tunda notifikasi pengingat ini (Snooze)"
+                >
+                  <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 group-hover:scale-110" />
+                  <span>Tunda (Snooze)</span>
+                  <ChevronDown className={`w-3 h-3 transition-transform ${isSnoozeOpen ? 'rotate-180' : ''}`} />
+                </button>
+              </div>
+            ) : <div />}
+
+            {/* Action button if provided */}
+            {toast.actionLabel && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (toast.onAction) {
+                    toast.onAction();
+                  }
+                  onDismiss(toast.id);
+                }}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/80 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition-colors cursor-pointer shadow-2xs ml-auto"
+              >
+                <span>{toast.actionLabel}</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Expandable Snooze Presets (1 Jam, 4 Jam, 1 Hari) */}
+          <AnimatePresence>
+            {isDeadline && isSnoozeOpen && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden bg-amber-50/95 dark:bg-amber-950/60 rounded-xl border border-amber-200 dark:border-amber-800/80 p-2 flex flex-col gap-1.5 text-xs shadow-inner"
+              >
+                <div className="flex items-center justify-between text-[10px] font-bold text-amber-800 dark:text-amber-300">
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    Pilih durasi tunda reminder:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsSnoozeOpen(false)}
+                    className="text-amber-600 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-100 cursor-pointer"
+                  >
+                    Tutup
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-1.5">
+                  {SNOOZE_PRESETS.map(preset => (
+                    <button
+                      key={preset.key}
+                      type="button"
+                      onClick={() => {
+                        if (onSnooze) {
+                          onSnooze(toast, preset.key);
+                        } else {
+                          onDismiss(toast.id);
+                        }
+                        setIsSnoozeOpen(false);
+                      }}
+                      className="flex flex-col items-center justify-center py-1.5 px-1 bg-white hover:bg-amber-100 dark:bg-slate-900 dark:hover:bg-amber-900/60 text-slate-800 dark:text-slate-100 border border-amber-200 dark:border-amber-800/60 rounded-lg text-center transition-all cursor-pointer shadow-2xs hover:scale-[1.02] active:scale-[0.98]"
+                      title={preset.description}
+                    >
+                      <span className="text-[11px] font-bold text-amber-900 dark:text-amber-200">
+                        {preset.label}
+                      </span>
+                      <span className="text-[9px] text-slate-500 dark:text-slate-400 font-mono">
+                        {preset.key === '1h' ? '+1 Jam' : preset.key === '4h' ? '+4 Jam' : '+1 Hari'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
@@ -322,7 +414,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
   activeFilter: controlledFilter,
   onFilterChange
 }) => {
-  // App context for toast simulation
+  // App context for toast simulation and triggers
   let appCtx: ReturnType<typeof useApp> | null = null;
   try {
     // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -347,6 +439,113 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
   const [showFilterSettings, setShowFilterSettings] = useState(false);
   const [isFloatingBadgeOpen, setIsFloatingBadgeOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  // Snoozed Deadline Reminders State
+  const [snoozedList, setSnoozedList] = useState<SnoozedDeadlineReminder[]>(() => {
+    return getStoredSnoozedReminders();
+  });
+
+  // Background checker for due snoozed reminders (every 15s + visibility/focus)
+  useEffect(() => {
+    const checkSnoozed = () => {
+      const due = checkAndPopDueSnoozedReminders();
+      if (due.length > 0 && appCtx?.showToast) {
+        due.forEach(item => {
+          appCtx?.showToast({
+            type: 'urgent',
+            category: 'deadline',
+            snoozable: true,
+            eventId: item.eventId,
+            targetDate: item.targetDate,
+            title: `⏰ [Tenggat Waktu Berakhir] ${item.title.replace(/^⏰\s*(\[.*?\]\s*)?/, '')}`,
+            message: `Waktu tunda selesai! ${item.message}`,
+            duration: 8500,
+            actionLabel: item.actionLabel || 'Buka Kalender',
+            onAction: () => {
+              window.dispatchEvent(
+                new CustomEvent('mis-open-calendar-event', {
+                  detail: { eventId: item.eventId, date: item.targetDate }
+                })
+              );
+            }
+          });
+        });
+      }
+      setSnoozedList(getStoredSnoozedReminders());
+    };
+
+    checkSnoozed();
+    const interval = setInterval(checkSnoozed, 15000);
+    const handleSync = () => checkSnoozed();
+    const handleSnoozeUpdated = () => setSnoozedList(getStoredSnoozedReminders());
+
+    window.addEventListener('focus', handleSync);
+    window.addEventListener('visibilitychange', handleSync);
+    window.addEventListener('mis-snoozed-reminders-updated', handleSnoozeUpdated);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleSync);
+      window.removeEventListener('visibilitychange', handleSync);
+      window.removeEventListener('mis-snoozed-reminders-updated', handleSnoozeUpdated);
+    };
+  }, [appCtx]);
+
+  // Handle Snooze action from toast card
+  const handleSnoozeToast = (toast: ToastNotification, duration: SnoozeDuration) => {
+    try {
+      playPleasantClickSound();
+    } catch {
+      // ignore
+    }
+
+    const { formattedResumeTime } = snoozeDeadlineReminder(toast, duration);
+    onDismiss(toast.id);
+    setSnoozedList(getStoredSnoozedReminders());
+
+    if (appCtx?.showToast) {
+      const durLabel = duration === '1h' ? '1 Jam' : duration === '4h' ? '4 Jam' : '1 Hari';
+      appCtx.showToast({
+        type: 'info',
+        category: 'deadline',
+        title: '⏰ Pengingat Berhasil Ditunda',
+        message: `Pengingat "${toast.title}" ditunda ${durLabel}. Akan muncul kembali: ${formattedResumeTime}.`,
+        duration: 4500
+      });
+    }
+  };
+
+  // Immediate wake-up for snoozed reminder ("Munculkan Sekarang")
+  const handleWakeSnoozedNow = (snoozeId: string) => {
+    const item = cancelSnoozedReminder(snoozeId);
+    setSnoozedList(getStoredSnoozedReminders());
+    if (item && appCtx?.showToast) {
+      appCtx.showToast({
+        type: 'urgent',
+        category: 'deadline',
+        snoozable: true,
+        eventId: item.eventId,
+        targetDate: item.targetDate,
+        title: `⏰ [Tenggat Waktu] ${item.title.replace(/^⏰\s*(\[.*?\]\s*)?/, '')}`,
+        message: item.message,
+        actionLabel: item.actionLabel || 'Buka Kalender',
+        onAction: () => {
+          window.dispatchEvent(
+            new CustomEvent('mis-open-calendar-event', {
+              detail: { eventId: item.eventId, date: item.targetDate }
+            })
+          );
+        },
+        duration: 8000
+      });
+    }
+  };
+
+  // Cancel snoozed reminder permanently
+  const handleCancelSnooze = (snoozeId: string) => {
+    cancelSnoozedReminder(snoozeId);
+    setSnoozedList(getStoredSnoozedReminders());
+  };
 
   // Close filter dropdown on click outside
   useEffect(() => {
@@ -412,20 +611,31 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
 
   const currentCategoryConfig = CATEGORIES_CONFIG.find(c => c.id === activeCategory) || CATEGORIES_CONFIG[0];
 
-  // If there are no toasts and the user is not opening the settings popover, render the subtle filter pill
+  // If there are no toasts and the user is not opening the settings popover, render subtle indicator pills
   if (toasts.length === 0 && !showFilterSettings && !isFloatingBadgeOpen) {
-    // Discreet mini-button if non-'all' filter is active, so the user remembers that a filter is active
-    if (activeCategory !== 'all') {
+    if (snoozedList.length > 0 || activeCategory !== 'all') {
       return (
-        <div className="fixed top-3 right-4 z-[9990] pointer-events-auto print:hidden">
-          <button
-            onClick={() => setShowFilterSettings(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 rounded-full shadow-sm hover:bg-amber-100 transition-colors cursor-pointer"
-            title={`Filter Notifikasi Aktif: Hanya ${currentCategoryConfig.label}. Klik untuk mengubah.`}
-          >
-            <Filter className="w-3 h-3 text-amber-600 animate-pulse" />
-            <span>Filter: {currentCategoryConfig.shortLabel}</span>
-          </button>
+        <div className="fixed top-3 right-4 z-[9990] pointer-events-auto print:hidden flex items-center gap-2">
+          {snoozedList.length > 0 && (
+            <button
+              onClick={() => setShowFilterSettings(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 dark:text-amber-200 border border-amber-400/50 rounded-full shadow-sm transition-colors cursor-pointer"
+              title={`${snoozedList.length} pengingat deadline sedang ditunda (Snoozed). Klik untuk melihat.`}
+            >
+              <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400 animate-pulse" />
+              <span>{snoozedList.length} Pengingat Ditunda</span>
+            </button>
+          )}
+          {activeCategory !== 'all' && (
+            <button
+              onClick={() => setShowFilterSettings(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 rounded-full shadow-sm hover:bg-amber-100 transition-colors cursor-pointer"
+              title={`Filter Notifikasi Aktif: Hanya ${currentCategoryConfig.label}. Klik untuk mengubah.`}
+            >
+              <Filter className="w-3 h-3 text-amber-600 animate-pulse" />
+              <span>Filter: {currentCategoryConfig.shortLabel}</span>
+            </button>
+          )}
         </div>
       );
     }
@@ -445,15 +655,15 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
             <button
               onClick={() => setShowFilterSettings(!showFilterSettings)}
               className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-                activeCategory !== 'all'
+                activeCategory !== 'all' || snoozedList.length > 0
                   ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
                   : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
               }`}
-              title="Atur Jenis Notifikasi Toast (Filter Kategori)"
+              title="Atur Jenis Notifikasi Toast & Pengingat Ditunda"
             >
               <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
               <span className="truncate">
-                {activeCategory === 'all' ? 'Filter Notifikasi' : `Filter: ${currentCategoryConfig.shortLabel}`}
+                {activeCategory === 'all' ? 'Pengaturan Notifikasi' : `Filter: ${currentCategoryConfig.shortLabel}`}
               </span>
               <ChevronDown className={`w-3 h-3 transition-transform ${showFilterSettings ? 'rotate-180' : ''}`} />
             </button>
@@ -462,6 +672,17 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
             {toasts.length > 0 && (
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200/70 dark:border-slate-700">
                 {filteredToasts.length}/{toasts.length}
+              </span>
+            )}
+
+            {/* Snoozed reminders pill in header bar */}
+            {snoozedList.length > 0 && (
+              <span
+                className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700"
+                title={`${snoozedList.length} pengingat tenggat waktu sedang ditunda`}
+              >
+                <Clock className="w-2.5 h-2.5 text-amber-600" />
+                <span>{snoozedList.length} Ditunda</span>
               </span>
             )}
           </div>
@@ -536,6 +757,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
               exit={{ opacity: 0, height: 0 }}
               className="overflow-hidden border-t border-slate-200/80 dark:border-slate-800 pt-2.5 mt-1 flex flex-col gap-2.5 text-xs"
             >
+              {/* Category Filter Selector Header */}
               <div className="flex items-center justify-between text-slate-700 dark:text-slate-300">
                 <span className="font-extrabold text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Pilih Kategori Yang Ditampilkan
@@ -588,6 +810,70 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
                     </button>
                   );
                 })}
+              </div>
+
+              {/* Snoozed Deadline Reminders Manager Card */}
+              <div className="bg-amber-50/70 dark:bg-amber-950/40 p-2.5 rounded-xl border border-amber-200/80 dark:border-amber-800/80 flex flex-col gap-2">
+                <div className="flex items-center justify-between text-amber-900 dark:text-amber-200">
+                  <span className="font-extrabold text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                    Pengingat Deadline Ditunda ({snoozedList.length})
+                  </span>
+                  {snoozedList.length > 0 && (
+                    <span className="text-[10px] text-amber-700 dark:text-amber-300 font-mono">
+                      Background Active
+                    </span>
+                  )}
+                </div>
+
+                {snoozedList.length === 0 ? (
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">
+                    Belum ada pengingat tenggat waktu yang sedang ditunda (Snoozed).
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1">
+                    {snoozedList.map(item => (
+                      <div
+                        key={item.id}
+                        className="bg-white dark:bg-slate-900 p-2 rounded-lg border border-amber-200/70 dark:border-amber-800/60 flex items-center justify-between gap-2 shadow-2xs"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[11px] font-bold text-slate-900 dark:text-white truncate">
+                            {item.title}
+                          </p>
+                          <div className="flex items-center gap-1.5 mt-0.5 text-[9px] text-slate-500 dark:text-slate-400">
+                            <span className="px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-medium">
+                              {item.snoozeDurationLabel}
+                            </span>
+                            <span>•</span>
+                            <span className="font-mono text-amber-600 dark:text-amber-400 font-semibold">
+                              {formatSnoozeRemainingTime(item.snoozedUntil)}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleWakeSnoozedNow(item.id)}
+                            className="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-md text-[10px] font-bold transition-colors cursor-pointer shadow-2xs"
+                            title="Munculkan notifikasi sekarang tanpa menunggu durasi tunda"
+                          >
+                            Munculkan
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleCancelSnooze(item.id)}
+                            className="p-1 rounded-md text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition-colors cursor-pointer"
+                            title="Batalkan pengingat tunda"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Simulation / Testing Buttons */}
@@ -661,7 +947,12 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
       {/* Render Filtered Toast Notifications */}
       <AnimatePresence mode="popLayout">
         {filteredToasts.map(toast => (
-          <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
+          <ToastItem
+            key={toast.id}
+            toast={toast}
+            onDismiss={onDismiss}
+            onSnooze={handleSnoozeToast}
+          />
         ))}
       </AnimatePresence>
     </div>

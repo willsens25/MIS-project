@@ -262,3 +262,139 @@ export function openDirectWhatsApp(
     url
   };
 }
+
+/**
+ * Bangun pesan WhatsApp ucapan terima kasih & tanda terima donasi sponsorship cetak buku
+ */
+export function generateDonationWhatsAppMessage(params: {
+  donorName: string;
+  nominal: number;
+  proyekTitle?: string;
+  bookTitle?: string;
+  nomorTandaTerima?: string;
+  dedikasiName?: string;
+  dedikasiDoa?: string;
+  eksemplarDidukung?: number;
+  paket?: string;
+}): string {
+  const {
+    donorName,
+    nominal,
+    proyekTitle = 'Penerbitan Buku Dharma Nusantara',
+    bookTitle = 'Buku Dharma Terbitan Yayasan Lamrimnesia',
+    nomorTandaTerima = 'DON-VERIFIED',
+    dedikasiName,
+    dedikasiDoa,
+    eksemplarDidukung = 1
+  } = params;
+
+  return `🙏 *Anumodana & Tanda Terima Donasi Sponsor Cetak Buku* 🙏\n\n` +
+    `Kepada Yth. *${donorName}*,\n\n` +
+    `Yayasan Pelestarian & Pengembangan Lamrim Nusantara (Lamrimnesia) dengan penuh sukacita dan rasa hormat yang mendalam telah menerima dana kebajikan sponsorship cetak buku Dharma:\n\n` +
+    `📖 *Proyek:* ${proyekTitle}\n` +
+    `📚 *Judul Buku:* ${bookTitle}\n` +
+    `💰 *Nominal Donasi:* Rp ${nominal.toLocaleString('id-ID')}\n` +
+    `🧾 *No. Tanda Terima:* ${nomorTandaTerima}\n` +
+    `✨ *Dukungan:* ~${eksemplarDidukung} eksemplar buku Dharma\n\n` +
+    `🌟 *Nama Dedikasi yang Dicantumkan di Halaman Buku:*\n` +
+    `"${dedikasiName || donorName}"\n\n` +
+    `🕊️ *Doa & Aspirasi Kebajikan:*\n` +
+    `"${dedikasiDoa || 'Semoga kebajikan ini melimpah bagi keluarga dan semua makhluk.'}"\n\n` +
+    `Semoga melalui jasa kebajikan penyebaran ajaran suci ini (Dhamma Dana), Anda sekeluarga senantiasa dilimpahi kesehatan prima, kedamaian batin, umur panjang, kemudahan rezeki, dan kemajuan spiritual menuju kebahagiaan sejati.\n\n` +
+    `*Yayasan Lamrimnesia (Pustaka Dharma Nusantara)*\n` +
+    `_Website: lamrimnesia.org_`;
+}
+
+/**
+ * Bangun pesan WhatsApp pengingat tenggat waktu (deadline) agenda atau To-Do List ke PIC
+ */
+export function generateDeadlineWhatsAppMessage(params: {
+  picName: string;
+  eventTitle: string;
+  targetDate: string;
+  divisionName?: string;
+  priority?: string;
+  status?: string;
+  time?: string;
+  location?: string;
+  subtasks?: Array<{ title: string; completed: boolean }>;
+}): string {
+  const {
+    picName,
+    eventTitle,
+    targetDate,
+    divisionName = 'Direktorat',
+    priority = 'High',
+    status = 'Belum Mulai',
+    time,
+    location,
+    subtasks = []
+  } = params;
+
+  const targetDateObj = new Date(targetDate);
+  const now = new Date();
+  const diffDays = Math.ceil((targetDateObj.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+  let statusTenggat = '';
+  if (diffDays < 0) {
+    statusTenggat = `🚨 *MELEWATI DEADLINE (${Math.abs(diffDays)} hari yang lalu)*`;
+  } else if (diffDays === 0) {
+    statusTenggat = `⏰ *DEADLINE HARI INI!*`;
+  } else if (diffDays === 1) {
+    statusTenggat = `⏳ *DEADLINE BESOK (1 hari lagi)*`;
+  } else {
+    statusTenggat = `⏳ *Tenggat Waktu: ${diffDays} hari lagi*`;
+  }
+
+  let subtaskText = '';
+  if (subtasks.length > 0) {
+    const doneCount = subtasks.filter(s => s.completed).length;
+    subtaskText = `\n📋 *Checklist Sub-Tugas (${doneCount}/${subtasks.length} Selesai):*\n` +
+      subtasks.map(s => `${s.completed ? '✅' : '⬜'} ${s.title}`).join('\n');
+  }
+
+  return `Namo Buddhaya, Halo Rekan *${picName}* 🙏\n\n` +
+    `Pemberitahuan pengingat jadwal kerja dari *${divisionName}*:\n\n` +
+    `📌 *Agenda / Tugas:* ${eventTitle}\n` +
+    `📅 *Tenggat Waktu:* ${targetDate}\n` +
+    `⚡ *Status Waktu:* ${statusTenggat}\n` +
+    `🎯 *Prioritas:* ${priority}\n` +
+    `📊 *Progres Status:* ${status}` +
+    (time ? `\n⏰ *Waktu:* ${time}` : '') +
+    (location ? `\n📍 *Lokasi:* ${location}` : '') +
+    subtaskText +
+    `\n\nMohon kesediaannya untuk memeriksa dan memperbarui progres penyelesaian tugas ini di sistem MIS Lamrimnesia. Terima kasih atas dedikasi dan kerja samanya! 🙏✨\n\n` +
+    `*Sistem Informasi Manajemen Yayasan Lamrimnesia*`;
+}
+
+/**
+ * Bangun pesan WhatsApp notifikasi pengiriman paket dan nomor resi logistik
+ */
+export function generateLogisticResiWhatsAppMessage(params: {
+  recipientName: string;
+  invoiceNo?: string;
+  ekspedisi?: string;
+  nomorResi?: string;
+  alamatPenerima?: string;
+  daftarBukuRingkas?: string;
+}): string {
+  const {
+    recipientName,
+    invoiceNo = 'INV',
+    ekspedisi = 'Kurir Ekspedisi',
+    nomorResi = 'DALAM-PROSES',
+    alamatPenerima,
+    daftarBukuRingkas
+  } = params;
+
+  return `Namo Buddhaya, Halo Kak *${recipientName}* 🙏\n\n` +
+    `Kabar baik dari tim Logistik & Distribusi Yayasan Lamrimnesia! Paket buku Dharma Anda untuk pesanan *${invoiceNo}* telah resmi diserahkan ke kurir pengiriman 🚚📦\n\n` +
+    `📦 *Ekspedisi:* ${ekspedisi}\n` +
+    `🔖 *Nomor Resi:* *${nomorResi}*\n` +
+    (alamatPenerima ? `📍 *Alamat Tujuan:* ${alamatPenerima}\n` : '') +
+    (daftarBukuRingkas ? `📚 *Paket Buku:* ${daftarBukuRingkas}\n` : '') +
+    `\nKakak dapat melacak pergerakan paket secara berkala melalui aplikasi atau web resmi *${ekspedisi}* menggunakan nomor resi di atas.\n\n` +
+    `Jika paket sudah diterima dengan baik, mohon kesediaannya untuk mengabari kami ya Kak. Selamat membaca dan semoga membawa berkah kedamaian! 🙏🌸\n\n` +
+    `*Logistik & Gudang Lamrimnesia*`;
+}
+

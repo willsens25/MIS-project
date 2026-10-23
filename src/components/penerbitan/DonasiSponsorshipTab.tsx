@@ -33,6 +33,8 @@ import { DonasiProyekCetak, DonasiSponsorRecord } from '../../types';
 import { RupiahInput } from '../common/RupiahInput';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
 import { DownloadPdfButton } from '../common/DownloadPdfButton';
+import { QuickWhatsAppShareModal, WhatsAppPresetTemplate } from '../common/QuickWhatsAppShareModal';
+import { generateDonationWhatsAppMessage } from '../../utils/whatsappTemplates';
 
 export const DonasiSponsorshipTab: React.FC = () => {
   const {
@@ -46,7 +48,8 @@ export const DonasiSponsorshipTab: React.FC = () => {
     books,
     accounts,
     identitasList,
-    orders
+    orders,
+    showToast
   } = useApp();
 
   const [activeView, setActiveView] = useState<'katalog' | 'sponsor_list' | 'dedikasi_page'>('katalog');
@@ -58,6 +61,7 @@ export const DonasiSponsorshipTab: React.FC = () => {
   const [isModalProyekOpen, setIsModalProyekOpen] = useState(false);
   const [isModalDonasiOpen, setIsModalDonasiOpen] = useState(false);
   const [selectedCertificateDonor, setSelectedCertificateDonor] = useState<DonasiSponsorRecord | null>(null);
+  const [whatsAppModalDonor, setWhatsAppModalDonor] = useState<DonasiSponsorRecord | null>(null);
 
   // Form State: Proyek Baru
   const [proyekForm, setProyekForm] = useState({
@@ -188,30 +192,9 @@ export const DonasiSponsorshipTab: React.FC = () => {
     });
   };
 
-  // WhatsApp Share Message Generator
+  // WhatsApp Share Message Trigger
   const sendWhatsAppAnumodana = (sponsor: DonasiSponsorRecord) => {
-    const cleanPhone = (sponsor.no_wa || '').replace(/\D/g, '');
-    const formattedPhone = cleanPhone.startsWith('0') ? '62' + cleanPhone.slice(1) : cleanPhone;
-    const proyek = donasiProyeks.find(p => p.id === sponsor.proyek_id);
-
-    const msg = `🙏 *Anumodana & Ucapan Terima Kasih Donasi Cetak Dharma* 🙏\n\n` +
-      `Kepada Yth. *${sponsor.nama_donatur}*,\n\n` +
-      `Yayasan Pelestarian & Penerbitan Naskah Dharma Nusantara (Lamrimnesia) dengan penuh sukacita dan rasa hormat yang mendalam telah menerima dana kebajikan sponsorship cetak buku:\n\n` +
-      `📖 *Proyek:* ${proyek?.judul_proyek || 'Penerbitan Buku Dharma'}\n` +
-      `📚 *Judul Buku:* ${proyek?.nama_buku || '-'}\n` +
-      `💰 *Nominal Dana:* Rp ${sponsor.nominal.toLocaleString('id-ID')}\n` +
-      `🧾 *No. Tanda Terima:* ${sponsor.nomor_tanda_terima || '-'}\n` +
-      `✨ *Dukungan:* ~${sponsor.jumlah_eksemplar_didukung} eksemplar buku dharma\n\n` +
-      `🌟 *Nama Dedikasi yang Dicantumkan di Buku:*\n` +
-      `"${sponsor.nama_dedikasi || sponsor.nama_donatur}"\n` +
-      `🕊️ *Doa & Aspirasi Kebajikan:*\n` +
-      `"${sponsor.doa_dedikasi || '-'}"\n\n` +
-      `Semoga melalui jasa kebajikan penyebaran ajaran Dharma (Dhamma Dana) yang tak ternilai ini, Anda dan seluruh sanak keluarga senantiasa dilimpahi berkah kesehatan prima, ketenangan batin, panjang umur, kedamaian, dan kemajuan spiritual menuju pencerahan sejati.\n\n` +
-      `*Yayasan Lamrimnesia*\n` +
-      `_Pustaka Dharma Nusantara_`;
-
-    const encoded = encodeURIComponent(msg);
-    window.open(`https://wa.me/${formattedPhone}?text=${encoded}`, '_blank');
+    setWhatsAppModalDonor(sponsor);
   };
 
   return (
@@ -1215,6 +1198,62 @@ export const DonasiSponsorshipTab: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Quick WhatsApp Share Modal for Donor Anumodana */}
+      {whatsAppModalDonor && (
+        <QuickWhatsAppShareModal
+          isOpen={!!whatsAppModalDonor}
+          onClose={() => setWhatsAppModalDonor(null)}
+          badgeCategory="Donasi"
+          title="Kirim Ucapan Anumodana via WhatsApp"
+          subtitle={`Donatur: ${whatsAppModalDonor.nama_donatur} • Rp ${whatsAppModalDonor.nominal.toLocaleString('id-ID')}`}
+          recipientName={whatsAppModalDonor.nama_donatur}
+          initialPhone={whatsAppModalDonor.no_wa || ''}
+          defaultMessage={generateDonationWhatsAppMessage({
+            donorName: whatsAppModalDonor.nama_donatur,
+            nominal: whatsAppModalDonor.nominal,
+            proyekTitle: donasiProyeks.find(p => p.id === whatsAppModalDonor.proyek_id)?.judul_proyek,
+            bookTitle: donasiProyeks.find(p => p.id === whatsAppModalDonor.proyek_id)?.nama_buku,
+            nomorTandaTerima: whatsAppModalDonor.nomor_tanda_terima,
+            dedikasiName: whatsAppModalDonor.nama_dedikasi,
+            dedikasiDoa: whatsAppModalDonor.doa_dedikasi,
+            eksemplarDidukung: whatsAppModalDonor.jumlah_eksemplar_didukung,
+            paket: whatsAppModalDonor.paket
+          })}
+          presetTemplates={[
+            {
+              id: 'lengkap',
+              label: 'Ucapan Lengkap & Tanda Terima',
+              badge: 'Resmi',
+              text: generateDonationWhatsAppMessage({
+                donorName: whatsAppModalDonor.nama_donatur,
+                nominal: whatsAppModalDonor.nominal,
+                proyekTitle: donasiProyeks.find(p => p.id === whatsAppModalDonor.proyek_id)?.judul_proyek,
+                bookTitle: donasiProyeks.find(p => p.id === whatsAppModalDonor.proyek_id)?.nama_buku,
+                nomorTandaTerima: whatsAppModalDonor.nomor_tanda_terima,
+                dedikasiName: whatsAppModalDonor.nama_dedikasi,
+                dedikasiDoa: whatsAppModalDonor.doa_dedikasi,
+                eksemplarDidukung: whatsAppModalDonor.jumlah_eksemplar_didukung,
+                paket: whatsAppModalDonor.paket
+              })
+            },
+            {
+              id: 'ringkas',
+              label: 'Pesan Singkat & Hangat',
+              badge: 'Kasual',
+              text: `Namo Buddhaya Kak *${whatsAppModalDonor.nama_donatur}* 🙏\n\nTerima kasih banyak atas partisipasi dana sponsorship cetak buku Dharma sebesar *Rp ${whatsAppModalDonor.nominal.toLocaleString('id-ID')}* (No: ${whatsAppModalDonor.nomor_tanda_terima || 'DON'}).\n\nNama dedikasi: *"${whatsAppModalDonor.nama_dedikasi || whatsAppModalDonor.nama_donatur}"*\nDoa: _"${whatsAppModalDonor.doa_dedikasi || '-'}"_\n\nSemoga kebajikan ini melimpahkan kesehatan, umur panjang, dan kebahagiaan bagi sekeluarga. Anumodana! 🙏✨\n\n*Yayasan Lamrimnesia*`
+            }
+          ]}
+          onSentLog={() => {
+            showToast({
+              title: 'WhatsApp Anumodana Siap Dikirim! 📲',
+              message: `Pesan terima kasih untuk donatur ${whatsAppModalDonor.nama_donatur} telah disiapkan.`,
+              type: 'success',
+              category: 'finance'
+            });
+          }}
+        />
       )}
     </div>
   );

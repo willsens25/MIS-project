@@ -560,6 +560,7 @@ export interface PlenoMeetingRecord {
 
 export type ToastType = 'success' | 'warning' | 'error' | 'info' | 'urgent';
 export type ToastCategory = 'order' | 'stock' | 'finance' | 'production' | 'logistic' | 'deadline' | 'system';
+export type SnoozeDuration = '1h' | '4h' | '1d';
 
 export interface ToastNotification {
   id: string;
@@ -572,6 +573,10 @@ export interface ToastNotification {
   onAction?: () => void;
   category?: ToastCategory;
   divisionName?: string;
+  snoozable?: boolean;
+  onSnooze?: (duration: SnoozeDuration) => void;
+  eventId?: string;
+  targetDate?: string;
 }
 
 export interface BackupMetadata {

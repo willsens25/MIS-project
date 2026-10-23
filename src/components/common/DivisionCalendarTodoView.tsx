@@ -33,13 +33,16 @@ import {
   ArrowUpDown,
   BarChart3,
   Filter,
-  Activity
+  Activity,
+  MessageSquare
 } from 'lucide-react';
 import { ProductivityStatsView } from '../charts/ProductivityStatsView';
 import {
   ElegantTaskProgressBar,
   fireTaskCelebrationConfetti
 } from './ElegantTaskProgressBar';
+import { QuickWhatsAppShareModal } from './QuickWhatsAppShareModal';
+import { generateDeadlineWhatsAppMessage } from '../../utils/whatsappTemplates';
 
 export interface TodoSubtask {
   id: string;
@@ -943,6 +946,22 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
     return () => window.removeEventListener('mis-division-search-jump', handleJump);
   }, []);
 
+  // Listener to open calendar event date directly from toast or snoozed reminder action
+  useEffect(() => {
+    const handleOpenEvent = (e: Event) => {
+      const custom = e as CustomEvent<{ eventId?: string; date?: string }>;
+      if (custom.detail?.date) {
+        setSelectedDateStr(custom.detail.date);
+        const [yr, mo] = custom.detail.date.split('-').map(Number);
+        if (yr && yr !== selectedYear) setSelectedYear(yr);
+        if (mo && mo - 1 !== focusedMonth) setFocusedMonth(mo - 1);
+        setViewMode('daily-planner');
+      }
+    };
+    window.addEventListener('mis-open-calendar-event', handleOpenEvent);
+    return () => window.removeEventListener('mis-open-calendar-event', handleOpenEvent);
+  }, [selectedYear, focusedMonth]);
+
   // Manual trigger to test / fire deadline toast notifications for this division
   const handleTriggerDeadlineToastsNow = () => {
     const divEvts = events.filter(e => {
@@ -974,10 +993,14 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
         message: `Tugas "${ev.title}" (PIC: ${ev.picName}) jatuh tempo pada ${ev.date}. Mohon segera ditindaklanjuti!`,
         type: 'urgent',
         category: 'deadline',
+        snoozable: true,
+        eventId: ev.id,
+        targetDate: ev.date,
         duration: 7000,
         actionLabel: 'Lihat Tugas',
         onAction: () => {
           setSelectedDateStr(ev.date);
+          setViewMode('daily-planner');
         }
       });
     });
@@ -989,10 +1012,14 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
         message: `Agenda "${ev.title}" bersama PIC ${ev.picName} terjadwal pada ${ev.date}.`,
         type: info.state === 'today' ? 'urgent' : 'warning',
         category: 'deadline',
+        snoozable: true,
+        eventId: ev.id,
+        targetDate: ev.date,
         duration: 6500,
         actionLabel: 'Buka Tanggal',
         onAction: () => {
           setSelectedDateStr(ev.date);
+          setViewMode('daily-planner');
         }
       });
     });
@@ -1604,6 +1631,15 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [newSubtaskPic, setNewSubtaskPic] = useState('');
   const [coPicInput, setCoPicInput] = useState('');
+  const [whatsAppModalEvent, setWhatsAppModalEvent] = useState<CalendarTodoEvent | null>(null);
+
+  const findPicPhone = (picName: string): string => {
+    const foundUser = usersList.find(u => u.name.toLowerCase() === picName.toLowerCase());
+    if (foundUser?.phone) return foundUser.phone;
+    const foundIdentitas = identitasList.find(i => i.nama_lengkap.toLowerCase() === picName.toLowerCase());
+    if (foundIdentitas?.nomor_hp_primary) return foundIdentitas.nomor_hp_primary;
+    return '';
+  };
 
   const defaultPicForDivision = useMemo(() => {
     return (
@@ -4073,6 +4109,14 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                                     </button>
                                     <button
                                       type="button"
+                                      onClick={() => setWhatsAppModalEvent(ev)}
+                                      className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 transition-colors cursor-pointer"
+                                      title={`Kirim Pengingat Tugas via WhatsApp ke PIC (${ev.picName})`}
+                                    >
+                                      <MessageSquare className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
                                       onClick={() => openEditModal(ev)}
                                       className="p-1.5 rounded-lg bg-white/80 dark:bg-slate-900/80 text-slate-500 hover:text-indigo-600 transition-colors cursor-pointer"
                                       title="Edit Tugas"
@@ -4792,6 +4836,14 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                       </button>
                       <button
                         type="button"
+                        onClick={() => setWhatsAppModalEvent(evt)}
+                        className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200/70 dark:border-emerald-800 transition-colors cursor-pointer"
+                        title={`Kirim Pengingat Tugas via WhatsApp ke PIC (${evt.picName})`}
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => openEditModal(evt)}
                         className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                         title="Edit Tugas"
@@ -4962,6 +5014,14 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
                       </div>
 
                       <div className="flex items-center space-x-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setWhatsAppModalEvent(evt)}
+                          className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200/70 dark:border-emerald-800 transition-colors cursor-pointer"
+                          title={`Kirim Pengingat Tugas via WhatsApp ke PIC (${evt.picName})`}
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                        </button>
                         <button
                           type="button"
                           onClick={() => openEditModal(evt)}
@@ -5692,6 +5752,57 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
           </div>,
           document.body
         )}
+
+      {/* Quick WhatsApp Share Modal for Task / Deadline Reminder */}
+      {whatsAppModalEvent && (
+        <QuickWhatsAppShareModal
+          isOpen={!!whatsAppModalEvent}
+          onClose={() => setWhatsAppModalEvent(null)}
+          badgeCategory="Deadline"
+          title="Kirim Pengingat Tugas via WhatsApp"
+          subtitle={`Agenda: ${whatsAppModalEvent.title} • PIC: ${whatsAppModalEvent.picName}`}
+          recipientName={whatsAppModalEvent.picName}
+          initialPhone={findPicPhone(whatsAppModalEvent.picName)}
+          defaultMessage={generateDeadlineWhatsAppMessage({
+            picName: whatsAppModalEvent.picName,
+            eventTitle: whatsAppModalEvent.title,
+            targetDate: whatsAppModalEvent.date,
+            divisionName: currentDivObj?.nama_divisi || 'Direktorat',
+            priority: whatsAppModalEvent.priority,
+            status: whatsAppModalEvent.status,
+            time: whatsAppModalEvent.time,
+            location: whatsAppModalEvent.location,
+            subtasks: whatsAppModalEvent.subtasks
+          })}
+          presetTemplates={[
+            {
+              id: 'lengkap',
+              label: 'Pengingat Lengkap & Checklist',
+              badge: 'Detail',
+              text: generateDeadlineWhatsAppMessage({
+                picName: whatsAppModalEvent.picName,
+                eventTitle: whatsAppModalEvent.title,
+                targetDate: whatsAppModalEvent.date,
+                divisionName: currentDivObj?.nama_divisi || 'Direktorat',
+                priority: whatsAppModalEvent.priority,
+                status: whatsAppModalEvent.status,
+                time: whatsAppModalEvent.time,
+                location: whatsAppModalEvent.location,
+                subtasks: whatsAppModalEvent.subtasks
+              })
+            },
+            {
+              id: 'ringkas',
+              label: 'Sapaan Ramah Singkat',
+              badge: 'Santun',
+              text: `Namo Buddhaya Rekan *${whatsAppModalEvent.picName}* 🙏\n\nSekadar mengingatkan agenda kerja *"${whatsAppModalEvent.title}"* (${currentDivObj?.nama_divisi || 'Direktorat'}) yang terjadwal pada *${whatsAppModalEvent.date}*.\n\nMohon bantuannya untuk memeriksa kelengkapan tugas di sistem MIS Lamrimnesia ya. Semangat dan terima kasih atas dedikasinya! 🙏✨`
+            }
+          ]}
+          onSentLog={() => {
+            triggerToast(`Pengingat WhatsApp untuk PIC ${whatsAppModalEvent.picName} berhasil disiapkan!`);
+          }}
+        />
+      )}
 
       {/* Toast Notification */}
       {toastMsg && (
