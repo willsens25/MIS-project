@@ -663,3 +663,21 @@ export interface SeederSummary {
   logisticLogsAdded: number;
   timestamp: string;
 }
+
+export type DailyPulseEnergyLevel = 'peak' | 'good' | 'moderate' | 'low' | 'drained';
+export type DailyPulseWorkload = 'light' | 'normal' | 'heavy' | 'critical';
+
+export interface DailyPulseRecord {
+  id: string;
+  userId: number;
+  userName: string;
+  userDivisionId: DivisionId;
+  date: string; // YYYY-MM-DD
+  energyLevel: DailyPulseEnergyLevel;
+  workload: DailyPulseWorkload;
+  goalNote: string;
+  mindfulQuote?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+

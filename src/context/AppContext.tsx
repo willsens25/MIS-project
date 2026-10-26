@@ -42,7 +42,8 @@ import {
   BankReconciliationRecord,
   DocumentAttachment,
   AttachmentCategory,
-  BudgetPagu
+  BudgetPagu,
+  DailyPulseRecord
 } from '../types';
 import { SeedOptions, generateSeedData } from '../lib/dummySeeder';
 import { DEFAULT_COLOR_PRESET } from '../lib/themePresets';
@@ -362,6 +363,13 @@ interface AppContextType {
   updateBudget: (id: number, budget: Partial<BudgetPagu>) => void;
   deleteBudget: (id: number) => void;
   bulkDeleteBudgets: (ids: number[]) => void;
+
+  // Daily Pulse Check & Team Wellbeing
+  dailyPulse: DailyPulseRecord | null;
+  saveDailyPulse: (pulse: DailyPulseRecord) => void;
+  isDailyPulseModalOpen: boolean;
+  setIsDailyPulseModalOpen: (open: boolean) => void;
+  openDailyPulseModal: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -671,6 +679,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAuthModalMode('register');
     setIsAuthModalOpen(true);
   };
+
+  // Daily Pulse Check & Team Wellbeing
+  const [isDailyPulseModalOpen, setIsDailyPulseModalOpen] = useState(false);
+  const [dailyPulse, setDailyPulse] = useState<DailyPulseRecord | null>(() => {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const savedUser = getStoredItem<User | null>('mis_current_user', null) || INITIAL_USERS[0];
+      const key = `mis_daily_pulse_${savedUser.id}_${today}`;
+      const stored = localStorage.getItem(key);
+      if (stored) return JSON.parse(stored);
+    } catch (e) {
+      console.warn('Error reading daily pulse from storage:', e);
+    }
+    return null;
+  });
+
+  const openDailyPulseModal = useCallback(() => {
+    setIsDailyPulseModalOpen(true);
+  }, []);
+
+  const saveDailyPulse = useCallback((record: DailyPulseRecord) => {
+    setDailyPulse(record);
+    try {
+      localStorage.setItem(`mis_daily_pulse_${record.userId}_${record.date}`, JSON.stringify(record));
+      localStorage.setItem(`mis_last_active_pulse_${record.userId}`, JSON.stringify(record));
+    } catch (e) {
+      console.warn('Error saving daily pulse to storage:', e);
+    }
+  }, []);
+
+  // Update dailyPulse state when active user switches
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const key = `mis_daily_pulse_${currentUser.id}_${today}`;
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        setDailyPulse(JSON.parse(stored));
+      } else {
+        setDailyPulse(null);
+      }
+    } catch {
+      setDailyPulse(null);
+    }
+  }, [currentUser?.id]);
+
+  // Prompt Daily Pulse Check on initial load if logged in and not yet filled today
+  useEffect(() => {
+    if (!isAuthenticated || !currentUser?.id) return;
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const isDismissed = sessionStorage.getItem('mis_pulse_dismissed_session') === 'true';
+      const key = `mis_daily_pulse_${currentUser.id}_${today}`;
+      const stored = localStorage.getItem(key);
+      if (!stored && !isDismissed) {
+        const timer = setTimeout(() => {
+          setIsDailyPulseModalOpen(true);
+        }, 850);
+        return () => clearTimeout(timer);
+      }
+    } catch {
+      // ignore
+    }
+  }, [currentUser?.id, isAuthenticated]);
 
   const [categories, setCategories] = useState<Category[]>(() => getStoredItem('mis_categories', INITIAL_CATEGORIES));
   const [accounts, setAccounts] = useState<Account[]>(() => getStoredItem('mis_accounts', INITIAL_ACCOUNTS));
@@ -2921,6 +2994,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsAuthenticated(true);
     localStorage.setItem('mis_is_auth', 'true');
     recordActivity('Login User', 'Auth', `Pengguna "${user.name}" (${user.email}) berhasil terverifikasi dan masuk ke sistem SAPA-ALL.`);
+
+    // Prompt Daily Pulse Check on login if not yet filled today
+    try {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const pulseKey = `mis_daily_pulse_${user.id}_${todayStr}`;
+      if (!localStorage.getItem(pulseKey)) {
+        setTimeout(() => {
+          setIsDailyPulseModalOpen(true);
+        }, 700);
+      }
+    } catch {
+      // ignore
+    }
+
     return { success: true, message: `Selamat datang kembali, ${user.name}!`, user };
   };
 
@@ -2973,6 +3060,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsAuthenticated(true);
     localStorage.setItem('mis_is_auth', 'true');
     recordActivity('Registrasi User', 'Auth', `Akun baru terdaftar: "${newUser.name}" (${newUser.email}) pada divisi ${divisiList.find(d => d.id === data.divisi_id)?.nama_divisi} dengan enkripsi bcrypt.`);
+
+    // Prompt Daily Pulse Check for newly registered user
+    setTimeout(() => {
+      setIsDailyPulseModalOpen(true);
+    }, 700);
+
     return { success: true, message: `Akun berhasil didaftarkan dengan proteksi bcrypt! Selamat bertugas, ${newUser.name}.`, user: newUser };
   };
 
@@ -2990,6 +3083,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsAuthenticated(true);
       localStorage.setItem('mis_is_auth', 'true');
       recordActivity('Quick Login', 'Auth', `Beralih akun ke: "${user.name}" (${user.email})`);
+
+      // Prompt Daily Pulse Check on quick login if not yet filled today
+      try {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const pulseKey = `mis_daily_pulse_${user.id}_${todayStr}`;
+        if (!localStorage.getItem(pulseKey)) {
+          setTimeout(() => {
+            setIsDailyPulseModalOpen(true);
+          }, 700);
+        }
+      } catch {
+        // ignore
+      }
     }
   };
 
@@ -3809,7 +3915,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addBudget,
         updateBudget,
         deleteBudget,
-        bulkDeleteBudgets
+        bulkDeleteBudgets,
+
+        // Daily Pulse Check & Team Wellbeing
+        dailyPulse,
+        saveDailyPulse,
+        isDailyPulseModalOpen,
+        setIsDailyPulseModalOpen,
+        openDailyPulseModal
       }}
     >
       {children}

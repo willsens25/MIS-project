@@ -212,7 +212,7 @@ export const DIVISION_WIDGET_DEFINITIONS: Record<DivisionId, DivisionWidgetItem[
     },
     {
       id: 'mkt-w-promo',
-      title: 'VLOOKUP Kupon Promo & Mitra Agen',
+      title: 'Kupon Promo & Mitra Agen',
       subtitle: 'Kupon diskon aktif dan jaringan agen distribusi resmi',
       defaultW: 4,
       defaultH: 2,
@@ -1826,7 +1826,7 @@ export const DivisionWidgetGrid: React.FC<DivisionWidgetGridProps> = ({
               </p>
             </div>
             <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
-              <span className="text-slate-400">Otomasi VLOOKUP POS</span>
+              <span className="text-slate-400">Otomasi Promo POS</span>
               <button
                 type="button"
                 onClick={() => navigateToTab('promos')}

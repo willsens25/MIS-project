@@ -24,6 +24,7 @@ import { GlobalCommandPaletteModal } from './components/modals/GlobalCommandPale
 import { DocumentArchiveModal } from './components/modals/DocumentArchiveModal';
 import { ToastContainer } from './components/common/ToastContainer';
 import { UserSettingsModal } from './components/profile/UserSettingsModal';
+import { DailyPulseCheckModal } from './components/profile/DailyPulseCheckModal';
 import { NightShiftFloatingWidget } from './components/theme/NightShiftFloatingWidget';
 import { QuickActionsFloatingMenu } from './components/navigation/QuickActionsFloatingMenu';
 import { getStoredCalendarEvents, getDeadlineInfo } from './components/common/DivisionCalendarTodoView';
@@ -206,6 +207,8 @@ const AppContent: React.FC = () => {
     dismissToast,
     clearAllToasts,
     showToast,
+    isDailyPulseModalOpen,
+    setIsDailyPulseModalOpen
   } = useApp();
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isUserSettingsOpen, setIsUserSettingsOpen] = useState(false);
@@ -1219,6 +1222,12 @@ const AppContent: React.FC = () => {
       <UserSettingsModal
         isOpen={isUserSettingsOpen}
         onClose={() => setIsUserSettingsOpen(false)}
+      />
+
+      {/* Daily Pulse Check Modal */}
+      <DailyPulseCheckModal
+        isOpen={isDailyPulseModalOpen}
+        onClose={() => setIsDailyPulseModalOpen(false)}
       />
 
       {/* Mode Rapat Pleno (Projector View) Modal */}

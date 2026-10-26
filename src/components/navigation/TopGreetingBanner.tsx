@@ -1,6 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Calendar, X, ArrowRight, Bot } from 'lucide-react';
+import {
+  Sparkles,
+  Calendar,
+  X,
+  ArrowRight,
+  Bot,
+  Zap,
+  Sun,
+  Coffee,
+  BatteryCharging,
+  Heart,
+  Target,
+  Edit3,
+  Activity
+} from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getTimeBasedSalutation, getFriendlyUserFirstName, getCleanDivisionName } from '../../utils/greetingUtils';
 import { LiveClockBadge } from './LiveClockBadge';
@@ -10,7 +24,7 @@ interface TopGreetingBannerProps {
 }
 
 export const TopGreetingBanner: React.FC<TopGreetingBannerProps> = ({ onOpenAI }) => {
-  const { currentUser, divisiList } = useApp();
+  const { currentUser, divisiList, dailyPulse, openDailyPulseModal } = useApp();
   const [isDismissed, setIsDismissed] = useState(false);
 
   // Time & greeting calculations (reactive to timezone and real-time interval)
@@ -159,6 +173,68 @@ export const TopGreetingBanner: React.FC<TopGreetingBannerProps> = ({ onOpenAI }
                 <span className="hidden sm:inline text-slate-400 dark:text-slate-600">·</span>
                 <span className="text-slate-500 dark:text-slate-400 font-normal">{timeInfo.description}</span>
               </p>
+
+              {/* Daily Pulse Check Bar / Launcher */}
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                {dailyPulse && dailyPulse.date === new Date().toISOString().slice(0, 10) ? (
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 text-slate-700 dark:text-slate-300">
+                    <div className="flex items-center gap-1 font-semibold text-slate-800 dark:text-slate-200">
+                      {dailyPulse.energyLevel === 'peak' ? (
+                        <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500/20" />
+                      ) : dailyPulse.energyLevel === 'good' ? (
+                        <Sun className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500/20" />
+                      ) : dailyPulse.energyLevel === 'moderate' ? (
+                        <Coffee className="w-3.5 h-3.5 text-indigo-500 fill-indigo-500/20" />
+                      ) : dailyPulse.energyLevel === 'low' ? (
+                        <BatteryCharging className="w-3.5 h-3.5 text-orange-500 fill-orange-500/20" />
+                      ) : (
+                        <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500/20" />
+                      )}
+                      <span className="capitalize">
+                        {dailyPulse.energyLevel === 'peak' ? 'Energi Penuh (100%)' :
+                         dailyPulse.energyLevel === 'good' ? 'Optimal & Fokus (80%)' :
+                         dailyPulse.energyLevel === 'moderate' ? 'Sedang (60%)' :
+                         dailyPulse.energyLevel === 'low' ? 'Hemat Daya (40%)' : 'Pacing (20%)'}
+                      </span>
+                    </div>
+
+                    <span className="text-slate-300 dark:text-slate-600">·</span>
+
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Beban: <strong className="capitalize text-slate-700 dark:text-slate-300">{dailyPulse.workload}</strong>
+                    </span>
+
+                    {dailyPulse.goalNote && (
+                      <>
+                        <span className="text-slate-300 dark:text-slate-600 hidden sm:inline">·</span>
+                        <div className="hidden sm:flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-300 max-w-xs truncate" title={`Target: ${dailyPulse.goalNote}`}>
+                          <Target className="w-3 h-3 text-rose-500 shrink-0" />
+                          <span className="truncate">{dailyPulse.goalNote}</span>
+                        </div>
+                      </>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={openDailyPulseModal}
+                      className="ml-1 text-[11px] text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-semibold inline-flex items-center gap-0.5 cursor-pointer"
+                      title="Perbarui status pulse & target harian Anda"
+                    >
+                      <Edit3 className="w-2.5 h-2.5" />
+                      <span>Ubah</span>
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={openDailyPulseModal}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 border border-indigo-200/80 dark:border-indigo-800/80 text-indigo-700 dark:text-indigo-300 font-semibold text-[11px] transition-all cursor-pointer shadow-2xs hover:shadow-xs group"
+                  >
+                    <Activity className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
+                    <span>Check-in Pulse & Target Harian</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

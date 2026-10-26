@@ -357,9 +357,9 @@ export const GlobalCommandPaletteModal: React.FC<GlobalCommandPaletteModalProps>
       {
         divId: 4,
         subTab: 'promo',
-        title: 'VLOOKUP Kupon Promo & Diskon Pelanggan',
+        title: 'Kupon Promo & Diskon Pelanggan',
         subtitle: `${promos.length} kode voucher diskon persentase dan nominal`,
-        keywords: 'kupon promo voucher diskon vlookup marketing'
+        keywords: 'kupon promo voucher diskon marketing'
       },
       {
         divId: 5,

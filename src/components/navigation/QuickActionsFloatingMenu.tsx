@@ -27,7 +27,8 @@ import {
   AlertTriangle,
   ScanBarcode,
   Scale,
-  RefreshCw
+  RefreshCw,
+  Activity
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { DivisionId } from '../../types';
@@ -53,6 +54,7 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
     orders,
     books,
     accounts,
+    openDailyPulseModal,
   } = useApp();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -139,6 +141,20 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
       badgeColor: totalPendingApprovals > 0 ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800' : 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800',
       action: handleOpenApprovals,
       keywords: ['approval', 'persetujuan', 'pending', 'anggaran', 'spk', 'acc', 'verifikasi'],
+    },
+    {
+      id: 'daily-pulse-check',
+      title: '🩺 Daily Pulse Check & Target Kerja',
+      description: 'Check-in level energi, ekspektasi beban kerja, dan catatan fokus hari ini',
+      category: 'priority',
+      icon: Activity,
+      badge: 'Wellbeing',
+      badgeColor: 'bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800',
+      action: () => {
+        openDailyPulseModal();
+        setIsOpen(false);
+      },
+      keywords: ['pulse', 'energi', 'fokus', 'target', 'harian', 'wellbeing', 'mood', 'workload'],
     },
     {
       id: 'open-event-pos',

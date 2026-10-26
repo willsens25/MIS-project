@@ -194,7 +194,7 @@ export const MarketingDashboard: React.FC = () => {
   // 10. Keterangan (Kartu ucapan, permintaan khusus, dll)
   const [keterangan, setKeterangan] = useState('');
 
-  // 11. Buku & Promo (Multi-row with VLOOKUP)
+  // 11. Buku & Promo (Multi-row)
   const [orderItems, setOrderItems] = useState<Array<{
     buku_id: number;
     jumlah: number;
@@ -278,7 +278,7 @@ export const MarketingDashboard: React.FC = () => {
     setOrderItems(updated);
   };
 
-  // Calculate POS totals with intelligent promo VLOOKUP
+  // Calculate POS totals with intelligent promo lookup
   const calculatedItems: OrderItem[] = orderItems.map(row => {
     const book = books.find(b => b.id === row.buku_id);
     const hargaSatuan = book?.harga_jual || 0;
@@ -1179,7 +1179,7 @@ export const MarketingDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* 5. Pilihan Buku & Promo (VLOOKUP) */}
+            {/* 5. Pilihan Buku & Promo */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
               <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center space-x-2">
@@ -1188,7 +1188,7 @@ export const MarketingDashboard: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="font-bold text-sm text-slate-900 dark:text-white">
-                      5. Buku yang Dipesan & Kode Promo (VLOOKUP)
+                      5. Buku yang Dipesan & Kode Promo
                     </h3>
                     <p className="text-[11px] text-slate-500">
                       Daftar buku, kuantitas, dan promo yang berlaku untuk tanggal & pembeli ini
@@ -1258,11 +1258,11 @@ export const MarketingDashboard: React.FC = () => {
                           />
                         </div>
 
-                        {/* Promo Code with VLOOKUP Suggestions */}
+                        {/* Promo Code Suggestions */}
                         <div className="w-48">
                           <div className="flex items-center justify-between mb-0.5">
                             <label className="block text-[10px] font-bold text-slate-400 uppercase">
-                              Promo (VLOOKUP)
+                              Kode Promo
                             </label>
                             {eligiblePromos.length > 0 && (
                               <span className="text-[10px] text-indigo-600 font-bold">
