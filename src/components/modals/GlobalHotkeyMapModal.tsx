@@ -22,7 +22,8 @@ import {
   Play,
   Sparkles,
   CheckCircle2,
-  Command
+  Command,
+  Mic
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { DivisionId } from '../../types';
@@ -67,7 +68,8 @@ export const GlobalHotkeyMapModal: React.FC<GlobalHotkeyMapModalProps> = ({
     toggleTheme,
     toggleNightShift,
     isNightShiftActive,
-    showToast
+    showToast,
+    openVoiceActivation
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -214,6 +216,23 @@ export const GlobalHotkeyMapModal: React.FC<GlobalHotkeyMapModalProps> = ({
         icon: <Bot className="w-4 h-4 text-teal-500" />,
         onTrigger: () => {
           if (onOpenAI) onOpenAI();
+        }
+      },
+      {
+        id: 'hotkey-voice-activation',
+        keys: ['Alt', 'V'],
+        title: 'Aktivasi Perintah Suara (Voice Command Navigation & AI)',
+        description:
+          'Mengaktifkan Web Speech API untuk navigasi antar divisi atau mengajukan query pertanyaan ke Asisten AI melalui suara mikrofon.',
+        category: 'pencarian-aksi',
+        categoryLabel: 'Pencarian & Aksi Cepat',
+        badge: 'Voice AI',
+        badgeColor:
+          'bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800',
+        icon: <Mic className="w-4 h-4 text-teal-500" />,
+        onTrigger: () => {
+          onClose();
+          openVoiceActivation();
         }
       },
       {

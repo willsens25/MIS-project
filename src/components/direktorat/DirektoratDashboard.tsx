@@ -68,7 +68,8 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
     books,
     pengajuans,
     currentSubTab,
-    setCurrentSubTab
+    setCurrentSubTab,
+    openMonthlyPerformanceModal
   } = useApp();
 
   const activeSubTab = (['overview', 'identitas', 'users', 'kalender', 'productivity-stats', 'struktur'].includes(currentSubTab)
@@ -455,6 +456,15 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
               <span>Laporan Tahunan</span>
             </button>
           )}
+
+          <button
+            onClick={() => openMonthlyPerformanceModal('all')}
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
+            title="Buka Laporan Performa Bulanan Otomatis seluruh divisi atau per divisi berdasarkan histori tugas yang telah diselesaikan"
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span>Laporan Performa Bulanan</span>
+          </button>
 
           {activeSubTab === 'identitas' && (
             <>

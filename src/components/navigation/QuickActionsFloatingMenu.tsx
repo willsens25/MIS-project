@@ -28,7 +28,9 @@ import {
   ScanBarcode,
   Scale,
   RefreshCw,
-  Activity
+  Activity,
+  BarChart3,
+  Mic
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { DivisionId } from '../../types';
@@ -55,6 +57,8 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
     books,
     accounts,
     openDailyPulseModal,
+    openMonthlyPerformanceModal,
+    openVoiceActivation
   } = useApp();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -143,6 +147,20 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
       keywords: ['approval', 'persetujuan', 'pending', 'anggaran', 'spk', 'acc', 'verifikasi'],
     },
     {
+      id: 'voice-activation-trigger',
+      title: '🎤 Perintah Suara (Voice Command)',
+      description: 'Aktivasi Web Speech API untuk pindah divisi atau tanya AI via suara (Alt+V)',
+      category: 'priority',
+      icon: Mic,
+      badge: 'Voice AI',
+      badgeColor: 'bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800',
+      action: () => {
+        openVoiceActivation();
+        setIsOpen(false);
+      },
+      keywords: ['suara', 'voice', 'mic', 'speech', 'bicara', 'audio', 'tanya', 'navigasi', 'perintah'],
+    },
+    {
       id: 'daily-pulse-check',
       title: '🩺 Daily Pulse Check & Target Kerja',
       description: 'Check-in level energi, ekspektasi beban kerja, dan catatan fokus hari ini',
@@ -155,6 +173,20 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
         setIsOpen(false);
       },
       keywords: ['pulse', 'energi', 'fokus', 'target', 'harian', 'wellbeing', 'mood', 'workload'],
+    },
+    {
+      id: 'monthly-task-performance-report',
+      title: '📊 Laporan Performa Bulanan Divisi',
+      description: 'Rekapitulasi otomatis kinerja divisi dari histori tugas yang sudah diselesaikan',
+      category: 'priority',
+      icon: BarChart3,
+      badge: 'Laporan',
+      badgeColor: 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
+      action: () => {
+        openMonthlyPerformanceModal();
+        setIsOpen(false);
+      },
+      keywords: ['laporan', 'performa', 'bulanan', 'kinerja', 'tugas', 'selesai', 'evaluasi', 'kpi'],
     },
     {
       id: 'open-event-pos',

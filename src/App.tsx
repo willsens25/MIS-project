@@ -25,6 +25,8 @@ import { DocumentArchiveModal } from './components/modals/DocumentArchiveModal';
 import { ToastContainer } from './components/common/ToastContainer';
 import { UserSettingsModal } from './components/profile/UserSettingsModal';
 import { DailyPulseCheckModal } from './components/profile/DailyPulseCheckModal';
+import { MonthlyTaskPerformanceReportModal } from './components/modals/MonthlyTaskPerformanceReportModal';
+import { VoiceActivationModal } from './components/voice/VoiceActivationModal';
 import { NightShiftFloatingWidget } from './components/theme/NightShiftFloatingWidget';
 import { QuickActionsFloatingMenu } from './components/navigation/QuickActionsFloatingMenu';
 import { getStoredCalendarEvents, getDeadlineInfo } from './components/common/DivisionCalendarTodoView';
@@ -208,7 +210,15 @@ const AppContent: React.FC = () => {
     clearAllToasts,
     showToast,
     isDailyPulseModalOpen,
-    setIsDailyPulseModalOpen
+    setIsDailyPulseModalOpen,
+    isMonthlyPerformanceModalOpen,
+    setIsMonthlyPerformanceModalOpen,
+    monthlyPerformanceModalDivision,
+    monthlyPerformanceModalMonth,
+    monthlyPerformanceModalYear,
+    isVoiceActivationOpen,
+    setIsVoiceActivationOpen,
+    openVoiceActivation
   } = useApp();
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isUserSettingsOpen, setIsUserSettingsOpen] = useState(false);
@@ -614,6 +624,13 @@ const AppContent: React.FC = () => {
         return;
       }
 
+      // Alt + V -> Open Voice Activation (Web Speech API)
+      if (lowerKey === 'v' && !e.shiftKey) {
+        e.preventDefault();
+        openVoiceActivation();
+        return;
+      }
+
       // Alt + 1..6 -> Switch between the 6 Directorates
       if (['1', '2', '3', '4', '5', '6'].includes(e.key) && !e.shiftKey) {
         e.preventDefault();
@@ -629,7 +646,8 @@ const AppContent: React.FC = () => {
     setCurrentSubTab,
     toggleTheme,
     toggleNightShift,
-    switchDivision
+    switchDivision,
+    openVoiceActivation
   ]);
 
   const contextInfo = getDivisionContextInfo(currentUser.divisi_id, currentSubTab);
@@ -779,8 +797,12 @@ const AppContent: React.FC = () => {
       {/* Global AI Assistant Modal */}
       <AIAssistantModal
         isOpen={isAiModalOpen}
-        onClose={() => setIsAiModalOpen(false)}
+        onClose={() => {
+          setIsAiModalOpen(false);
+          setAiInitialPrompt('');
+        }}
         initialPrompt={aiInitialPrompt}
+        autoSubmitInitialPrompt={Boolean(aiInitialPrompt)}
       />
 
       {/* Floating AI Assistant Mascot Trigger with Audio-Visual Feedback & Environment Mute */}
@@ -1228,6 +1250,26 @@ const AppContent: React.FC = () => {
       <DailyPulseCheckModal
         isOpen={isDailyPulseModalOpen}
         onClose={() => setIsDailyPulseModalOpen(false)}
+      />
+
+      {/* Monthly Division Task Performance Report Modal */}
+      <MonthlyTaskPerformanceReportModal
+        isOpen={isMonthlyPerformanceModalOpen}
+        onClose={() => setIsMonthlyPerformanceModalOpen(false)}
+        initialDivisionId={monthlyPerformanceModalDivision}
+        initialMonth={monthlyPerformanceModalMonth}
+        initialYear={monthlyPerformanceModalYear}
+      />
+
+      {/* Voice Activation & Voice Commands HUD Modal (Web Speech API) */}
+      <VoiceActivationModal
+        isOpen={isVoiceActivationOpen}
+        onClose={() => setIsVoiceActivationOpen(false)}
+        onNavigateDivision={(divId, subTab) => switchDivision(divId, subTab)}
+        onTriggerAiQuery={(queryText) => {
+          setAiInitialPrompt(queryText);
+          setIsAiModalOpen(true);
+        }}
       />
 
       {/* Mode Rapat Pleno (Projector View) Modal */}

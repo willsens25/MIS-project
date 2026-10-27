@@ -57,7 +57,8 @@ import {
   PanelLeft,
   Keyboard,
   Search,
-  Paperclip
+  Paperclip,
+  Mic
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -110,7 +111,8 @@ export const Header: React.FC<HeaderProps> = ({
     isNightShiftActive,
     toggleNightShift,
     openDocumentArchive,
-    attachments
+    attachments,
+    openVoiceActivation
   } = useApp();
 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -488,6 +490,24 @@ export const Header: React.FC<HeaderProps> = ({
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-teal-500" />
                 </span>
+              </motion.button>
+
+              {/* Voice Command & Navigation Button (Web Speech API) */}
+              <motion.button
+                id="btn-voice-activation-header"
+                type="button"
+                onClick={openVoiceActivation}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="h-8.5 flex items-center space-x-1.5 px-2.5 bg-slate-100/90 dark:bg-white/[0.06] hover:bg-teal-50 dark:hover:bg-teal-950/40 text-slate-700 dark:text-slate-200 hover:text-teal-700 dark:hover:text-teal-300 border border-slate-200/90 dark:border-white/[0.08] hover:border-teal-400/40 rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer group"
+                title="Aktivasi Perintah Suara (Alt+V) — Pindah divisi atau ajukan query AI menggunakan mikrofon"
+                aria-label="Aktivasi Perintah Suara"
+              >
+                <Mic className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 group-hover:scale-110 transition-transform" />
+                <span className="hidden xl:inline">Suara</span>
+                <kbd className="hidden 2xl:inline text-[9px] font-mono px-1 py-0.2 rounded bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                  Alt+V
+                </kbd>
               </motion.button>
 
               {/* Subtle Vertical Divider */}

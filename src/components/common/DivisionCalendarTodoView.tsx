@@ -865,7 +865,7 @@ interface DivisionCalendarTodoViewProps {
 }
 
 export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> = ({ divisionId }) => {
-  const { usersList, identitasList, divisiList, recordActivity, showToast, switchDivision } = useApp();
+  const { usersList, identitasList, divisiList, recordActivity, showToast, switchDivision, openMonthlyPerformanceModal } = useApp();
 
   const currentYearActual = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState<number>(currentYearActual);
@@ -2528,6 +2528,17 @@ export const DivisionCalendarTodoView: React.FC<DivisionCalendarTodoViewProps> =
             >
               <BellRing className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 animate-pulse" />
               <span>Cek Pengingat Deadline</span>
+            </button>
+
+            {/* Tombol Laporan Performa Bulanan Divisi */}
+            <button
+              type="button"
+              onClick={() => openMonthlyPerformanceModal(divisionId, focusedMonth, selectedYear)}
+              className="flex items-center space-x-1.5 px-3 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
+              title="Buat Laporan Performa Bulanan Otomatis dari Histori Tugas yang Sudah Selesai"
+            >
+              <BarChart3 className="w-3.5 h-3.5 text-indigo-200" />
+              <span>Laporan Performa Bulanan</span>
             </button>
 
             {/* Ekspor Kalender PDF Split Button + Month Selector Dropdown */}

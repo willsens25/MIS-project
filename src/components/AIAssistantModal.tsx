@@ -49,6 +49,7 @@ interface AIAssistantModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialPrompt?: string;
+  autoSubmitInitialPrompt?: boolean;
 }
 
 // Clean helper to render message without raw markdown artifacts like ###, ##, ---
@@ -164,7 +165,12 @@ const getDivisionQuickPrompts = (divisiId: number) => {
   }
 };
 
-export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({ isOpen, onClose, initialPrompt }) => {
+export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
+  isOpen,
+  onClose,
+  initialPrompt,
+  autoSubmitInitialPrompt
+}) => {
   const {
     books,
     orders,
@@ -184,8 +190,14 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({ isOpen, onCl
   useEffect(() => {
     if (isOpen && initialPrompt) {
       setPrompt(initialPrompt);
+      if (autoSubmitInitialPrompt) {
+        const timer = setTimeout(() => {
+          handleSendRef.current?.(initialPrompt);
+        }, 320);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [isOpen, initialPrompt]);
+  }, [isOpen, initialPrompt, autoSubmitInitialPrompt]);
 
   const currentDivisi = divisiList.find(d => d.id === currentUser.divisi_id);
   const currentDivisiName = currentDivisi?.nama_divisi || 'Direktorat';

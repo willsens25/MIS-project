@@ -124,7 +124,8 @@ export const GlobalCommandPaletteModal: React.FC<GlobalCommandPaletteModalProps>
     usersList,
     productionLogs,
     logisticLogs,
-    showToast
+    showToast,
+    openVoiceActivation
   } = useApp();
 
   const [query, setQuery] = useState('');
@@ -272,6 +273,13 @@ export const GlobalCommandPaletteModal: React.FC<GlobalCommandPaletteModalProps>
     }> = [
       {
         divId: 1,
+        subTab: 'voice',
+        title: '🎤 Perintah Suara Web Speech (Voice Command Activation)',
+        subtitle: 'Aktivasi input suara untuk navigasi divisi atau mengajukan query pertanyaan ke Asisten AI (Alt+V)',
+        keywords: 'suara voice mic microphone speech web speech bicara audio perintah tanya ai'
+      },
+      {
+        divId: 1,
         subTab: 'productivity',
         title: 'Productivity Stats & Analitik Jam Aktif (Recharts)',
         subtitle: 'Visualisasi tren penyelesaian tugas, rata-rata waktu per divisi, dan jam aktif pengguna',
@@ -290,6 +298,13 @@ export const GlobalCommandPaletteModal: React.FC<GlobalCommandPaletteModalProps>
         title: 'Database Anggota, Donatur & Sangha',
         subtitle: `Direktori ${identitasList.length} profil umat, Dharma Patriot, dan relasi yayasan`,
         keywords: 'database anggota identitas umat donatur sangha dharma patriot'
+      },
+      {
+        divId: 1,
+        subTab: 'kalender',
+        title: 'Laporan Performa Bulanan Divisi (Histori Tugas)',
+        subtitle: 'Rekapitulasi otomatis capaian tugas selesai, ketepatan waktu, dan grade kinerja bulanan',
+        keywords: 'laporan performa bulanan evaluasi kinerja tugas selesai audit kpi kalender'
       },
       {
         divId: 2,
@@ -563,6 +578,13 @@ export const GlobalCommandPaletteModal: React.FC<GlobalCommandPaletteModalProps>
     (item: CommandPaletteItem) => {
       if (query.trim()) {
         saveRecentQuery(query);
+      }
+
+      // If voice command activation was selected
+      if (item.targetSubTab === 'voice') {
+        onClose();
+        openVoiceActivation();
+        return;
       }
 
       // Switch division and target sub-tab

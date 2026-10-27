@@ -44,7 +44,8 @@ import {
   Layers,
   Keyboard,
   BarChart3,
-  LogOut
+  LogOut,
+  Mic
 } from 'lucide-react';
 
 export interface SidebarSubMenuItem {
@@ -104,7 +105,8 @@ export const LeftSidebarNav: React.FC<LeftSidebarNavProps> = ({
     donasiProyeks,
     openPresentationMode,
     logout,
-    isAuthenticated
+    isAuthenticated,
+    openVoiceActivation
   } = useApp();
 
   const [menuSearch, setMenuSearch] = useState('');
@@ -931,7 +933,7 @@ export const LeftSidebarNav: React.FC<LeftSidebarNavProps> = ({
 
           <motion.div
             layout
-            className={`grid ${effectiveCollapsed ? 'grid-cols-1 gap-1' : 'grid-cols-2 gap-1.5'}`}
+            className={`grid ${effectiveCollapsed ? 'grid-cols-1 gap-1' : 'grid-cols-3 gap-1.5'}`}
           >
             <motion.button
               layout="position"
@@ -943,7 +945,7 @@ export const LeftSidebarNav: React.FC<LeftSidebarNavProps> = ({
                 onCloseMobile();
               }}
               title="Buka Layar Presentasi Mode Rapat Pleno"
-              className="flex items-center justify-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 dark:text-amber-300 border border-amber-400/40 transition-colors cursor-pointer overflow-hidden"
+              className="flex items-center justify-center space-x-1 px-1.5 py-1.5 rounded-xl text-[11px] font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 dark:text-amber-300 border border-amber-400/40 transition-colors cursor-pointer overflow-hidden"
             >
               <Tv className="w-3.5 h-3.5 shrink-0" />
               <AnimatePresence initial={false} mode="popLayout">
@@ -954,9 +956,38 @@ export const LeftSidebarNav: React.FC<LeftSidebarNavProps> = ({
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -6 }}
                     transition={{ duration: 0.2, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
-                    className="truncate"
+                    className="truncate text-[10.5px]"
                   >
-                    Rapat Pleno
+                    Pleno
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </motion.button>
+
+            <motion.button
+              layout="position"
+              type="button"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={() => {
+                openVoiceActivation();
+                onCloseMobile();
+              }}
+              title="Aktivasi Perintah Suara (Alt+V) — Web Speech API"
+              className="flex items-center justify-center space-x-1 px-1.5 py-1.5 rounded-xl text-[11px] font-bold bg-teal-500/15 hover:bg-teal-500/25 text-teal-800 dark:text-teal-300 border border-teal-400/40 transition-colors cursor-pointer overflow-hidden"
+            >
+              <Mic className="w-3.5 h-3.5 shrink-0 text-teal-600 dark:text-teal-400" />
+              <AnimatePresence initial={false} mode="popLayout">
+                {!effectiveCollapsed && (
+                  <motion.span
+                    key="shortcut-voice-text"
+                    initial={{ opacity: 0, x: -6 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -6 }}
+                    transition={{ duration: 0.2, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                    className="truncate text-[10.5px]"
+                  >
+                    Suara
                   </motion.span>
                 )}
               </AnimatePresence>

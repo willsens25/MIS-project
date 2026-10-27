@@ -370,6 +370,19 @@ interface AppContextType {
   isDailyPulseModalOpen: boolean;
   setIsDailyPulseModalOpen: (open: boolean) => void;
   openDailyPulseModal: () => void;
+
+  // Monthly Task Performance Report Modal
+  isMonthlyPerformanceModalOpen: boolean;
+  setIsMonthlyPerformanceModalOpen: (open: boolean) => void;
+  monthlyPerformanceModalDivision: DivisionId | 'all';
+  monthlyPerformanceModalMonth: number;
+  monthlyPerformanceModalYear: number;
+  openMonthlyPerformanceModal: (divisionId?: DivisionId | 'all', month?: number, year?: number) => void;
+
+  // Voice Activation Feature (Web Speech API)
+  isVoiceActivationOpen: boolean;
+  setIsVoiceActivationOpen: (open: boolean) => void;
+  openVoiceActivation: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -744,6 +757,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // ignore
     }
   }, [currentUser?.id, isAuthenticated]);
+
+  // Monthly Task Performance Report Modal State
+  const [isMonthlyPerformanceModalOpen, setIsMonthlyPerformanceModalOpen] = useState(false);
+  const [monthlyPerformanceModalDivision, setMonthlyPerformanceModalDivision] = useState<DivisionId | 'all'>('all');
+  const [monthlyPerformanceModalMonth, setMonthlyPerformanceModalMonth] = useState<number>(() => new Date().getMonth());
+  const [monthlyPerformanceModalYear, setMonthlyPerformanceModalYear] = useState<number>(() => new Date().getFullYear());
+
+  const openMonthlyPerformanceModal = useCallback((
+    divisionId?: DivisionId | 'all',
+    month?: number,
+    year?: number
+  ) => {
+    if (divisionId !== undefined) {
+      setMonthlyPerformanceModalDivision(divisionId);
+    } else {
+      setMonthlyPerformanceModalDivision(currentUser.divisi_id || 'all');
+    }
+    if (month !== undefined) {
+      setMonthlyPerformanceModalMonth(month);
+    } else {
+      setMonthlyPerformanceModalMonth(new Date().getMonth());
+    }
+    if (year !== undefined) {
+      setMonthlyPerformanceModalYear(year);
+    } else {
+      setMonthlyPerformanceModalYear(new Date().getFullYear());
+    }
+    setIsMonthlyPerformanceModalOpen(true);
+  }, [currentUser.divisi_id]);
+
+  // Voice Activation & Voice Navigation Modal State
+  const [isVoiceActivationOpen, setIsVoiceActivationOpen] = useState(false);
+
+  const openVoiceActivation = useCallback(() => {
+    setIsVoiceActivationOpen(true);
+  }, []);
 
   const [categories, setCategories] = useState<Category[]>(() => getStoredItem('mis_categories', INITIAL_CATEGORIES));
   const [accounts, setAccounts] = useState<Account[]>(() => getStoredItem('mis_accounts', INITIAL_ACCOUNTS));
@@ -3922,7 +3971,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         saveDailyPulse,
         isDailyPulseModalOpen,
         setIsDailyPulseModalOpen,
-        openDailyPulseModal
+        openDailyPulseModal,
+
+        // Monthly Task Performance Report Modal
+        isMonthlyPerformanceModalOpen,
+        setIsMonthlyPerformanceModalOpen,
+        monthlyPerformanceModalDivision,
+        monthlyPerformanceModalMonth,
+        monthlyPerformanceModalYear,
+        openMonthlyPerformanceModal,
+
+        // Voice Activation Feature (Web Speech API)
+        isVoiceActivationOpen,
+        setIsVoiceActivationOpen,
+        openVoiceActivation
       }}
     >
       {children}
