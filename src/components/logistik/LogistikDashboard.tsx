@@ -486,10 +486,10 @@ export const LogistikDashboard: React.FC = () => {
 
       {/* Sub navigation tabs & Action Bar */}
       <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 dark:border-white/[0.06] pb-3">
-        <div className="flex flex-wrap items-center gap-1 bg-slate-200/60 dark:bg-white/[0.05] p-1 rounded-2xl border border-slate-200/80 dark:border-white/[0.06] backdrop-blur-md">
+        <div className="flex items-center gap-1 bg-slate-200/60 dark:bg-white/[0.05] p-1 rounded-2xl border border-slate-200/80 dark:border-white/[0.06] backdrop-blur-md overflow-x-auto max-w-full scrollbar-none shrink">
           <button
             onClick={() => setActiveSubTab('antrean')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'antrean'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
@@ -506,7 +506,7 @@ export const LogistikDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('grafik')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'grafik'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
@@ -521,7 +521,7 @@ export const LogistikDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('manual')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'manual'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
@@ -533,7 +533,7 @@ export const LogistikDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('logs')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'logs'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
@@ -545,7 +545,7 @@ export const LogistikDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('kalender')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'kalender'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
@@ -695,7 +695,7 @@ export const LogistikDashboard: React.FC = () => {
             /* TABEL RAPI ANTREAN PACKING */
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
-                <table id="table-logistik-antrean" className="w-full text-xs text-left border-collapse">
+                <table id="table-logistik-antrean" className="w-full min-w-[720px] text-xs text-left border-collapse">
                   <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800 uppercase tracking-wider text-[11px]">
                     <tr>
                       <th className="p-3.5 w-10 text-center no-export print:hidden">
@@ -1038,7 +1038,7 @@ export const LogistikDashboard: React.FC = () => {
 
           {/* TABEL RAPI RIWAYAT LOGISTIK */}
           <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
-            <table id="table-logistik-logs" className="w-full text-xs text-left border-collapse">
+            <table id="table-logistik-logs" className="w-full min-w-[720px] text-xs text-left border-collapse">
               <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800 uppercase tracking-wider text-[11px]">
                 <tr>
                   <th className="p-3.5 w-10 text-center no-export print:hidden">

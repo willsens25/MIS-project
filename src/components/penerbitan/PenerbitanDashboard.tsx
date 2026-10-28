@@ -289,10 +289,10 @@ export const PenerbitanDashboard: React.FC = () => {
 
       {/* Sub navigation tabs & Action Bar */}
       <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 dark:border-white/[0.06] pb-3">
-        <div className="flex flex-wrap items-center gap-1 bg-slate-200/60 dark:bg-white/[0.05] p-1 rounded-2xl border border-slate-200/80 dark:border-white/[0.06] backdrop-blur-md">
+        <div className="flex items-center gap-1 bg-slate-200/60 dark:bg-white/[0.05] p-1 rounded-2xl border border-slate-200/80 dark:border-white/[0.06] backdrop-blur-md overflow-x-auto max-w-full scrollbar-none shrink">
           <button
             onClick={() => setActiveSubTab('katalog')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'katalog'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
@@ -304,7 +304,7 @@ export const PenerbitanDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('donasi_cetak')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeSubTab === 'donasi_cetak'
                 ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-xs'
                 : 'text-amber-800 dark:text-amber-400 hover:text-amber-950 dark:hover:text-white hover:bg-amber-50/50'
@@ -319,7 +319,7 @@ export const PenerbitanDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('royalti')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeSubTab === 'royalti'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
@@ -334,7 +334,7 @@ export const PenerbitanDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('ekonomi')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'ekonomi'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
@@ -349,7 +349,7 @@ export const PenerbitanDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('grafik')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'grafik'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
@@ -361,7 +361,7 @@ export const PenerbitanDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('pengajuan')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'pengajuan'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
@@ -373,7 +373,7 @@ export const PenerbitanDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('kalender')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeSubTab === 'kalender'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04]'
@@ -506,7 +506,7 @@ export const PenerbitanDashboard: React.FC = () => {
       {/* Books Table */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
+          <table className="w-full min-w-[700px] text-xs text-left">
             <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 uppercase font-semibold text-[11px] border-b border-slate-200 dark:border-slate-800">
               <tr>
                 <th className="p-3.5 w-10">
@@ -656,7 +656,7 @@ export const PenerbitanDashboard: React.FC = () => {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
+          <table className="w-full min-w-[650px] text-xs text-left">
             <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-800">
               <tr>
                 <th className="p-3 w-10 text-center">

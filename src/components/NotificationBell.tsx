@@ -517,11 +517,11 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
         aria-label={`Notifikasi Divisi ${currentDivisi?.nama_divisi || ''}`}
         aria-expanded={isOpen}
         title={`Alert & Notifikasi Divisi ${currentDivisi?.nama_divisi || ''} (${unreadAlerts.length} belum dibaca)`}
-        className={`relative h-8.5 w-8.5 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-100/90 dark:bg-white/[0.06] hover:bg-slate-200/80 dark:hover:bg-white/[0.1] border border-slate-200/90 dark:border-white/[0.08] transition-colors cursor-pointer group shadow-2xs ${
+        className={`relative h-8 w-8 sm:h-8.5 sm:w-8.5 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-100/90 dark:bg-white/[0.06] hover:bg-slate-200/80 dark:hover:bg-white/[0.1] border border-slate-200/90 dark:border-white/[0.08] transition-colors cursor-pointer group shadow-2xs ${
           isOpen ? 'ring-2 ring-indigo-500/50 text-indigo-600 dark:text-indigo-400' : ''
         }`}
       >
-        <Bell className={`w-4 h-4 transition-transform ${unreadAlerts.length > 0 ? 'group-hover:rotate-12' : ''}`} />
+        <Bell className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform ${unreadAlerts.length > 0 ? 'group-hover:rotate-12' : ''}`} />
 
         {/* Unread Count Badge */}
         {unreadAlerts.length > 0 && (
@@ -551,7 +551,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.16 }}
-            className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden"
+            className="absolute right-0 mt-2 w-80 sm:w-96 max-w-[calc(100vw-1.5rem)] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden"
           >
             {/* Header */}
             <div className="p-3.5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">

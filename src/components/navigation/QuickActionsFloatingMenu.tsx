@@ -417,7 +417,7 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
   return (
     <>
       {/* 1. FLOATING ACTION TRIGGER BUTTON (MAIN DASHBOARD VIEW) */}
-      <div className="fixed bottom-6 right-20 sm:right-24 z-40 print:hidden flex items-center">
+      <div className="fixed bottom-4 right-18 sm:bottom-6 sm:right-26 z-40 print:hidden flex items-center">
         <motion.button
           id="btn-floating-quick-actions"
           type="button"
@@ -427,7 +427,7 @@ export const QuickActionsFloatingMenu: React.FC<QuickActionsFloatingMenuProps> =
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', stiffness: 380, damping: 22 }}
-          className={`px-3.5 py-2.5 sm:px-4 sm:py-2.5 rounded-full shadow-xl border cursor-pointer group flex items-center space-x-2.5 transition-all ${
+          className={`p-2 sm:px-4 sm:py-2.5 rounded-full shadow-xl border cursor-pointer group flex items-center space-x-2 transition-all ${
             isOpen
               ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-700 dark:border-slate-300 ring-2 ring-indigo-500/40'
               : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 border-slate-200/90 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-indigo-500/20'

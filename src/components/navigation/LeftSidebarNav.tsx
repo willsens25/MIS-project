@@ -931,138 +931,158 @@ export const LeftSidebarNav: React.FC<LeftSidebarNavProps> = ({
             </AnimatePresence>
           </motion.button>
 
-          <motion.div
-            layout
-            className={`grid ${effectiveCollapsed ? 'grid-cols-1 gap-1' : 'grid-cols-3 gap-1.5'}`}
-          >
-            <motion.button
-              layout="position"
-              type="button"
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={() => {
-                openPresentationMode();
-                onCloseMobile();
-              }}
-              title="Buka Layar Presentasi Mode Rapat Pleno"
-              className="flex items-center justify-center space-x-1 px-1.5 py-1.5 rounded-xl text-[11px] font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 dark:text-amber-300 border border-amber-400/40 transition-colors cursor-pointer overflow-hidden"
-            >
-              <Tv className="w-3.5 h-3.5 shrink-0" />
-              <AnimatePresence initial={false} mode="popLayout">
-                {!effectiveCollapsed && (
-                  <motion.span
-                    key="shortcut-pleno-text"
-                    initial={{ opacity: 0, x: -6 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -6 }}
-                    transition={{ duration: 0.2, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
-                    className="truncate text-[10.5px]"
-                  >
-                    Pleno
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </motion.button>
-
-            <motion.button
-              layout="position"
-              type="button"
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={() => {
-                openVoiceActivation();
-                onCloseMobile();
-              }}
-              title="Aktivasi Perintah Suara (Alt+V) — Web Speech API"
-              className="flex items-center justify-center space-x-1 px-1.5 py-1.5 rounded-xl text-[11px] font-bold bg-teal-500/15 hover:bg-teal-500/25 text-teal-800 dark:text-teal-300 border border-teal-400/40 transition-colors cursor-pointer overflow-hidden"
-            >
-              <Mic className="w-3.5 h-3.5 shrink-0 text-teal-600 dark:text-teal-400" />
-              <AnimatePresence initial={false} mode="popLayout">
-                {!effectiveCollapsed && (
-                  <motion.span
-                    key="shortcut-voice-text"
-                    initial={{ opacity: 0, x: -6 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -6 }}
-                    transition={{ duration: 0.2, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                    className="truncate text-[10.5px]"
-                  >
-                    Suara
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </motion.button>
-
-            {onOpenAI && (
+          {/* Quick Actions in Left Sidebar */}
+          {effectiveCollapsed ? (
+            <div className="space-y-1.5">
+              {onOpenAI && (
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.06 }}
+                  whileTap={{ scale: 0.94 }}
+                  onClick={() => {
+                    onOpenAI();
+                    onCloseMobile();
+                  }}
+                  title="Tanya Asisten AI MIS (Alt+A)"
+                  className="w-full h-8.5 flex items-center justify-center rounded-xl bg-teal-600 hover:bg-teal-500 text-white shadow-2xs transition-colors cursor-pointer"
+                >
+                  <Bot className="w-4 h-4 shrink-0" />
+                </motion.button>
+              )}
               <motion.button
-                layout="position"
                 type="button"
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.96 }}
+                whileHover={{ scale: 1.06 }}
+                whileTap={{ scale: 0.94 }}
                 onClick={() => {
-                  onOpenAI();
+                  openVoiceActivation();
                   onCloseMobile();
                 }}
-                title="Buka Asisten AI SAPA-ALL MIS"
-                className="flex items-center justify-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-bold bg-teal-600 hover:bg-teal-700 text-white transition-colors cursor-pointer overflow-hidden"
+                title="Aktivasi Perintah Suara (Alt+V)"
+                className="w-full h-8.5 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-teal-50 dark:hover:bg-teal-950/40 text-teal-700 dark:text-teal-300 border border-slate-200/80 dark:border-slate-700/80 transition-colors cursor-pointer"
               >
-                <Bot className="w-3.5 h-3.5 shrink-0" />
-                <AnimatePresence initial={false} mode="popLayout">
-                  {!effectiveCollapsed && (
-                    <motion.span
-                      key="shortcut-ai-text"
-                      initial={{ opacity: 0, x: -6 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -6 }}
-                      transition={{ duration: 0.2, delay: 0.21, ease: [0.22, 1, 0.36, 1] }}
-                      className="truncate"
-                    >
-                      Tanya AI
-                    </motion.span>
-                  )}
-                </AnimatePresence>
+                <Mic className="w-4 h-4 shrink-0 text-teal-600 dark:text-teal-400" />
               </motion.button>
-            )}
-          </motion.div>
-
-          {onOpenHotkeyMap && (
-            <motion.button
-              layout
-              type="button"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => {
-                onOpenHotkeyMap();
-                onCloseMobile();
-              }}
-              title="Buka Global Hotkey Map (? / Alt+H)"
-              className={`w-full flex items-center ${
-                effectiveCollapsed ? 'justify-center p-2' : 'justify-between px-3 py-1.5'
-              } rounded-xl text-[11px] font-bold bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800/80 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/80 transition-colors cursor-pointer overflow-hidden`}
-            >
-              <span className="flex items-center space-x-2 min-w-0">
-                <Keyboard className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                <AnimatePresence initial={false} mode="popLayout">
-                  {!effectiveCollapsed && (
-                    <motion.span
-                      key="shortcut-hotkey-text"
-                      initial={{ opacity: 0, x: -6 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -6 }}
-                      transition={{ duration: 0.2, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                      className="truncate"
-                    >
-                      Pintasan Keyboard
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </span>
-              {!effectiveCollapsed && (
-                <kbd className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shrink-0">
-                  ? / Alt+H
-                </kbd>
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.06 }}
+                whileTap={{ scale: 0.94 }}
+                onClick={() => {
+                  openPresentationMode();
+                  onCloseMobile();
+                }}
+                title="Mode Rapat Pleno Proyektor LCD (Alt+Shift+P)"
+                className="w-full h-8.5 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-slate-200/80 dark:border-slate-700/80 transition-colors cursor-pointer"
+              >
+                <Tv className="w-4 h-4 shrink-0 text-amber-500" />
+              </motion.button>
+              {onOpenHotkeyMap && (
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.06 }}
+                  whileTap={{ scale: 0.94 }}
+                  onClick={() => {
+                    onOpenHotkeyMap();
+                    onCloseMobile();
+                  }}
+                  title="Peta Pintasan Keyboard (? / Alt+H)"
+                  className="w-full h-8.5 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/80 transition-colors cursor-pointer"
+                >
+                  <Keyboard className="w-4 h-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
+                </motion.button>
               )}
-            </motion.button>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {onOpenAI && (
+                <motion.button
+                  layout="position"
+                  type="button"
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    onOpenAI();
+                    onCloseMobile();
+                  }}
+                  title="Buka Asisten AI SAPA-ALL MIS (Alt+A)"
+                  className="w-full flex items-center justify-between h-9 px-3 rounded-xl text-xs font-bold bg-teal-600 hover:bg-teal-500 text-white shadow-2xs transition-colors cursor-pointer group"
+                >
+                  <span className="flex items-center space-x-2 min-w-0">
+                    <Bot className="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform" />
+                    <span className="truncate">Tanya Asisten AI</span>
+                  </span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-teal-700/70 text-teal-100 font-mono font-medium">
+                    Alt+A
+                  </span>
+                </motion.button>
+              )}
+
+              <div className="grid grid-cols-2 gap-1.5">
+                <motion.button
+                  layout="position"
+                  type="button"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => {
+                    openVoiceActivation();
+                    onCloseMobile();
+                  }}
+                  title="Aktivasi Perintah Suara (Alt+V) — Web Speech API"
+                  className="flex items-center justify-between h-8 px-2.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-teal-50 dark:bg-slate-800/80 dark:hover:bg-teal-950/40 text-slate-700 hover:text-teal-700 dark:text-slate-200 dark:hover:text-teal-300 border border-slate-200/80 dark:border-slate-700/80 transition-colors cursor-pointer min-w-0"
+                >
+                  <span className="flex items-center space-x-1.5 min-w-0">
+                    <Mic className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
+                    <span className="truncate text-[11px]">Suara</span>
+                  </span>
+                  <kbd className="text-[9px] font-mono px-1 py-0.2 rounded bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 shrink-0">
+                    Alt+V
+                  </kbd>
+                </motion.button>
+
+                <motion.button
+                  layout="position"
+                  type="button"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => {
+                    openPresentationMode();
+                    onCloseMobile();
+                  }}
+                  title="Buka Layar Rapat Pleno LCD (Alt+Shift+P)"
+                  className="flex items-center justify-between h-8 px-2.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-amber-50 dark:bg-slate-800/80 dark:hover:bg-amber-950/40 text-slate-700 hover:text-amber-800 dark:text-slate-200 dark:hover:text-amber-300 border border-slate-200/80 dark:border-slate-700/80 transition-colors cursor-pointer min-w-0"
+                >
+                  <span className="flex items-center space-x-1.5 min-w-0">
+                    <Tv className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <span className="truncate text-[11px]">Pleno</span>
+                  </span>
+                  <kbd className="text-[9px] font-mono px-1 py-0.2 rounded bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 shrink-0">
+                    Alt+P
+                  </kbd>
+                </motion.button>
+              </div>
+
+              {onOpenHotkeyMap && (
+                <motion.button
+                  layout
+                  type="button"
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    onOpenHotkeyMap();
+                    onCloseMobile();
+                  }}
+                  title="Buka Peta Pintasan Keyboard (? / Alt+H)"
+                  className="w-full flex items-center justify-between h-8 px-2.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800/80 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700/80 transition-colors cursor-pointer min-w-0"
+                >
+                  <span className="flex items-center space-x-1.5 min-w-0">
+                    <Keyboard className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                    <span className="truncate text-[11px]">Pintasan Keyboard</span>
+                  </span>
+                  <kbd className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shrink-0">
+                    ? / Alt+H
+                  </kbd>
+                </motion.button>
+              )}
+            </div>
           )}
 
           {/* User Profile Card & Quick Logout in Left Sidebar */}

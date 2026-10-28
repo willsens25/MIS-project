@@ -1102,7 +1102,7 @@ export const MonthlyTaskPerformanceReportModal: React.FC<MonthlyTaskPerformanceR
               </div>
 
               <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-2xl">
-                <table className="w-full text-xs text-left">
+                <table className="w-full min-w-[720px] text-xs text-left">
                   <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700 text-[11px]">
                     <tr>
                       <th className="py-3 px-3.5 w-10 text-center">No</th>

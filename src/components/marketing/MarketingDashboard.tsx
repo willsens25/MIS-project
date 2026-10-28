@@ -570,10 +570,10 @@ export const MarketingDashboard: React.FC = () => {
 
       {/* Sub tabs & Toolbar */}
       <div className="print:hidden flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 dark:border-white/[0.06] pb-3">
-        <div className="flex flex-wrap items-center gap-1 bg-slate-200/60 dark:bg-white/[0.05] p-1 rounded-2xl border border-slate-200/80 dark:border-white/[0.06] backdrop-blur-md">
+        <div className="flex items-center gap-1 bg-slate-200/60 dark:bg-white/[0.05] p-1 rounded-2xl border border-slate-200/80 dark:border-white/[0.06] backdrop-blur-md overflow-x-auto max-w-full scrollbar-none shrink">
           <button
             onClick={() => setActiveSubTab('grafik')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'grafik'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
@@ -588,7 +588,7 @@ export const MarketingDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('event_pos')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'event_pos'
                 ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
@@ -600,7 +600,7 @@ export const MarketingDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('bazaar')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'bazaar'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
@@ -620,23 +620,8 @@ export const MarketingDashboard: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setActiveSubTab('grafik')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
-              activeSubTab === 'grafik'
-                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
-            }`}
-          >
-            <TrendingUp className="w-3.5 h-3.5 text-blue-500" />
-            <span>Grafik Penjualan</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-800/40">
-              6 Bln
-            </span>
-          </button>
-
-          <button
             onClick={() => setActiveSubTab('pos')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'pos'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
@@ -648,7 +633,7 @@ export const MarketingDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('invoices')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'invoices'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
@@ -663,7 +648,7 @@ export const MarketingDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('promos')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'promos'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
@@ -678,7 +663,7 @@ export const MarketingDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('preorder')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'preorder'
                 ? 'bg-white dark:bg-slate-800 text-orange-600 dark:text-orange-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
@@ -690,7 +675,7 @@ export const MarketingDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('membership')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'membership'
                 ? 'bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
@@ -702,7 +687,7 @@ export const MarketingDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('saluran')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'saluran'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
@@ -714,7 +699,7 @@ export const MarketingDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('agen')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'agen'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
@@ -726,7 +711,7 @@ export const MarketingDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('whatsapp')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'whatsapp'
                 ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'
@@ -743,7 +728,7 @@ export const MarketingDashboard: React.FC = () => {
 
           <button
             onClick={() => setActiveSubTab('kalender')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
               activeSubTab === 'kalender'
                 ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs ring-1 ring-black/[0.04] dark:ring-white/[0.06]'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] font-medium'

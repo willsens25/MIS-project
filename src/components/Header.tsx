@@ -179,17 +179,17 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="print:hidden sticky top-0 z-40 bg-white/80 dark:bg-[#0e131b]/80 backdrop-blur-xl text-slate-800 dark:text-white border-b border-slate-200/80 dark:border-white/[0.08] shadow-2xs transition-colors duration-200">
-      <div className="w-full px-3 sm:px-5 lg:px-6">
-        <div className="flex items-center justify-between h-16 gap-2 sm:gap-3">
+      <div className="w-full px-2.5 sm:px-5 lg:px-6">
+        <div className="flex items-center justify-between h-15 sm:h-16 gap-1.5 sm:gap-3">
           
           {/* Left: Sidebar Trigger, Logo & Active Division Context Pill */}
-          <div className="flex items-center space-x-2 sm:space-x-2.5 shrink-0">
+          <div className="flex items-center space-x-1.5 sm:space-x-2.5 shrink-0">
             {/* Mobile Left Sidebar Drawer Button */}
             {onOpenMobileSidebar && (
               <button
                 type="button"
                 onClick={onOpenMobileSidebar}
-                className="lg:hidden h-8.5 w-8.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-indigo-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-colors cursor-pointer"
+                className="lg:hidden h-8 w-8 sm:h-8.5 sm:w-8.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-indigo-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-colors cursor-pointer"
                 title="Buka Menu Sidebar Kiri (Kategori)"
                 aria-label="Buka Menu Sidebar Kiri"
               >
@@ -214,7 +214,7 @@ export const Header: React.FC<HeaderProps> = ({
               <img
                 src="/img/logo-lamrimnesia.png"
                 alt="Logo Lamrimnesia"
-                className="h-8 sm:h-9 w-auto object-contain rounded-lg shadow-2xs hover:opacity-95 transition-opacity"
+                className="h-7.5 sm:h-9 w-auto object-contain rounded-lg shadow-2xs hover:opacity-95 transition-opacity"
                 referrerPolicy="no-referrer"
               />
             </div>
@@ -266,7 +266,7 @@ export const Header: React.FC<HeaderProps> = ({
           )}
 
           {/* Right: Coordinated Action Groups & User Profile */}
-          <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
+          <div className="relative flex items-center space-x-1 sm:space-x-2 shrink-0">
             {/* Desktop Actions Container (Hidden on Mobile < lg) */}
             <div className="hidden lg:flex items-center space-x-1.5 sm:space-x-2">
 
@@ -467,7 +467,7 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
 
               {/* Subtle Vertical Divider */}
-              <div className="h-4.5 w-px bg-slate-200/80 dark:border-white/[0.08] mx-0.5" />
+              <div className="h-4.5 w-px bg-slate-200/80 dark:bg-white/[0.1] mx-0.5" />
 
               {/* Cluster 2: AI Assistant Button */}
               <motion.button
@@ -476,7 +476,7 @@ export const Header: React.FC<HeaderProps> = ({
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.96 }}
                 className="h-8.5 flex items-center space-x-2 px-2.5 bg-gradient-to-r from-teal-500/15 via-emerald-500/15 to-teal-500/10 hover:from-teal-500/25 hover:to-emerald-500/25 text-teal-800 dark:text-teal-200 border border-teal-500/30 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer group"
-                title="Tanya Asisten AI MIS Lamrimnesia"
+                title="Tanya Asisten AI MIS Lamrimnesia (Alt+A)"
               >
                 <MascotAvatar
                   size="xs"
@@ -511,7 +511,7 @@ export const Header: React.FC<HeaderProps> = ({
               </motion.button>
 
               {/* Subtle Vertical Divider */}
-              <div className="h-4.5 w-px bg-slate-200/80 dark:border-white/[0.08] mx-0.5" />
+              <div className="h-4.5 w-px bg-slate-200/80 dark:bg-white/[0.1] mx-0.5" />
 
               {/* Cluster 3: Appearance & Notifications */}
               <div className="flex items-center space-x-1.5">
@@ -605,7 +605,7 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
 
               {/* Subtle Vertical Divider */}
-              <div className="h-4.5 w-px bg-slate-200/80 dark:border-white/[0.08] mx-0.5" />
+              <div className="h-4.5 w-px bg-slate-200/80 dark:bg-white/[0.1] mx-0.5" />
 
               {/* Cluster 4: Auth, Profile & DEV shortcut */}
               {!isAuthenticated ? (
@@ -643,15 +643,20 @@ export const Header: React.FC<HeaderProps> = ({
                       </span>
                     </button>
                   )}
+                </>
+              )}
+            </div>
 
-                  <div className="relative">
-                    <motion.button
-                      id="btn-user-profile"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.96 }}
-                      onClick={() => setShowProfileMenu(!showProfileMenu)}
-                      className="h-8.5 flex items-center space-x-2 bg-slate-100/90 dark:bg-white/[0.06] hover:bg-slate-200/80 dark:hover:bg-white/[0.1] border border-slate-200/90 dark:border-white/[0.08] px-2 rounded-xl text-xs text-slate-700 dark:text-slate-200 transition-all cursor-pointer shadow-2xs"
-                    >
+            {/* User Profile Container & Shared Popover Menu (Desktop & Mobile) */}
+            {isAuthenticated && (
+              <div className="relative">
+                <motion.button
+                  id="btn-user-profile"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  className="hidden lg:flex h-8.5 items-center space-x-2 bg-slate-100/90 dark:bg-white/[0.06] hover:bg-slate-200/80 dark:hover:bg-white/[0.1] border border-slate-200/90 dark:border-white/[0.08] px-2 rounded-xl text-xs text-slate-700 dark:text-slate-200 transition-all cursor-pointer shadow-2xs"
+                >
                       <div className="w-5.5 h-5.5 rounded-full overflow-hidden bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-[10px] shrink-0 ring-1 ring-white/40">
                         {currentUser.avatar ? (
                           <img
@@ -673,13 +678,18 @@ export const Header: React.FC<HeaderProps> = ({
 
                 <AnimatePresence>
                   {showProfileMenu && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -8, scale: 0.96 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -8, scale: 0.96 }}
-                      transition={{ duration: 0.16 }}
-                      className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl py-2 z-50 overflow-hidden"
-                    >
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setShowProfileMenu(false)}
+                      />
+                      <motion.div
+                        initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                        transition={{ duration: 0.16 }}
+                        className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-1.5rem)] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl py-2 z-50 overflow-hidden"
+                      >
                     {/* User Card Header with Quick Edit Trigger */}
                     <div
                       onClick={() => {
@@ -1074,12 +1084,11 @@ export const Header: React.FC<HeaderProps> = ({
                       )}
                     </div>
                   </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
         )}
-            </div>
 
             {/* Mobile Actions Container (Visible on Mobile/Tablet < lg) */}
             <div className="flex lg:hidden items-center space-x-1 sm:space-x-1.5">
@@ -1091,11 +1100,11 @@ export const Header: React.FC<HeaderProps> = ({
                   onClick={onOpenCommandPalette}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.93 }}
-                  className="flex items-center justify-center h-8.5 w-8.5 rounded-xl bg-slate-100/90 dark:bg-white/[0.06] border border-slate-200/90 dark:border-white/[0.08] text-slate-600 dark:text-slate-300 shadow-2xs cursor-pointer"
+                  className="flex items-center justify-center h-8 w-8 sm:h-8.5 sm:w-8.5 rounded-xl bg-slate-100/90 dark:bg-white/[0.06] border border-slate-200/90 dark:border-white/[0.08] text-slate-600 dark:text-slate-300 shadow-2xs cursor-pointer"
                   title="Pencarian Cepat (Ctrl+K)"
                   aria-label="Pencarian Cepat"
                 >
-                  <Search className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                  <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500 dark:text-slate-400" />
                 </motion.button>
               )}
 
@@ -1105,20 +1114,20 @@ export const Header: React.FC<HeaderProps> = ({
                 onClick={onOpenAI}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.93 }}
-                className="flex items-center justify-center h-8.5 w-8.5 rounded-xl bg-teal-500/10 dark:bg-teal-500/20 border border-teal-500/30 text-teal-800 dark:text-teal-200 shadow-2xs cursor-pointer"
+                className="flex items-center justify-center h-8 w-8 sm:h-8.5 sm:w-8.5 rounded-xl bg-teal-500/10 dark:bg-teal-500/20 border border-teal-500/30 text-teal-800 dark:text-teal-200 shadow-2xs cursor-pointer"
                 title="Tanya Asisten AI MIS Lamrimnesia"
                 aria-label="Asisten AI"
               >
-                <MascotAvatar size="xs" variant="badge" interactive={false} className="w-5 h-5" />
+                <MascotAvatar size="xs" variant="badge" interactive={false} className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
               </motion.button>
 
-              {/* Mobile Document Archive Trigger */}
+              {/* Mobile Document Archive Trigger (Visible on tablet/desktop >= sm) */}
               <motion.button
                 id="btn-mobile-doc-archive"
                 onClick={() => openDocumentArchive()}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.93 }}
-                className="flex items-center justify-center h-8.5 w-8.5 rounded-xl bg-slate-100/90 dark:bg-white/[0.06] border border-slate-200/90 dark:border-white/[0.08] text-indigo-600 dark:text-indigo-400 shadow-2xs cursor-pointer"
+                className="hidden sm:flex items-center justify-center h-8.5 w-8.5 rounded-xl bg-slate-100/90 dark:bg-white/[0.06] border border-slate-200/90 dark:border-white/[0.08] text-indigo-600 dark:text-indigo-400 shadow-2xs cursor-pointer"
                 title={`Buka Arsip Dokumen (${attachments.length} file)`}
                 aria-label="Arsip Dokumen"
               >
@@ -1130,14 +1139,14 @@ export const Header: React.FC<HeaderProps> = ({
                 onOpenPersetujuan={onOpenPersetujuan}
               />
 
-              {/* Mobile Theme Toggle Button */}
+              {/* Mobile Theme Toggle Button (Visible on tablet/desktop >= sm) */}
               <motion.button
                 id="btn-mobile-theme-toggle"
                 type="button"
                 onClick={toggleTheme}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.92 }}
-                className="h-8.5 w-8.5 rounded-xl bg-slate-100/90 dark:bg-white/[0.06] text-slate-700 dark:text-slate-200 border border-slate-200/90 dark:border-white/[0.08] shadow-2xs cursor-pointer flex items-center justify-center"
+                className="hidden sm:flex h-8.5 w-8.5 rounded-xl bg-slate-100/90 dark:bg-white/[0.06] text-slate-700 dark:text-slate-200 border border-slate-200/90 dark:border-white/[0.08] shadow-2xs cursor-pointer items-center justify-center"
                 title={theme === 'dark' ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
                 aria-label="Ganti Tema Tampilan"
               >
@@ -1154,7 +1163,7 @@ export const Header: React.FC<HeaderProps> = ({
                   id="btn-mobile-profile-avatar"
                   type="button"
                   onClick={() => setShowProfileMenu(prev => !prev)}
-                  className="flex items-center justify-center w-8.5 h-8.5 rounded-xl overflow-hidden bg-gradient-to-tr from-indigo-500 to-purple-500 text-white font-bold text-xs ring-1 ring-white/40 shadow-2xs cursor-pointer shrink-0"
+                  className="flex items-center justify-center w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-xl overflow-hidden bg-gradient-to-tr from-indigo-500 to-purple-500 text-white font-bold text-xs ring-1 ring-white/40 shadow-2xs cursor-pointer shrink-0"
                   title="Menu Profil Saya"
                   aria-label="Buka Menu Profil"
                 >
@@ -1169,7 +1178,7 @@ export const Header: React.FC<HeaderProps> = ({
                   id="btn-mobile-login"
                   type="button"
                   onClick={openLoginModal}
-                  className="h-8.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold cursor-pointer shadow-sm"
+                  className="h-8 sm:h-8.5 px-2.5 sm:px-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold cursor-pointer shadow-sm"
                 >
                   Masuk
                 </button>

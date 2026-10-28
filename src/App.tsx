@@ -751,7 +751,7 @@ const AppContent: React.FC = () => {
           <BreadcrumbNav />
 
           {/* Main Content Area with Division Switch Transition */}
-          <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+          <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 lg:p-6 space-y-4 sm:space-y-6">
             {/* Top Division Welcome Greeting Banner (Time-aware, spacious & clear) */}
             <TopGreetingBanner onOpenAI={() => setIsAiModalOpen(true)} />
 
@@ -807,7 +807,7 @@ const AppContent: React.FC = () => {
 
       {/* Floating AI Assistant Mascot Trigger with Audio-Visual Feedback & Environment Mute */}
       <div
-        className="fixed bottom-6 right-6 z-40 flex items-center print:hidden"
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 flex items-center print:hidden"
         onMouseEnter={() => {
           cancelDismissTimer();
         }}
@@ -909,7 +909,7 @@ const AppContent: React.FC = () => {
                 // Tolerant 800ms grace period so moving away doesn't close abruptly
                 scheduleDismissSpeechBubble(800);
               }}
-              className="absolute right-0 bottom-full mb-3.5 w-78 p-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl rounded-br-xs shadow-2xl border border-teal-500/35 dark:border-teal-400/25 text-left z-50 pointer-events-auto"
+              className="absolute right-0 bottom-full mb-3.5 w-[calc(100vw-2rem)] max-w-xs sm:w-78 p-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl rounded-br-xs shadow-2xl border border-teal-500/35 dark:border-teal-400/25 text-left z-50 pointer-events-auto"
             >
               {/* Invisible Hover Bridge spanning gap between Bubble and Mascot */}
               <div className="absolute -bottom-5 left-0 right-0 h-5 pointer-events-auto" />
