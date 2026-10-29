@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useApp } from '../../context/AppContext';
 import { DivisionId } from '../../types';
 import { getStoredCalendarEvents, getDeadlineInfo } from '../common/DivisionCalendarTodoView';
+import { exportClonedContentToPdf } from '../../utils/exportClonedPdf';
 import {
   Building2,
   Wallet,
@@ -18,6 +19,7 @@ import {
   Building,
   Printer,
   FileText,
+  FileDown,
   Tag,
   Globe,
   Plus,
@@ -975,6 +977,21 @@ export const LeftSidebarNav: React.FC<LeftSidebarNavProps> = ({
               >
                 <Tv className="w-4 h-4 shrink-0 text-amber-500" />
               </motion.button>
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.06 }}
+                whileTap={{ scale: 0.94 }}
+                onClick={() => {
+                  exportClonedContentToPdf({
+                    targetElementId: 'printable-area'
+                  });
+                  onCloseMobile();
+                }}
+                title="Export Dashboard to PDF"
+                className="w-full h-8.5 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-slate-200/80 dark:border-slate-700/80 transition-colors cursor-pointer"
+              >
+                <FileDown className="w-4 h-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
+              </motion.button>
               {onOpenHotkeyMap && (
                 <motion.button
                   type="button"
@@ -1059,6 +1076,30 @@ export const LeftSidebarNav: React.FC<LeftSidebarNavProps> = ({
                   </kbd>
                 </motion.button>
               </div>
+
+              {/* Global Export to PDF in Sidebar */}
+              <motion.button
+                layout="position"
+                type="button"
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  exportClonedContentToPdf({
+                    targetElementId: 'printable-area'
+                  });
+                  onCloseMobile();
+                }}
+                title="Export Dashboard to PDF — Cetak Kloning Terisolasi"
+                className="w-full flex items-center justify-between h-8 px-2.5 rounded-xl text-xs font-semibold bg-indigo-50 hover:bg-indigo-100/90 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/80 transition-colors cursor-pointer min-w-0"
+              >
+                <span className="flex items-center space-x-1.5 min-w-0">
+                  <FileDown className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  <span className="truncate text-[11px] font-bold">Export to PDF</span>
+                </span>
+                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 shrink-0">
+                  Print
+                </span>
+              </motion.button>
 
               {onOpenHotkeyMap && (
                 <motion.button

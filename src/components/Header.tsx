@@ -15,6 +15,7 @@ import { NightShiftHeaderButton } from './theme/NightShiftHeaderButton';
 import { BackupRestoreModal } from './common/BackupRestoreModal';
 import { DataImportExportModal } from './modals/DataImportExportModal';
 import { getColorPreset, COLOR_PRESETS } from '../lib/themePresets';
+import { exportClonedContentToPdf } from '../utils/exportClonedPdf';
 import {
   Building2,
   Wallet,
@@ -437,17 +438,35 @@ export const Header: React.FC<HeaderProps> = ({
                   </span>
                 </motion.button>
 
-                {/* Download PDF Report Button */}
+                {/* Download PDF Report Modal Button */}
                 <motion.button
                   id="btn-download-pdf-report"
                   onClick={() => setShowReportModal(true)}
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.96 }}
                   className="h-8.5 flex items-center space-x-1.5 px-2.5 bg-indigo-50/90 dark:bg-indigo-500/10 hover:bg-indigo-100/90 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200/90 dark:border-indigo-500/30 rounded-xl text-xs font-semibold shadow-2xs transition-all cursor-pointer"
-                  title="Download PDF Report — Cetak Ringkasan Laporan Divisi"
+                  title="Ringkasan Laporan Divisi — Modal Kustom"
                 >
-                  <FileDown className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
-                  <span className="hidden 2xl:inline">PDF</span>
+                  <FileText className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
+                  <span className="hidden 2xl:inline">Ringkasan</span>
+                </motion.button>
+
+                {/* Global Export to PDF Button (Clones #printable-area with pdf-export-mode) */}
+                <motion.button
+                  id="btn-global-export-pdf-header"
+                  onClick={() => {
+                    exportClonedContentToPdf({
+                      targetElementId: 'printable-area',
+                      documentTitle: `Laporan Resmi SAPA MIS - ${divisiList.find(d => d.id === currentUser.divisi_id)?.nama_divisi || 'Direktorat'}`
+                    });
+                  }}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.96 }}
+                  className="h-8.5 flex items-center space-x-1.5 px-2.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl text-xs font-bold shadow-2xs hover:shadow-indigo-500/20 transition-all cursor-pointer"
+                  title="Export to PDF — Kloning tampilan dashboard aktif & buka dialog cetak PDF"
+                >
+                  <FileDown className="w-3.5 h-3.5 text-white" />
+                  <span className="hidden xl:inline">Export PDF</span>
                 </motion.button>
 
                 {/* Global Hotkey Map Button */}

@@ -719,9 +719,9 @@ const AppContent: React.FC = () => {
   return (
     <div className="relative min-h-screen bg-slate-100/70 dark:bg-[#0b0e14] text-slate-900 dark:text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white overflow-x-hidden">
       {/* Gen Z Ambient Aura Top Mesh */}
-      <div className="fixed -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[360px] bg-gradient-to-b from-indigo-500/10 via-violet-500/5 to-transparent blur-3xl pointer-events-none -z-10 dark:from-indigo-600/15" />
-      <div className="fixed top-24 -left-32 w-80 h-80 rounded-full bg-teal-500/5 dark:bg-teal-400/5 blur-3xl pointer-events-none -z-10" />
-      <div className="fixed top-48 -right-32 w-80 h-80 rounded-full bg-indigo-500/5 dark:bg-indigo-400/5 blur-3xl pointer-events-none -z-10" />
+      <div className="print:hidden fixed -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[360px] bg-gradient-to-b from-indigo-500/10 via-violet-500/5 to-transparent blur-3xl pointer-events-none -z-10 dark:from-indigo-600/15" />
+      <div className="print:hidden fixed top-24 -left-32 w-80 h-80 rounded-full bg-teal-500/5 dark:bg-teal-400/5 blur-3xl pointer-events-none -z-10" />
+      <div className="print:hidden fixed top-48 -right-32 w-80 h-80 rounded-full bg-indigo-500/5 dark:bg-indigo-400/5 blur-3xl pointer-events-none -z-10" />
       
       {/* Top Header & Division Navigation */}
       <Header
@@ -751,7 +751,7 @@ const AppContent: React.FC = () => {
           <BreadcrumbNav />
 
           {/* Main Content Area with Division Switch Transition */}
-          <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 lg:p-6 space-y-4 sm:space-y-6">
+          <main className="flex-1 max-w-7xl print:max-w-none print:w-full print:p-0 print:m-0 w-full mx-auto p-3 sm:p-5 lg:p-6 space-y-4 sm:space-y-6">
             {/* Top Division Welcome Greeting Banner (Time-aware, spacious & clear) */}
             <TopGreetingBanner onOpenAI={() => setIsAiModalOpen(true)} />
 
@@ -763,7 +763,7 @@ const AppContent: React.FC = () => {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -12, scale: 0.99 }}
                 transition={{ duration: 0.22, ease: 'easeOut' }}
-                className="w-full printable-dashboard"
+                className="w-full printable-dashboard print:w-full print:max-w-none print:m-0 print:p-0"
               >
                 {currentUser.divisi_id === 1 && <DirektoratDashboard />}
                 {currentUser.divisi_id === 2 && <FinanceDashboard />}

@@ -259,7 +259,7 @@ export const VoiceActivationModal: React.FC<VoiceActivationModalProps> = ({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
       {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -276,10 +276,10 @@ export const VoiceActivationModal: React.FC<VoiceActivationModalProps> = ({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.94, y: 16 }}
         transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-        className="relative w-full max-w-xl rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-white/10 shadow-2xl overflow-hidden z-10 flex flex-col text-slate-800 dark:text-slate-100"
+        className="relative w-full max-w-xl rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-white/10 shadow-2xl overflow-hidden z-10 flex flex-col text-slate-800 dark:text-slate-100 max-h-[92vh] overflow-y-auto"
       >
         {/* Top Header Bar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50">
           <div className="flex items-center space-x-2.5">
             <div className="w-8 h-8 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center border border-teal-500/20">
               <Mic className="w-4 h-4 animate-pulse" />
@@ -322,7 +322,7 @@ export const VoiceActivationModal: React.FC<VoiceActivationModalProps> = ({
         </div>
 
         {/* Center Listening Arena */}
-        <div className="p-6 flex flex-col items-center justify-center text-center space-y-4">
+        <div className="p-4 sm:p-6 flex flex-col items-center justify-center text-center space-y-3.5 sm:space-y-4">
           {/* Animated Glowing Microphone Circle */}
           <div className="relative flex items-center justify-center my-2">
             {/* Pulsing Ripple Rings */}
@@ -521,7 +521,7 @@ export const VoiceActivationModal: React.FC<VoiceActivationModalProps> = ({
         </div>
 
         {/* Footer Guidance */}
-        <div className="px-6 py-2.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
+        <div className="px-4 sm:px-6 py-2.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
           <span>Tekan <kbd className="font-mono text-slate-700 dark:text-slate-300">Esc</kbd> untuk menutup</span>
           <span>Web Speech API • Multi-bahasa</span>
         </div>

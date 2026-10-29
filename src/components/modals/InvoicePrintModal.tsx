@@ -48,12 +48,20 @@ export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({ order, onC
           onClick={e => e.stopPropagation()}
         >
           {/* Modal Controls (Not printed) */}
-          <div className="flex items-center justify-between px-6 py-3.5 bg-slate-900 text-white print:hidden">
-            <div className="flex items-center space-x-2">
-              <Printer className="w-4 h-4 text-cyan-400" />
-              <span className="font-semibold text-sm">Faktur Penjualan Resmi #{order.no_invoice}</span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-3 sm:py-3.5 bg-slate-900 text-white print:hidden gap-2">
+            <div className="flex items-center justify-between sm:justify-start space-x-2">
+              <div className="flex items-center space-x-2">
+                <Printer className="w-4 h-4 text-cyan-400" />
+                <span className="font-semibold text-xs sm:text-sm">Faktur #{order.no_invoice}</span>
+              </div>
+              <button
+                onClick={onClose}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer sm:hidden"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center flex-wrap gap-1.5 sm:space-x-2">
               <button
                 onClick={handleDownloadHtml}
                 className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 rounded-lg text-xs font-semibold cursor-pointer border border-slate-700 transition-all"
@@ -96,7 +104,7 @@ export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({ order, onC
               </button>
               <button
                 onClick={onClose}
-                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer"
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer hidden sm:inline-flex"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -164,8 +172,8 @@ export const InvoicePrintModal: React.FC<InvoicePrintModalProps> = ({ order, onC
             </div>
 
             {/* Items Table */}
-            <div className="border border-slate-200 rounded-xl overflow-hidden mb-6">
-              <table className="w-full text-xs">
+            <div className="border border-slate-200 rounded-xl overflow-x-auto mb-6">
+              <table className="w-full min-w-[500px] text-xs">
                 <thead className="bg-slate-800 text-white">
                   <tr>
                     <th className="py-2.5 px-3 text-left w-8">No</th>

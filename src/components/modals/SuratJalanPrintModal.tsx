@@ -52,12 +52,20 @@ export const SuratJalanPrintModal: React.FC<SuratJalanPrintModalProps> = ({ noIn
           onClick={e => e.stopPropagation()}
         >
           {/* Controls */}
-          <div className="flex items-center justify-between px-6 py-3.5 bg-slate-900 text-white print:hidden">
-            <div className="flex items-center space-x-2">
-              <Printer className="w-4 h-4 text-emerald-400" />
-              <span className="font-semibold text-sm">Surat Jalan Pengiriman #{noInvoice}</span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-3 sm:py-3.5 bg-slate-900 text-white print:hidden gap-2">
+            <div className="flex items-center justify-between sm:justify-start space-x-2">
+              <div className="flex items-center space-x-2">
+                <Printer className="w-4 h-4 text-emerald-400" />
+                <span className="font-semibold text-xs sm:text-sm">Surat Jalan #{noInvoice}</span>
+              </div>
+              <button
+                onClick={onClose}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer sm:hidden"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center flex-wrap gap-1.5 sm:space-x-2">
               <button
                 onClick={handleDownloadHtml}
                 className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 rounded-lg text-xs font-semibold cursor-pointer border border-slate-700 transition-all"
@@ -103,7 +111,7 @@ export const SuratJalanPrintModal: React.FC<SuratJalanPrintModalProps> = ({ noIn
               </button>
               <button
                 onClick={onClose}
-                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer"
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer hidden sm:inline-flex"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -149,7 +157,8 @@ export const SuratJalanPrintModal: React.FC<SuratJalanPrintModalProps> = ({ noIn
               <p className="text-slate-600 mt-1">Ref Invoice: <span className="font-semibold">{noInvoice}</span></p>
             </div>
 
-            <table className="w-full text-xs border border-slate-200 rounded-xl overflow-hidden mb-6">
+            <div className="border border-slate-200 rounded-xl overflow-x-auto mb-6">
+              <table className="w-full min-w-[500px] text-xs">
               <thead className="bg-slate-800 text-white">
                 <tr>
                   <th className="py-2.5 px-3 text-left w-8">No</th>
@@ -169,6 +178,7 @@ export const SuratJalanPrintModal: React.FC<SuratJalanPrintModalProps> = ({ noIn
                 ))}
               </tbody>
             </table>
+            </div>
 
             <div className="grid grid-cols-3 gap-6 mt-12 pt-6 border-t border-slate-200 text-center text-xs text-slate-600">
               <div>

@@ -532,8 +532,38 @@ body.dark #night-shift-shield-overlay {
   mix-blend-mode: soft-light;
 }
 
-/* EXEMPTIONS: Printing, PDF exports, and modals should never be tinted with amber */
+/* ==========================================================================
+   PRINT STYLESHEET OPTIMIZATION (HIGH-DENSITY, CRISP & CLEAN A4 PRINT)
+   Hides non-essential decorative elements, unconstrains paper width,
+   formats tables with page-break protection and crisp contrasting borders.
+   ========================================================================== */
+
+@page {
+  size: A4 portrait;
+  margin: 10mm 12mm 12mm 12mm;
+}
+
 @media print {
+  /* 1. Global Reset & High-Contrast Print Canvas */
+  html,
+  body {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 10.5pt !important;
+    line-height: 1.4 !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    filter: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Reset Night Shift & Ambient Shields */
   html[data-night-shift="active"] body {
     filter: none !important;
   }
@@ -541,15 +571,380 @@ body.dark #night-shift-shield-overlay {
   .night-shift-ui-exclude {
     display: none !important;
   }
+
+  /* 2. Unconstrain Content Width to Fill the Entire Printed Paper */
+  #root,
+  .relative.min-h-screen,
+  .flex-1.flex.min-w-0,
+  main,
+  .printable-dashboard,
+  #printable-area,
+  #printable-monthly-performance-area,
+  .max-w-7xl,
+  .max-w-6xl,
+  .max-w-5xl,
+  .max-w-4xl,
+  .max-w-3xl,
+  .max-w-2xl,
+  .max-w-xl,
+  .max-w-lg {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  /* 3. Hide Decorative Elements, Shell Navigation, and Interactive Widgets */
+  header,
+  aside,
+  nav,
+  footer,
+  #breadcrumb-navigation-bar,
+  #btn-floating-ai-mascot,
+  #btn-toggle-sound-environment,
+  #btn-floating-quick-actions,
+  [data-rgl-widget-workspace="true"],
+  .toast-container,
+  [class*="blur-"],
+  .animate-pulse,
+  .animate-ping,
+  .animate-bounce,
+  .animate-spin,
+  .pointer-events-none {
+    display: none !important;
+  }
+
+  /* Hide interactive form inputs, filters, action bars and search fields */
+  input[type="text"],
+  input[type="search"],
+  input[type="number"],
+  input[type="date"],
+  select,
+  textarea,
+  button:not(.print-include),
+  .no-print,
+  .no-export,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Hide table selection checkboxes and selection action columns */
+  th.w-10,
+  td.w-10,
+  th input[type="checkbox"],
+  td input[type="checkbox"],
+  th:has(input[type="checkbox"]),
+  td:has(input[type="checkbox"]) {
+    display: none !important;
+  }
+
+  /* 4. Neutralize Shadows & Rounded Shapes for Flat Ink Precision */
+  *,
+  *::before,
+  *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .rounded-3xl,
+  .rounded-2xl,
+  .rounded-xl,
+  .rounded-lg {
+    border-radius: 4px !important;
+  }
+
+  /* 5. Clean, Professional Table Printing */
+  .overflow-x-auto,
+  .overflow-hidden,
+  .overflow-y-auto {
+    overflow: visible !important;
+    max-height: none !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    border: none !important;
+  }
+
+  table {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    border-collapse: collapse !important;
+    margin-top: 6px !important;
+    margin-bottom: 14px !important;
+    page-break-inside: auto !important;
+    font-size: 8.5pt !important;
+    line-height: 1.35 !important;
+    table-layout: auto !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  th {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    font-size: 8pt !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    padding: 6px 8px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-bottom: 2px solid #64748b !important;
+    text-align: left;
+  }
+
+  td {
+    padding: 5px 8px !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #1e293b !important;
+    vertical-align: middle;
+  }
+
+  tbody tr:nth-child(even) {
+    background-color: #f8fafc !important;
+  }
+
+  tbody tr:nth-child(odd) {
+    background-color: #ffffff !important;
+  }
+
+  /* Numerical columns align right in print */
+  td.text-right,
+  th.text-right {
+    text-align: right !important;
+    font-variant-numeric: tabular-nums !important;
+  }
+
+  td.text-center,
+  th.text-center {
+    text-align: center !important;
+  }
+
+  /* 6. Clean Card & Stat Summary Grids */
+  .grid {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .grid > * {
+    flex: 1 1 28% !important;
+    min-width: 140px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .border {
+    border-color: #cbd5e1 !important;
+  }
+
+  .bg-white,
+  .dark\:bg-slate-900,
+  .bg-slate-50,
+  .dark\:bg-slate-800 {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  /* Badges */
+  .rounded-full {
+    border: 1px solid #cbd5e1 !important;
+    padding: 1px 6px !important;
+    font-size: 7.5pt !important;
+    font-weight: 700 !important;
+  }
+
+  /* 7. Official Report Header Banner */
+  .print-report-header,
+  .hidden.print\:block {
+    display: block !important;
+    width: 100% !important;
+    border-bottom: 2px solid #0f172a !important;
+    padding-bottom: 8px !important;
+    margin-bottom: 12px !important;
+  }
+
+  /* 8. Modal Print Isolations (e.g. Invoices, Surat Jalan, Monthly Performance) */
+  .fixed.inset-0.z-50 {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
 }
 
-.pdf-export-mode body,
-.pdf-export-mode {
+/* ==========================================================================
+   PDF EXPORT MODE STYLING (.pdf-export-mode)
+   Applied to cloned #printable-area content for clean, high-density PDF printing
+   ========================================================================== */
+.pdf-export-mode,
+.pdf-export-mode body {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  font-size: 10pt !important;
+  line-height: 1.4 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
   filter: none !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+  color-adjust: exact !important;
 }
 
-.pdf-export-mode #night-shift-shield-overlay {
+.pdf-export-mode #night-shift-shield-overlay,
+.pdf-export-mode .night-shift-ui-exclude,
+.pdf-export-mode header,
+.pdf-export-mode aside,
+.pdf-export-mode nav,
+.pdf-export-mode footer,
+.pdf-export-mode #breadcrumb-navigation-bar,
+.pdf-export-mode #btn-floating-ai-mascot,
+.pdf-export-mode #btn-toggle-sound-environment,
+.pdf-export-mode #btn-floating-quick-actions,
+.pdf-export-mode [data-rgl-widget-workspace="true"],
+.pdf-export-mode .toast-container,
+.pdf-export-mode [class*="blur-"],
+.pdf-export-mode .no-print,
+.pdf-export-mode .no-export,
+.pdf-export-mode .print\:hidden,
+.pdf-export-mode button:not(.print-include),
+.pdf-export-mode input,
+.pdf-export-mode select,
+.pdf-export-mode textarea,
+.pdf-export-mode th.w-10,
+.pdf-export-mode td.w-10 {
   display: none !important;
+}
+
+.pdf-export-mode .hidden.print\:block,
+.pdf-export-mode .print-report-header {
+  display: block !important;
+  width: 100% !important;
+  border-bottom: 2px solid #0f172a !important;
+  padding-bottom: 8px !important;
+  margin-bottom: 14px !important;
+}
+
+.pdf-export-mode .overflow-x-auto,
+.pdf-export-mode .overflow-hidden,
+.pdf-export-mode .overflow-y-auto {
+  overflow: visible !important;
+  max-height: none !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  border: none !important;
+}
+
+.pdf-export-mode table {
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  border-collapse: collapse !important;
+  margin-top: 6px !important;
+  margin-bottom: 14px !important;
+  page-break-inside: auto !important;
+  font-size: 8.5pt !important;
+  line-height: 1.35 !important;
+  table-layout: auto !important;
+}
+
+.pdf-export-mode thead {
+  display: table-header-group !important;
+}
+
+.pdf-export-mode tfoot {
+  display: table-footer-group !important;
+}
+
+.pdf-export-mode tr {
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
+}
+
+.pdf-export-mode th {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  font-size: 8pt !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  padding: 6px 8px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-bottom: 2px solid #64748b !important;
+  text-align: left;
+}
+
+.pdf-export-mode td {
+  padding: 5px 8px !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #1e293b !important;
+  vertical-align: middle;
+}
+
+.pdf-export-mode tbody tr:nth-child(even) {
+  background-color: #f8fafc !important;
+}
+
+.pdf-export-mode tbody tr:nth-child(odd) {
+  background-color: #ffffff !important;
+}
+
+.pdf-export-mode td.text-right,
+.pdf-export-mode th.text-right {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+.pdf-export-mode td.text-center,
+.pdf-export-mode th.text-center {
+  text-align: center !important;
+}
+
+.pdf-export-mode *,
+.pdf-export-mode *::before,
+.pdf-export-mode *::after {
+  box-shadow: none !important;
+  text-shadow: none !important;
+  animation: none !important;
+  transition: none !important;
+}
+
+.pdf-export-mode .rounded-3xl,
+.pdf-export-mode .rounded-2xl,
+.pdf-export-mode .rounded-xl,
+.pdf-export-mode .rounded-lg {
+  border-radius: 4px !important;
+}
+
+.pdf-export-mode .grid {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+}
+
+.pdf-export-mode .grid > * {
+  flex: 1 1 28% !important;
+  min-width: 140px !important;
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
 }
 
 /* ==========================================================================

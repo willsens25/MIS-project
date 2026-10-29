@@ -33,8 +33,11 @@ import {
   Crown,
   Heart,
   Sparkles,
-  Award
+  Award,
+  FileDown,
+  Loader2
 } from 'lucide-react';
+import { exportClonedContentToPdf } from '../../utils/exportClonedPdf';
 
 export interface BreadcrumbTabConfig {
   id: string;
@@ -454,6 +457,24 @@ export const BreadcrumbNav: React.FC = () => {
     setIsTabDropdownOpen(false);
   };
 
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+
+  const handleExportToPdf = () => {
+    if (isExportingPdf) return;
+    setIsExportingPdf(true);
+    try {
+      exportClonedContentToPdf({
+        targetElementId: 'printable-area',
+        documentTitle: `Laporan Eksekutif SAPA MIS - ${currentDivisionConfig.name}`,
+        filename: `Laporan_${currentDivisionConfig.code}_${new Date().toISOString().substring(0, 10)}`
+      });
+    } finally {
+      setTimeout(() => {
+        setIsExportingPdf(false);
+      }, 1500);
+    }
+  };
+
   return (
     <nav
       aria-label="Breadcrumb Navigation"
@@ -679,9 +700,26 @@ export const BreadcrumbNav: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Side: Quick System State & Date (Clean & Non-redundant) */}
-        <div className="hidden md:flex items-center space-x-2.5 text-slate-500 dark:text-slate-400 shrink-0 text-xs ml-auto">
-          <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-slate-100/90 dark:bg-white/[0.05] border border-slate-200/80 dark:border-white/[0.06] text-[11px] font-medium text-slate-600 dark:text-slate-300">
+        {/* Right Side: Global 'Export to PDF' Button & System Status */}
+        <div className="flex items-center space-x-2 text-slate-500 dark:text-slate-400 shrink-0 text-xs ml-auto">
+          {/* Global 'Export to PDF' Button */}
+          <button
+            id="btn-global-export-pdf-nav"
+            type="button"
+            onClick={handleExportToPdf}
+            disabled={isExportingPdf}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold shadow-xs hover:shadow-indigo-500/20 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-wait active:scale-95"
+            title="Kloning tampilan dashboard aktif (#printable-area), terapkan styling pdf-export-mode, dan buka dialog cetak PDF"
+          >
+            {isExportingPdf ? (
+              <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
+            ) : (
+              <FileDown className="w-3.5 h-3.5 text-white" />
+            )}
+            <span className="text-[11px] font-bold">Export to PDF</span>
+          </button>
+
+          <div className="hidden md:flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-slate-100/90 dark:bg-white/[0.05] border border-slate-200/80 dark:border-white/[0.06] text-[11px] font-medium text-slate-600 dark:text-slate-300">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             <span className="font-semibold">Sistem Terhubung</span>
             <span className="text-slate-300 dark:text-slate-700">·</span>
