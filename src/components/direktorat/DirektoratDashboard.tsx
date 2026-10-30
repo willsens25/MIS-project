@@ -34,6 +34,7 @@ import { DirektoratCharts } from '../charts/DirektoratCharts';
 import { ProductivityStatsView } from '../charts/ProductivityStatsView';
 import { DivisionKpiSummaryBanner } from '../charts/DivisionKpiSummaryBanner';
 import { TaskCompletionTrendsSummaryCard } from '../charts/TaskCompletionTrendsSummaryCard';
+import { WeeklyTaskCompletionTrendCard } from '../charts/WeeklyTaskCompletionTrendCard';
 import { AnnualReportModal } from '../modals/AnnualReportModal';
 import { DataImportExportModal } from '../modals/DataImportExportModal';
 import { PrintCurrentViewButton } from '../common/PrintCurrentViewButton';
@@ -555,6 +556,11 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
             </button>
           </motion.div>
 
+          {/* Weekly Team Task Completion Trends Visual Card (Recharts) */}
+          <WeeklyTaskCompletionTrendCard
+            onNavigateSubTab={tab => setActiveSubTab(tab as any)}
+          />
+
           {/* Consolidated Task Completion Trends Across All 6 Divisions (Recharts Line Chart Summary Card) */}
           <TaskCompletionTrendsSummaryCard
             onNavigateSubTab={tab => setActiveSubTab(tab as any)}
@@ -973,7 +979,12 @@ export const DirektoratDashboard: React.FC<DirektoratDashboardProps> = ({ initia
 
       {/* PRODUCTIVITY STATS SUB TAB */}
       {activeSubTab === 'productivity-stats' && (
-        <ProductivityStatsView divisionId={1} defaultScope="all" />
+        <div className="space-y-6">
+          <WeeklyTaskCompletionTrendCard
+            onNavigateSubTab={tab => setActiveSubTab(tab as any)}
+          />
+          <ProductivityStatsView divisionId={1} defaultScope="all" />
+        </div>
       )}
 
       {/* MANAJEMEN USER SUB TAB */}
