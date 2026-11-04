@@ -12,10 +12,16 @@ class GeminiController extends Controller
 
     private const SYSTEM_INSTRUCTION = 'Kamu adalah asisten AI profesional untuk sistem MIS. Analisis input user dan berikan respons yang rapi, ringkas, dan jelas.';
 
+    private const MAX_HISTORY_TURNS = 6;
+
     public function generate(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'prompt' => 'required|string|max:4000',
+            'systemContext' => 'nullable|string|max:20000',
+            'history' => 'nullable|array|max:20',
+            'history.*.role' => 'required|in:user,assistant',
+            'history.*.content' => 'required|string|max:4000',
         ]);
 
         $apiKey = config('services.gemini.key');
@@ -36,12 +42,11 @@ class GeminiController extends Controller
                 'systemInstruction' => [
                     'parts' => [['text' => self::SYSTEM_INSTRUCTION]],
                 ],
-                'contents' => [
-                    [
-                        'role' => 'user',
-                        'parts' => [['text' => $validated['prompt']]],
-                    ],
-                ],
+                'contents' => $this->buildContents(
+                    $validated['prompt'],
+                    $validated['systemContext'] ?? null,
+                    $validated['history'] ?? [],
+                ),
             ]);
 
         if (!$response->successful()) {
@@ -66,5 +71,28 @@ class GeminiController extends Controller
             'success' => true,
             'output' => $text,
         ]);
+    }
+
+    private function buildContents(string $prompt, ?string $systemContext, array $history): array
+    {
+        $contents = [];
+
+        foreach (array_slice($history, -self::MAX_HISTORY_TURNS) as $turn) {
+            $contents[] = [
+                'role' => $turn['role'] === 'assistant' ? 'model' : 'user',
+                'parts' => [['text' => $turn['content']]],
+            ];
+        }
+
+        $contextBlock = $systemContext
+            ? "[Konteks & Database Terkini MIS Lamrimnesia]:\n{$systemContext}\n\n"
+            : '';
+
+        $contents[] = [
+            'role' => 'user',
+            'parts' => [['text' => $contextBlock . "Permintaan/Instruksi Pengguna:\n" . $prompt]],
+        ];
+
+        return $contents;
     }
 }
