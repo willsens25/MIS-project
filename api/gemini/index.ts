@@ -17,6 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Prompt required' });
     }
 
+    // Gabungkan data konteks sistem dengan pertanyaan pengguna
     const fullPrompt = `${systemContext || ''}\n\nPertanyaan: ${prompt}`;
 
     const response = await ai.models.generateContent({
@@ -24,14 +25,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       contents: fullPrompt,
     });
 
+    // Ambil isi teks teks balasan dari Gemini AI
+    const aiText = response.text || 'Tidak ada respons dari AI.';
+
+    // Kirimkan key output & message agar terbaca oleh AIAssistant.tsx
     return res.status(200).json({ 
-      output: response.text,
-      message: response.text 
+      output: aiText,
+      message: aiText 
     });
+
   } catch (error: any) {
     console.error('Gemini API Error:', error);
     return res.status(500).json({ 
-      error: error.message || 'Terjadi kesalahan server AI.' 
+      error: error.message || 'Terjadi kesalahan pada server AI.' 
     });
   }
 }
