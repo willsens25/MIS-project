@@ -1,8 +1,11 @@
 import express, { Request, Response } from "express";
 import path from "path";
+import { existsSync } from "fs";
 import cors from "cors";
 import bcrypt from "bcryptjs";
 import { GoogleGenAI } from "@google/genai";
+
+if (existsSync(".env")) process.loadEnvFile(".env");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -157,7 +160,9 @@ const FAST_GEMINI_MODELS = [
 ];
 
 // System instruction for genuinely helpful, flexible, and context-aware responses
-const GEMINI_SYSTEM_INSTRUCTION = `Anda adalah Asisten AI Cerdas MIS SAPA-ALL Lamrimnesia (Sistem Administrasi & Pengelolaan Terpadu).
+const GEMINI_SYSTEM_INSTRUCTION = `Kamu adalah asisten AI profesional untuk sistem MIS. Analisis input user dan berikan respons yang rapi, ringkas, dan jelas.
+
+Anda adalah Asisten AI Cerdas MIS SAPA-ALL Lamrimnesia (Sistem Administrasi & Pengelolaan Terpadu).
 Karakter Anda adalah asisten yang cerdas, luwes, komunikatif, solutif, dan profesional.
 
 PANDUAN SAPAAN & PENYESUAIAN DIVISI (SANGAT PENTING):

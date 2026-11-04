@@ -20,8 +20,7 @@ use App\Http\Controllers\{
     KegiatanController,
     DivisiController,
     MarketingOrderController,
-    PenjualanController,
-    GeminiController
+    PenjualanController
 };
 
 /*
@@ -59,9 +58,6 @@ Route::middleware('auth')->group(function () {
 
     // Integrasi Global Keuangan
     Route::get('/finance/bayar/{id}', [FinanceController::class, 'konfirmasiBayarInvoice'])->name('finance.bayar_global');
-
-    // Asisten AI (Gemini)
-    Route::post('/api/asisten-ai', [GeminiController::class, 'generate'])->name('asisten-ai.generate');
 
     /*
     |--------------------------------------------------------------------------
