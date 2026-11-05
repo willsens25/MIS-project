@@ -5,7 +5,13 @@ import cors from "cors";
 import bcrypt from "bcryptjs";
 import { GoogleGenAI } from "@google/genai";
 
-if (existsSync(".env")) process.loadEnvFile(".env");
+try {
+  if (existsSync(".env") && typeof (process as any).loadEnvFile === "function") {
+    (process as any).loadEnvFile(".env");
+  }
+} catch (e) {
+  console.warn("Could not load .env file:", e);
+}
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
