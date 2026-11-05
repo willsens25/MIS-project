@@ -489,12 +489,32 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
             customPrefix: activeCustomPrefix
           })
         });
-        const data = await fallbackRes.json();
+        let contentText = 'Respon selesai.';
+
+        if (fallbackRes.ok) {
+          try {
+            const data = await fallbackRes.json();
+            contentText = data.output || data.message || contentText;
+          } catch {
+            const rawText = await fallbackRes.text().catch(() => '');
+            if (rawText && !rawText.trim().startsWith('<')) {
+              contentText = rawText;
+            }
+          }
+        } else {
+          try {
+            const errData = await fallbackRes.json();
+            contentText = errData.error || errData.message || `Kendala server AI (Status ${fallbackRes.status})`;
+          } catch {
+            contentText = `Server AI sedang memproses pembaruan atau mengalami kendala (Status ${fallbackRes.status}). Silakan coba sesaat lagi.`;
+          }
+        }
+
         setMessages(prev => {
           const updated = [...prev];
           const lastIdx = updated.length - 1;
           if (lastIdx >= 0 && updated[lastIdx].role === 'assistant') {
-            updated[lastIdx] = { ...updated[lastIdx], content: data.output || data.message || 'Respon selesai.' };
+            updated[lastIdx] = { ...updated[lastIdx], content: contentText };
           }
           return updated;
         });
