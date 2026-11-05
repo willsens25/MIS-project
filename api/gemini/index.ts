@@ -11,27 +11,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { prompt, systemContext } = req.body;
+    const { prompt, systemContext } = req.body || {};
 
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt required' });
     }
 
-    // Gabungkan data konteks sistem dengan pertanyaan pengguna
     const fullPrompt = `${systemContext || ''}\n\nPertanyaan: ${prompt}`;
 
+    // UBAH NAMA MODEL DI SINI: gunakan 'gemini-3.6-flash'
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.6-flash',
       contents: fullPrompt,
     });
 
-    // Ambil isi teks teks balasan dari Gemini AI
-    const aiText = response.text || 'Tidak ada respons dari AI.';
+    const replyText = response.text || 'Tidak ada tanggapan dari Gemini.';
 
-    // Kirimkan key output & message agar terbaca oleh AIAssistant.tsx
     return res.status(200).json({ 
-      output: aiText,
-      message: aiText 
+      output: replyText,
+      message: replyText 
     });
 
   } catch (error: any) {
