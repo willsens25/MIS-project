@@ -3,9 +3,27 @@ import { GoogleGenAI } from '@google/genai';
 
 const CANDIDATE_MODELS = [
   'gemini-3.8-flash',
+  'gemini-3.1-flash-lite',
   'gemini-flash-latest',
-  'gemini-3.1-flash-lite'
+  'gemini-4-argon'
 ];
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+function formatErrorMessage(err: any): string {
+  if (!err) return 'Terjadi kendala pada koneksi server AI.';
+  const msg = typeof err === 'string' ? err : err.message || JSON.stringify(err);
+  if (msg.includes('503') || msg.includes('high demand') || msg.includes('UNAVAILABLE')) {
+    return 'Pusat data Google Gemini sedang mengalami lonjakan antrean trafik tinggi sesaat (HTTP 503 High Demand). Silakan coba kirim ulang dalam beberapa detik.';
+  }
+  if (msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED')) {
+    return 'Batas kuota permintaan harian/per menit Gemini API Anda sedang tercapai. Mohon tunggu sesaat sebelum mencoba kembali.';
+  }
+  if (msg.includes('API_KEY_INVALID') || msg.includes('API key not valid')) {
+    return 'Kunci GEMINI_API_KEY tidak valid. Silakan periksa kembali API Key Anda di Google AI Studio dan perbarui di Settings Vercel.';
+  }
+  return msg.replace(/\{"error":\{.*?"message":"(.*?)"\}.*?\}/gs, '$1');
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS support
@@ -68,15 +86,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         break;
       } catch (err: any) {
         lastError = err;
-        console.warn(`Model ${model} failed in Vercel stream, trying next:`, err?.message);
+        const errMsg = String(err?.message || err);
+        const is503 = errMsg.includes('503') || errMsg.includes('high demand') || errMsg.includes('UNAVAILABLE');
+        console.warn(`Model ${model} ${is503 ? 'kapasitas padat (503)' : 'error'}, lanjut ke model alternatif...`);
+        if (is503) {
+          await sleep(350);
+        }
       }
     }
 
     if (!streamSuccess) {
-      // Fallback single generation if stream had issues
+      // Fallback single generation with stable flash-lite model if streaming had issues
       try {
         const fallbackRes = await ai.models.generateContent({
-          model: 'gemini-3.8-flash',
+          model: 'gemini-3.1-flash-lite',
           contents: fullPrompt,
         });
         if (fallbackRes.text) {
@@ -89,7 +112,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (!streamSuccess) {
-      const friendlyErr = `Maaf, server AI sedang mengalami kendala trafik: ${lastError?.message || 'Gagal memproses permintaan'}. Silakan coba kembali sesaat lagi.`;
+      const friendlyErr = formatErrorMessage(lastError);
       res.write(`data: ${JSON.stringify({ chunk: friendlyErr })}\n\n`);
     }
 

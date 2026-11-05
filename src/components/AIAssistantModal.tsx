@@ -499,6 +499,8 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
             const rawText = await fallbackRes.text().catch(() => '');
             if (rawText && !rawText.trim().startsWith('<')) {
               contentText = rawText;
+            } else {
+              contentText = 'Server AI memberikan respon yang tidak dapat diproses. Silakan coba beberapa saat lagi.';
             }
           }
         } else {
@@ -506,7 +508,7 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
             const errData = await fallbackRes.json();
             contentText = errData.error || errData.message || `Kendala server AI (Status ${fallbackRes.status})`;
           } catch {
-            contentText = `Server AI sedang memproses pembaruan atau mengalami kendala (Status ${fallbackRes.status}). Silakan coba sesaat lagi.`;
+            contentText = `Server AI sedang memproses pembaruan atau mengalami kendala kapasitas (Status ${fallbackRes.status}). Silakan coba sesaat lagi.`;
           }
         }
 
@@ -521,11 +523,16 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
         triggerTaskSuccess('Respon AI siap!');
       } catch (err: any) {
         setAiAppState('idle');
+        const rawMsg = err?.message || 'Koneksi terputus.';
+        let userFriendlyMsg = rawMsg;
+        if (rawMsg.includes('Unexpected token') || rawMsg.includes('is not valid JSON')) {
+          userFriendlyMsg = 'Layanan API Vercel mengembalikan halaman error (kemungkinan GEMINI_API_KEY belum dikonfigurasi di Vercel Dashboard > Settings > Environment Variables). Mohon periksa API Key Anda.';
+        }
         setMessages(prev => {
           const updated = [...prev];
           const lastIdx = updated.length - 1;
           if (lastIdx >= 0 && updated[lastIdx].role === 'assistant') {
-            updated[lastIdx] = { ...updated[lastIdx], content: `Gagal menghubungi server AI: ${err.message || 'Koneksi terputus.'}` };
+            updated[lastIdx] = { ...updated[lastIdx], content: `Gagal menghubungi server AI: ${userFriendlyMsg}` };
           }
           return updated;
         });
