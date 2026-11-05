@@ -1,16 +1,18 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI } from '@google/genai';
 
-const ai = new GoogleGenAI({ 
-  apiKey: process.env.GEMINI_API_KEY 
-});
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'GEMINI_API_KEY belum terpasang di Vercel.' });
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
     const { prompt, systemContext } = req.body || {};
 
     if (!prompt) {
@@ -19,7 +21,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const fullPrompt = `${systemContext || ''}\n\nPertanyaan: ${prompt}`;
 
-    // UBAH NAMA MODEL DI SINI: gunakan 'gemini-3.6-flash'
     const response = await ai.models.generateContent({
       model: 'gemini-3.6-flash',
       contents: fullPrompt,
