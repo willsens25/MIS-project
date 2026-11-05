@@ -2,9 +2,9 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI } from '@google/genai';
 
 const CANDIDATE_MODELS = [
-  'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-1.5-flash'
+  'gemini-3.8-flash',
+  'gemini-flash-latest',
+  'gemini-3.1-flash-lite'
 ];
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -76,7 +76,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Fallback single generation if stream had issues
       try {
         const fallbackRes = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
+          model: 'gemini-3.8-flash',
           contents: fullPrompt,
         });
         if (fallbackRes.text) {

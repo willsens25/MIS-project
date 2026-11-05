@@ -160,12 +160,9 @@ function getAIClient() {
 
 // Priority list of fast, modern Gemini models (stable lite model first to prevent 503 capacity spikes)
 const FAST_GEMINI_MODELS = [
-  "gemini-2.5-flash",
-  "gemini-2.0-flash",
-  "gemini-1.5-flash",
-  "gemini-3.1-flash-lite",
+  "gemini-3.8-flash",
   "gemini-flash-latest",
-  "gemini-3.8-flash"
+  "gemini-3.1-flash-lite"
 ];
 
 // System instruction for genuinely helpful, flexible, and context-aware responses
