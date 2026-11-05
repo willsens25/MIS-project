@@ -1,14 +1,4 @@
 {
-  "functions": {
-    "api/**/*.ts": {
-      "memory": 1024,
-      "maxDuration": 15
-    },
-    "api/*.ts": {
-      "memory": 1024,
-      "maxDuration": 15
-    }
-  },
   "rewrites": [
     {
       "source": "/api/gemini/stream",
