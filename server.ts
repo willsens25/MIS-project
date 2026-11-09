@@ -159,11 +159,20 @@ function getAIClient() {
 }
 
 // Priority list of fast, modern Gemini models (stable lite model first to prevent 503 capacity spikes)
+// Priority list of fast, modern Gemini models (stable lite model first to prevent 503 capacity spikes)
 const FAST_GEMINI_MODELS = [
-  "gemini-3.8-flash",
+  "gemini-3.1-flash-lite",
   "gemini-flash-latest",
-  "gemini-3.1-flash-lite"
+  "gemini-3.8-flash"
 ];
+
+// Helper to prevent any single model call from hanging indefinitely
+function callWithTimeout<T>(promise: Promise<T>, ms = 6000): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Timeout exceeding ${ms}ms`)), ms))
+  ]);
+}
 
 // System instruction for genuinely helpful, flexible, and context-aware responses
 const GEMINI_SYSTEM_INSTRUCTION = `Kamu adalah asisten AI profesional untuk sistem MIS. Analisis input user dan berikan respons yang rapi, ringkas, dan jelas.
@@ -212,20 +221,23 @@ async function generateWithFallback(ai: GoogleGenAI, contents: any, customPrefix
 
   for (const model of FAST_GEMINI_MODELS) {
     try {
-      const response = await ai.models.generateContent({
-        model,
-        contents,
-        config: {
-          systemInstruction: effectiveSystemInstruction,
-          temperature: 0.75,
-        }
-      });
+      const response = await callWithTimeout(
+        ai.models.generateContent({
+          model,
+          contents,
+          config: {
+            systemInstruction: effectiveSystemInstruction,
+            temperature: 0.75,
+          }
+        }),
+        6000
+      );
       if (response.text) {
         return { text: response.text, modelUsed: model };
       }
     } catch (err: any) {
       lastError = err;
-      // Immediately try next model on error without delay
+      console.warn(`[Fast Fallback] Model ${model} failed, switching to next model:`, err?.message || err);
     }
   }
 
@@ -405,6 +417,126 @@ Wajib balas HANYA dalam format JSON valid tanpa markdown, tanpa penjelasan:
       success: false,
       message: "Gagal memproses pencarian ISBN: " + (error?.message || String(error))
     });
+  }
+});
+
+// AI API Connection Status & Health Diagnostics Endpoint
+let localStatusCache: any = null;
+let localStatusCacheTime = 0;
+
+app.all("/api/gemini/status", async (req: Request, res: Response) => {
+  const force = req.query.force === "true" || req.body?.force === true;
+  const now = Date.now();
+
+  if (!force && localStatusCache && (now - localStatusCacheTime < 45000)) {
+    return res.json({
+      ...localStatusCache,
+      cached: true,
+      ageSeconds: Math.round((now - localStatusCacheTime) / 1000)
+    });
+  }
+
+  const ai = getAIClient();
+  if (!ai) {
+    const unconfigured = {
+      status: "unconfigured",
+      online: false,
+      hasDisruption: true,
+      severity: "critical",
+      title: "API Key Belum Terpasang",
+      message: "GEMINI_API_KEY belum terpasang di sistem server.",
+      troubleshooting: "Tambahkan GEMINI_API_KEY pada file .env atau konfigurasi hosting.",
+      activeModel: "Belum terhubung",
+      latencyMs: 0,
+      timestamp: new Date().toISOString()
+    };
+    localStatusCache = unconfigured;
+    localStatusCacheTime = now;
+    return res.json(unconfigured);
+  }
+
+  const startTime = Date.now();
+  try {
+    await ai.models.generateContent({
+      model: "gemini-3.1-flash-lite",
+      contents: "ping",
+      config: { maxOutputTokens: 5, temperature: 0.1 }
+    });
+
+    const latencyMs = Date.now() - startTime;
+    const healthy = {
+      status: "healthy",
+      online: true,
+      hasDisruption: false,
+      severity: "none",
+      title: "Koneksi AI Optimal",
+      message: "Layanan Google Gemini AI terhubung dengan baik dan siap memproses perintah.",
+      activeModel: "gemini-3.8-flash (utama) & gemini-3.1-flash-lite (cadangan)",
+      latencyMs,
+      timestamp: new Date().toISOString()
+    };
+    localStatusCache = healthy;
+    localStatusCacheTime = now;
+    return res.json(healthy);
+  } catch (error: any) {
+    const latencyMs = Date.now() - startTime;
+    const errStr = String(error?.message || error);
+    let result: any;
+
+    if (errStr.includes("503") || errStr.includes("high demand") || errStr.includes("UNAVAILABLE")) {
+      result = {
+        status: "degraded",
+        online: true,
+        hasDisruption: true,
+        severity: "warning",
+        title: "Lonjakan Antrean Trafik (HTTP 503)",
+        message: "Pusat data Google AI saat ini sedang mengalami lonjakan antrean trafik sesaat.",
+        troubleshooting: "Sistem otomatis menerapkan failover ke model cadangan. Pertanyaan Anda tetap dapat dikirim.",
+        activeModel: "gemini-3.1-flash-lite (failover)",
+        latencyMs,
+        timestamp: new Date().toISOString()
+      };
+    } else if (errStr.includes("429") || errStr.includes("quota") || errStr.includes("RESOURCE_EXHAUSTED")) {
+      result = {
+        status: "quota_exceeded",
+        online: false,
+        hasDisruption: true,
+        severity: "warning",
+        title: "Batas Kuota Tercapai (HTTP 429)",
+        message: "Batas kuota harian atau permintaan per menit API Gemini telah tercapai.",
+        troubleshooting: "Silakan tunggu sekitar 1-2 menit atau periksa kuota akun di Google AI Studio.",
+        latencyMs,
+        timestamp: new Date().toISOString()
+      };
+    } else if (errStr.includes("API_KEY_INVALID") || errStr.includes("API key not valid")) {
+      result = {
+        status: "invalid_key",
+        online: false,
+        hasDisruption: true,
+        severity: "critical",
+        title: "Kunci API Tidak Valid",
+        message: "Kunci GEMINI_API_KEY ditolak oleh server Google AI.",
+        troubleshooting: "Periksa kembali API Key Anda di Google AI Studio dan pastikan belum dicabut.",
+        latencyMs,
+        timestamp: new Date().toISOString()
+      };
+    } else {
+      result = {
+        status: "down",
+        online: false,
+        hasDisruption: true,
+        severity: "critical",
+        title: "Gangguan Teknis Server AI",
+        message: "Koneksi ke gateway Google AI sedang mengalami kendala.",
+        troubleshooting: errStr.replace(/\{"error":\{.*?"message":"(.*?)"\}.*?\}/gs, "$1"),
+        latencyMs,
+        timestamp: new Date().toISOString()
+      };
+    }
+
+    localStatusCache = result;
+    localStatusCacheTime = now;
+    return res.json(result);
   }
 });
 

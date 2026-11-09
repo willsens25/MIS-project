@@ -14,6 +14,7 @@ import { ThemePresetModal } from './theme/ThemePresetModal';
 import { NightShiftHeaderButton } from './theme/NightShiftHeaderButton';
 import { BackupRestoreModal } from './common/BackupRestoreModal';
 import { DataImportExportModal } from './modals/DataImportExportModal';
+import { AiHealthNavbarIndicator } from './AiHealthNavbarIndicator';
 import { getColorPreset, COLOR_PRESETS } from '../lib/themePresets';
 import { exportClonedContentToPdf } from '../utils/exportClonedPdf';
 import {
@@ -505,11 +506,10 @@ export const Header: React.FC<HeaderProps> = ({
                   className="w-5 h-5 group-hover:scale-110 transition-transform shadow-xs"
                 />
                 <span className="font-bold">AI MIS</span>
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-teal-500" />
-                </span>
               </motion.button>
+
+              {/* Real-time AI Health Status Indicator (Green: Operational, Amber: High Latency, Red: Outage) */}
+              <AiHealthNavbarIndicator />
 
               {/* Voice Command & Navigation Button (Web Speech API) */}
               <motion.button

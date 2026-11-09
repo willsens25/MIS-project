@@ -15,9 +15,13 @@ import {
   Radio,
   History,
   RotateCcw,
-  Trash2
+  Trash2,
+  AlertTriangle,
+  Activity
 } from 'lucide-react';
 import { useWebSpeech } from '../hooks/useWebSpeech';
+import { useAiHealth } from '../hooks/useAiHealth';
+import { AiDiagnosticsModal } from './AiDiagnosticsModal';
 import { DivisionId } from '../types';
 import {
   getEffectivePromptPrefix,
@@ -209,6 +213,22 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
     userSettings?.aiResponseTone
   );
   const activeToneConfig = AI_RESPONSE_TONE_CONFIGS[userSettings?.aiResponseTone || 'professional'];
+
+  const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
+  const {
+    healthInfo,
+    isChecking: isHealthChecking,
+    checkStatus: checkAiHealth,
+    badgeConfig: healthBadgeConfig,
+    hasDisruption: hasAiDisruption
+  } = useAiHealth({ autoCheck: true, pollIntervalMs: 60000 });
+
+  // Refresh status when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      checkAiHealth(false);
+    }
+  }, [isOpen, checkAiHealth]);
 
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([
     {
@@ -419,8 +439,10 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
         })
       });
 
-      if (!response.ok || !response.body) {
-        throw new Error(`Streaming failed with status: ${response.status}`);
+      const contentType = response.headers.get('content-type') || '';
+      if (!response.ok || !response.body || (!contentType.includes('text/event-stream') && !contentType.includes('application/octet-stream'))) {
+        const streamErrText = await response.text().catch(() => '');
+        throw new Error(`Streaming failed (${response.status}): ${streamErrText.slice(0, 100)}`);
       }
 
       const reader = response.body.getReader();
@@ -491,23 +513,30 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
         });
         let contentText = 'Respon selesai.';
 
-        if (fallbackRes.ok) {
-          try {
-            const data = await fallbackRes.json();
-            contentText = data.output || data.message || contentText;
-          } catch {
-            const rawText = await fallbackRes.text().catch(() => '');
-            if (rawText && !rawText.trim().startsWith('<')) {
-              contentText = rawText;
-            } else {
-              contentText = 'Server AI memberikan respon yang tidak dapat diproses. Silakan coba beberapa saat lagi.';
-            }
+        // Safely extract response text first so body stream is never consumed twice
+        const rawBody = await fallbackRes.text().catch(() => '');
+        let parsedData: any = null;
+        try {
+          if (rawBody && rawBody.trim()) {
+            parsedData = JSON.parse(rawBody);
           }
+        } catch {
+          // Body is not JSON (e.g. plain text or HTML error page)
+        }
+
+        if (fallbackRes.ok && parsedData) {
+          contentText = parsedData.output || parsedData.message || contentText;
+        } else if (parsedData && (parsedData.output || parsedData.error || parsedData.message)) {
+          contentText = parsedData.output || parsedData.error || parsedData.message;
         } else {
-          try {
-            const errData = await fallbackRes.json();
-            contentText = errData.error || errData.message || `Kendala server AI (Status ${fallbackRes.status})`;
-          } catch {
+          const trimmed = (rawBody || '').trim();
+          if (trimmed.includes('An error occurred') || trimmed.includes('FUNCTION_INVOCATION')) {
+            contentText = 'Layanan API Vercel mengalami kendala eksekusi Lambda (kemungkinan batas waktu atau GEMINI_API_KEY belum dikonfigurasi di Vercel Dashboard > Settings > Environment Variables). Mohon periksa API Key Anda.';
+          } else if (trimmed.includes('503') || trimmed.includes('high demand') || trimmed.includes('UNAVAILABLE')) {
+            contentText = 'Pusat data Google Gemini sedang mengalami antrean trafik tinggi sesaat (HTTP 503). Silakan coba kirim ulang dalam beberapa saat.';
+          } else if (trimmed && !trimmed.startsWith('<')) {
+            contentText = trimmed.slice(0, 200);
+          } else {
             contentText = `Server AI sedang memproses pembaruan atau mengalami kendala kapasitas (Status ${fallbackRes.status}). Silakan coba sesaat lagi.`;
           }
         }
@@ -523,10 +552,13 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
         triggerTaskSuccess('Respon AI siap!');
       } catch (err: any) {
         setAiAppState('idle');
-        const rawMsg = err?.message || 'Koneksi terputus.';
+        checkAiHealth(true);
+        const rawMsg = String(err?.message || err || 'Koneksi terputus.');
         let userFriendlyMsg = rawMsg;
-        if (rawMsg.includes('Unexpected token') || rawMsg.includes('is not valid JSON')) {
+        if (rawMsg.includes('Unexpected token') || rawMsg.includes('is not valid JSON') || rawMsg.includes('An error o')) {
           userFriendlyMsg = 'Layanan API Vercel mengembalikan halaman error (kemungkinan GEMINI_API_KEY belum dikonfigurasi di Vercel Dashboard > Settings > Environment Variables). Mohon periksa API Key Anda.';
+        } else if (rawMsg.includes('Failed to fetch') || rawMsg.includes('NetworkError')) {
+          userFriendlyMsg = 'Koneksi ke server terputus. Pastikan perangkat Anda terhubung ke internet.';
         }
         setMessages(prev => {
           const updated = [...prev];
@@ -573,7 +605,7 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
                     enableIdleAnimation={userSettings?.mascotIdleAnimationEnabled !== false}
                     className="ring-2 ring-white/30 shadow-md"
                   />
-                  <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 border-2 border-slate-900 rounded-full" />
+                  <span className={`absolute bottom-0 right-0 w-3 h-3 ${healthBadgeConfig.dotColor} border-2 border-slate-900 rounded-full`} />
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
@@ -584,6 +616,19 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
                       <Sparkles className="w-2.5 h-2.5 text-teal-400" />
                       Gemini Flash
                     </span>
+                    {/* Live AI Health Status & Diagnostics Pill */}
+                    <button
+                      type="button"
+                      onClick={() => setIsDiagnosticsOpen(true)}
+                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-all duration-150 flex items-center gap-1.5 cursor-pointer hover:brightness-125 active:scale-95 ${healthBadgeConfig.bgClass}`}
+                      title={`${healthInfo?.title || 'Status AI'}: ${healthInfo?.message || 'Klik untuk membuka diagnostik koneksi'} (${healthInfo?.latencyMs ? `${healthInfo.latencyMs}ms` : 'Klik untuk tes'})`}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${healthBadgeConfig.dotColor}`} />
+                      <span>{healthBadgeConfig.label}</span>
+                      {hasAiDisruption && (
+                        <AlertTriangle className="w-2.5 h-2.5 text-amber-300" />
+                      )}
+                    </button>
                     <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-800/90 text-slate-300 border border-slate-700/80 hidden xs:inline-flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                       {currentDivisiName}
@@ -631,6 +676,56 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
 
             {/* Chat History Canvas */}
             <div className="flex-1 p-4 sm:p-5 overflow-y-auto space-y-4 bg-[#E8EAED] dark:bg-slate-950/90 transition-colors">
+              {/* Technical Disruption Notification Banner */}
+              {hasAiDisruption && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`p-3 sm:p-3.5 rounded-2xl border text-xs shadow-xs flex items-start justify-between gap-3 ${
+                    healthInfo?.severity === 'warning'
+                      ? 'bg-amber-500/15 border-amber-500/30 text-amber-950 dark:text-amber-200'
+                      : 'bg-rose-500/15 border-rose-500/30 text-rose-950 dark:text-rose-200'
+                  }`}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <AlertTriangle className={`w-4 h-4 shrink-0 mt-0.5 ${healthInfo?.severity === 'warning' ? 'text-amber-500' : 'text-rose-500'}`} />
+                    <div className="space-y-0.5">
+                      <div className="font-bold flex items-center gap-1.5 flex-wrap">
+                        <span>{healthInfo?.title || 'Perhatian Status AI'}</span>
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-black/10 dark:bg-white/10 font-mono">
+                          {healthInfo?.status}
+                        </span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed opacity-95">
+                        {healthInfo?.message}
+                      </p>
+                      {healthInfo?.troubleshooting && (
+                        <p className="text-[10px] font-medium opacity-85 mt-1">
+                          Tips: {healthInfo.troubleshooting}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0 self-start sm:self-center">
+                    <button
+                      type="button"
+                      onClick={() => checkAiHealth(true)}
+                      disabled={isHealthChecking}
+                      className="text-[10px] font-semibold px-2 py-1 rounded-lg bg-black/10 dark:bg-white/10 hover:bg-black/20 dark:hover:bg-white/20 transition-colors cursor-pointer"
+                    >
+                      {isHealthChecking ? 'Cek...' : 'Cek Ulang'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsDiagnosticsOpen(true)}
+                      className="text-[10px] font-semibold px-2 py-1 rounded-lg bg-teal-600 hover:bg-teal-500 text-white transition-colors cursor-pointer"
+                    >
+                      Diagnostik
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
               {messages.map((msg, idx) => {
                 // If this is an empty assistant placeholder waiting for first chunk, don't show blank bubble yet
                 if (msg.role === 'assistant' && !msg.content && isLoading) {
@@ -963,6 +1058,15 @@ ${pendingCetakSummary || 'Tidak ada pengajuan cetak pending'}
           </motion.div>
         </motion.div>
       )}
+
+      {/* Diagnostics & Connection Details Dialog */}
+      <AiDiagnosticsModal
+        isOpen={isDiagnosticsOpen}
+        onClose={() => setIsDiagnosticsOpen(false)}
+        healthInfo={healthInfo}
+        isChecking={isHealthChecking}
+        onRefresh={() => checkAiHealth(true)}
+      />
     </AnimatePresence>
   );
 };

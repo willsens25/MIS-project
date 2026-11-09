@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Volume2, VolumeX, Check, Sparkles, Loader2, Settings, Sliders, Tv, Eye, EyeOff, Shield } from 'lucide-react';
+import { Volume2, VolumeX, Check, Sparkles, Loader2, Settings, Sliders, Tv, Eye, EyeOff, Shield, AlertTriangle } from 'lucide-react';
 import { AppProvider, useApp } from './context/AppContext';
+import { useAiHealth } from './hooks/useAiHealth';
 import { Header } from './components/Header';
 import { BreadcrumbNav } from './components/navigation/BreadcrumbNav';
 import { LeftSidebarNav } from './components/navigation/LeftSidebarNav';
@@ -14,6 +15,8 @@ import { ProduksiDashboard } from './components/produksi/ProduksiDashboard';
 import { LogistikDashboard } from './components/logistik/LogistikDashboard';
 import { AIAssistantModal } from './components/AIAssistantModal';
 import { MascotAvatar } from './components/MascotAvatar';
+import { useMascotMood } from './hooks/useMascotMood';
+import { MascotMoodSecretModal } from './components/MascotMoodSecretModal';
 import { AuthModal } from './components/auth/AuthModal';
 import { SessionTimeoutModal } from './components/modals/SessionTimeoutModal';
 import { DivisionReportModal } from './components/modals/DivisionReportModal';
@@ -221,6 +224,13 @@ const AppContent: React.FC = () => {
     openVoiceActivation
   } = useApp();
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const {
+    healthInfo: aiHealthInfo,
+    hasDisruption: hasAiDisruption,
+    isDegraded: isAiDegraded
+  } = useAiHealth({ autoCheck: true, pollIntervalMs: 60000 });
+  const { mood: mascotMood, moodConfig: mascotMoodConfig } = useMascotMood();
+  const [showMoodSecretModal, setShowMoodSecretModal] = useState(false);
   const [isUserSettingsOpen, setIsUserSettingsOpen] = useState(false);
   const [isHotkeyMapOpen, setIsHotkeyMapOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -281,16 +291,20 @@ const AppContent: React.FC = () => {
     if (speechBubbleTimerRef.current) {
       clearTimeout(speechBubbleTimerRef.current);
     }
-    const currentDivisi = divisiList.find(d => d.id === currentUser.divisi_id);
-    const greetings = getDivisionGreetingOptions(
-      currentUser.name,
-      currentUser.divisi_id,
-      currentDivisi?.nama_divisi,
-      new Date(),
-      activeMascotPersonality
-    );
-    const randomIndex = Math.floor(Math.random() * greetings.length);
-    setSpeechBubbleMessage(greetings[randomIndex]);
+    if (hasAiDisruption && aiHealthInfo) {
+      setSpeechBubbleMessage(`⚠️ ${aiHealthInfo.title}: ${aiHealthInfo.message}`);
+    } else {
+      const currentDivisi = divisiList.find(d => d.id === currentUser.divisi_id);
+      const greetings = getDivisionGreetingOptions(
+        currentUser.name,
+        currentUser.divisi_id,
+        currentDivisi?.nama_divisi,
+        new Date(),
+        activeMascotPersonality
+      );
+      const randomIndex = Math.floor(Math.random() * greetings.length);
+      setSpeechBubbleMessage(greetings[randomIndex]);
+    }
     setIsSpeechBubbleVisible(true);
 
     const fadeDurationMs = MASCOT_FREQUENCY_CONFIGS[activeMascotFrequency]?.autoFadeMs || 5200;
@@ -661,7 +675,12 @@ const AppContent: React.FC = () => {
     setIsAiModalOpen(true);
   };
 
-  const handleMascotClick = () => {
+  const handleMascotClick = (e?: React.MouseEvent) => {
+    if (e && (e.shiftKey || e.altKey)) {
+      e.preventDefault();
+      setShowMoodSecretModal(true);
+      return;
+    }
     dismissSpeechBubbleImmediate();
     // 1. Play subtle pleasant tactile click sound if enabled
     if (userSettings?.mascotSoundEffectsEnabled !== false) {
@@ -931,6 +950,17 @@ const AppContent: React.FC = () => {
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
+                      setShowMoodSecretModal(true);
+                    }}
+                    className="p-1 rounded-md text-amber-500 hover:text-amber-600 dark:hover:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors cursor-pointer text-xs"
+                    title={`Mood Maskot: ${mascotMoodConfig?.label || 'Santai'} (Klik untuk info Mood Tracker)`}
+                  >
+                    <span>{mascotMoodConfig?.badgeEmoji || '⚡'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setIsUserSettingsOpen(true);
                     }}
                     className="p-1 rounded-md text-slate-400 hover:text-teal-600 dark:hover:text-teal-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
@@ -1030,7 +1060,7 @@ const AppContent: React.FC = () => {
         <motion.button
           id="btn-floating-ai-mascot"
           type="button"
-          onClick={handleMascotClick}
+          onClick={(e) => handleMascotClick(e)}
           onContextMenu={(e) => {
             e.preventDefault();
             handleToggleSound();
@@ -1079,6 +1109,8 @@ const AppContent: React.FC = () => {
               ? 'AI sedang berpikir / memproses respon... Klik untuk membuka Asisten AI'
               : aiAppState === 'success'
               ? `Tugas Selesai: ${lastCompletedTaskMessage || 'Sukses'}! Klik untuk membuka Asisten AI`
+              : hasAiDisruption
+              ? `Perhatian: ${aiHealthInfo?.title || 'Trafik AI Padat'} - Klik untuk membuka Asisten & Diagnostik AI`
               : `${contextInfo.primaryShortcut} (${contextInfo.divisionName} - ${contextInfo.activeComponentLabel}) - Klik Kanan untuk Toggle Mute`
           }
           aria-label={
@@ -1181,6 +1213,13 @@ const AppContent: React.FC = () => {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex items-center justify-center rounded-full h-4 w-4 bg-emerald-600 text-white border-2 border-white dark:border-slate-900 shadow-xs">
                   <Check className="w-2.5 h-2.5 stroke-[3]" />
+                </span>
+              </span>
+            ) : hasAiDisruption ? (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isAiDegraded ? 'bg-amber-400' : 'bg-rose-400'} opacity-75`} />
+                <span className={`relative inline-flex items-center justify-center rounded-full h-4 w-4 ${isAiDegraded ? 'bg-amber-500' : 'bg-rose-600'} text-white border-2 border-white dark:border-slate-900 shadow-xs`} title={`Pemberitahuan: ${aiHealthInfo?.title || 'Kendala AI'}`}>
+                  <AlertTriangle className="w-2.5 h-2.5 text-white" />
                 </span>
               </span>
             ) : (
@@ -1349,6 +1388,12 @@ const AppContent: React.FC = () => {
 
       {/* Night Shift Floating Quick Widget (Active during overtime) */}
       <NightShiftFloatingWidget />
+
+      {/* Secret Mascot Interaction Mood Tracker Modal */}
+      <MascotMoodSecretModal
+        isOpen={showMoodSecretModal}
+        onClose={() => setShowMoodSecretModal(false)}
+      />
 
     </div>
   );

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
+import { MascotMood, MASCOT_MOOD_CONFIGS } from '../services/mascotMoodTracker';
+import { useMascotMood } from '../hooks/useMascotMood';
 
 interface MascotAvatarProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
@@ -8,6 +10,10 @@ interface MascotAvatarProps {
   showBorder?: boolean;
   interactive?: boolean;
   enableIdleAnimation?: boolean;
+  mood?: MascotMood;
+  showMoodBadge?: boolean;
+  useRasterImage?: boolean;
+  onClick?: () => void;
 }
 
 export const MascotAvatar: React.FC<MascotAvatarProps> = ({
@@ -16,9 +22,17 @@ export const MascotAvatar: React.FC<MascotAvatarProps> = ({
   className = '',
   showBorder = false,
   interactive = true,
-  enableIdleAnimation = false
+  enableIdleAnimation = false,
+  mood: explicitMood,
+  showMoodBadge = false,
+  useRasterImage = false,
+  onClick
 }) => {
   const [imageError, setImageError] = useState(false);
+  const { mood: trackedMood, moodConfig: trackedConfig } = useMascotMood();
+
+  const effectiveMood: MascotMood = explicitMood || trackedMood || 'chill';
+  const moodConfig = MASCOT_MOOD_CONFIGS[effectiveMood];
 
   const sizeDimensions = {
     xs: 24,
@@ -54,14 +68,16 @@ export const MascotAvatar: React.FC<MascotAvatarProps> = ({
       }
     : {};
 
-  // Try displaying the high-res generated asset first if available
-  if (!imageError && variant === 'badge') {
+  // Optional raster fallback if requested explicitly
+  if (useRasterImage && !imageError && variant === 'badge') {
     return (
       <motion.div
         {...motionProps}
         {...idleBobProps}
+        onClick={onClick}
         className={`relative inline-flex items-center justify-center rounded-full overflow-hidden shrink-0 shadow-sm ${className}`}
         style={{ width: px, height: px }}
+        title={`AI MIS Mascot — Mood: ${moodConfig.label}`}
       >
         <img
           src="/img/ai-mis-mascot.jpg"
@@ -70,7 +86,7 @@ export const MascotAvatar: React.FC<MascotAvatarProps> = ({
           onError={() => setImageError(true)}
           referrerPolicy="no-referrer"
         />
-        {/* Subtle dynamic blink overlay for raster image if idle animation is active */}
+        {/* Dynamic blink overlay */}
         {enableIdleAnimation && (
           <motion.div
             aria-hidden="true"
@@ -91,15 +107,17 @@ export const MascotAvatar: React.FC<MascotAvatarProps> = ({
     );
   }
 
-  // Vector SVG illustration matching both Image 1 (Yellow circle) and Image 2 (Green ring + Pink background badge)
+  // Vector SVG illustration with dynamic facial expressions based on mood
   return (
     <motion.div
       {...motionProps}
       {...idleBobProps}
+      onClick={onClick}
       className={`relative inline-flex items-center justify-center rounded-full overflow-hidden shrink-0 select-none ${
         showBorder ? 'ring-2 ring-emerald-500/40' : ''
       } ${className}`}
       style={{ width: px, height: px }}
+      title={`AI MIS Mascot (${moodConfig.label})`}
     >
       <svg
         viewBox="0 0 100 100"
@@ -107,7 +125,7 @@ export const MascotAvatar: React.FC<MascotAvatarProps> = ({
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>
-          <clipPath id="mascot-circle-clip">
+          <clipPath id={`mascot-circle-clip-${px}`}>
             <circle cx="50" cy="50" r="48" />
           </clipPath>
         </defs>
@@ -130,7 +148,7 @@ export const MascotAvatar: React.FC<MascotAvatarProps> = ({
         )}
 
         {/* Character Illustration */}
-        <g clipPath="url(#mascot-circle-clip)">
+        <g clipPath={`url(#mascot-circle-clip-${px})`}>
           {/* Man-bun / Hair Knot at Top-Left */}
           <g id="bun">
             <path
@@ -183,32 +201,119 @@ export const MascotAvatar: React.FC<MascotAvatarProps> = ({
             strokeLinejoin="round"
           />
 
-          {/* Cute Rosy Blush Marks */}
-          <ellipse cx="44" cy="65" rx="5" ry="2.8" fill="#ff7690" />
-          <ellipse cx="76" cy="59" rx="4.5" ry="2.6" fill="#ff7690" />
+          {/* Dynamic Rosy Blush Marks reflecting mood intensity */}
+          <ellipse
+            cx="44"
+            cy="65"
+            rx={effectiveMood === 'cheerful' ? 6 : effectiveMood === 'zen' ? 3.8 : 5}
+            ry={effectiveMood === 'cheerful' ? 3.4 : effectiveMood === 'zen' ? 2.4 : 2.8}
+            fill={effectiveMood === 'cheerful' ? '#ff4f75' : effectiveMood === 'focused' ? '#ff6685' : '#ff7690'}
+            opacity={effectiveMood === 'zen' ? 0.75 : 0.9}
+          />
+          <ellipse
+            cx="76"
+            cy="59"
+            rx={effectiveMood === 'cheerful' ? 5.5 : effectiveMood === 'zen' ? 3.4 : 4.5}
+            ry={effectiveMood === 'cheerful' ? 3.2 : effectiveMood === 'zen' ? 2.2 : 2.6}
+            fill={effectiveMood === 'cheerful' ? '#ff4f75' : effectiveMood === 'focused' ? '#ff6685' : '#ff7690'}
+            opacity={effectiveMood === 'zen' ? 0.75 : 0.9}
+          />
 
-          {/* Grinning Clenched Teeth Mouth */}
-          <g id="mouth">
-            <path
-              d="M 50 67 C 54 65 65 64 70 66 C 72 71 67 75 60 76 C 54 76 50 72 50 67 Z"
-              fill="#ffffff"
-              stroke="#1b120c"
-              strokeWidth="2.5"
-              strokeLinejoin="round"
-            />
-            {/* Tooth Divider Line */}
-            <path
-              d="M 51 70.5 C 57 69.5 64 69.5 69 70"
-              stroke="#1b120c"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-            />
-          </g>
+          {/* ==================================================================== */}
+          {/* Dynamic Mood-Aware Mouth Expressions */}
+          {/* ==================================================================== */}
+          {effectiveMood === 'focused' ? (
+            /* Focused: Confident Grinning Smirk with Corner Sparkle */
+            <g id="mouth-focused">
+              <path
+                d="M 50 67 C 55 64 66 64 71 65 C 73 69 68 74 61 75 C 55 75 50 71 50 67 Z"
+                fill="#ffffff"
+                stroke="#1b120c"
+                strokeWidth="2.5"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M 51 69.5 C 57 68.5 65 68.5 70 69"
+                stroke="#1b120c"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+              {/* Confident Star Gleam at teeth edge */}
+              <path
+                d="M 72 63.5 L 72.8 65 L 74.2 65.5 L 72.8 66 L 72 67.5 L 71.2 66 L 69.8 65.5 L 71.2 65 Z"
+                fill="#ffffff"
+              />
+            </g>
+          ) : effectiveMood === 'cheerful' ? (
+            /* Cheerful: Joyful Open Smile with Pink Tongue & Teeth */
+            <g id="mouth-cheerful">
+              <path
+                d="M 49 66 C 54 64 67 64 72 66 C 73 74 66 78 60 78 C 53 78 48 74 49 66 Z"
+                fill="#8b1e3f"
+                stroke="#1b120c"
+                strokeWidth="2.5"
+                strokeLinejoin="round"
+              />
+              {/* Upper teeth */}
+              <path
+                d="M 50.5 66.5 C 55 65 66 65 70.5 66.5 C 70 69.5 65 70.5 60 70.5 C 55 70.5 51 69.5 50.5 66.5 Z"
+                fill="#ffffff"
+              />
+              {/* Joyful Tongue */}
+              <ellipse cx="60.5" cy="74.5" rx="5" ry="3" fill="#ff7690" />
+            </g>
+          ) : effectiveMood === 'curious' ? (
+            /* Curious: Cute Inquisitive Parted Mouth */
+            <g id="mouth-curious">
+              <ellipse
+                cx="61"
+                cy="69"
+                rx="4.2"
+                ry="5"
+                fill="#8b1e3f"
+                stroke="#1b120c"
+                strokeWidth="2.2"
+              />
+              <ellipse cx="61" cy="71" rx="2.8" ry="2" fill="#ff7690" />
+            </g>
+          ) : effectiveMood === 'zen' ? (
+            /* Zen: Gentle Peaceful Little Smile */
+            <g id="mouth-zen">
+              <path
+                d="M 53 69 Q 61 74 68 69"
+                fill="none"
+                stroke="#1b120c"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+            </g>
+          ) : (
+            /* Chill / Baseline: Friendly Gentle Curved Line Smile */
+            <g id="mouth-chill">
+              <path
+                d="M 51 67 Q 61 74 70 67"
+                fill="none"
+                stroke="#1b120c"
+                strokeWidth="2.8"
+                strokeLinecap="round"
+              />
+            </g>
+          )}
 
-          {/* Determined Bold Eyebrows */}
+          {/* ==================================================================== */}
+          {/* Dynamic Mood-Aware Eyebrows */}
+          {/* ==================================================================== */}
           {/* Left Eyebrow */}
           <motion.path
-            d="M 45 53 C 49 53 53 56 56 59"
+            d={
+              effectiveMood === 'focused'
+                ? 'M 45 52 C 49 52 53 55 57 59'
+                : effectiveMood === 'cheerful'
+                ? 'M 45 51 C 49 49 53 52 56 56'
+                : effectiveMood === 'curious'
+                ? 'M 45 54 C 49 54 53 56 56 58'
+                : 'M 46 54 C 50 53 54 54 57 56'
+            }
             stroke="#1b120c"
             strokeWidth="3.2"
             strokeLinecap="round"
@@ -226,11 +331,20 @@ export const MascotAvatar: React.FC<MascotAvatarProps> = ({
               ease: 'easeInOut',
             }}
           />
+
           {/* Right Eyebrow */}
           <motion.path
-            d="M 68 53 C 67 50 66 47 64 45"
+            d={
+              effectiveMood === 'curious'
+                ? 'M 69 48 C 68 44 66 42 62 41' // One eyebrow raised curiously!
+                : effectiveMood === 'focused'
+                ? 'M 69 52 C 68 49 67 46 64 43' // Sharp determined slant
+                : effectiveMood === 'cheerful'
+                ? 'M 69 50 C 67 47 65 46 62 46' // Joyful high arch
+                : 'M 68 53 C 66 51 63 50 60 51' // Relaxed natural
+            }
             stroke="#1b120c"
-            strokeWidth="3.5"
+            strokeWidth="3.4"
             strokeLinecap="round"
             fill="none"
             animate={
@@ -248,48 +362,86 @@ export const MascotAvatar: React.FC<MascotAvatarProps> = ({
             }}
           />
 
-          {/* Big Determined Cartoon Eyes with Natural Blinking */}
-          {/* Left Eye Group */}
-          <motion.g
-            animate={
-              enableIdleAnimation
-                ? {
-                    scaleY: [1, 1, 1, 1, 0.08, 1, 1, 1],
-                  }
-                : {}
-            }
-            style={{ transformOrigin: '51px 60px' }}
-            transition={{
-              duration: 4.8,
-              repeat: Infinity,
-              times: [0, 0.65, 0.88, 0.9, 0.92, 0.94, 0.96, 1],
-              ease: 'easeInOut',
-            }}
-          >
-            <ellipse cx="51" cy="60" rx="3" ry="3.5" fill="#1b120c" />
-            <circle cx="52" cy="59" r="1.1" fill="#ffffff" />
-          </motion.g>
+          {/* ==================================================================== */}
+          {/* Dynamic Mood-Aware Eyes with Natural Blinking */}
+          {/* ==================================================================== */}
+          {effectiveMood === 'zen' ? (
+            /* Zen: Peaceful Closed Crescent Eyes (^_^) */
+            <g id="eyes-zen">
+              <path
+                d="M 47 60 Q 51 55 55 60"
+                fill="none"
+                stroke="#1b120c"
+                strokeWidth="2.8"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 64 57 Q 68 52 72 57"
+                fill="none"
+                stroke="#1b120c"
+                strokeWidth="2.8"
+                strokeLinecap="round"
+              />
+            </g>
+          ) : (
+            <>
+              {/* Left Eye Group */}
+              <motion.g
+                animate={
+                  enableIdleAnimation
+                    ? {
+                        scaleY: [1, 1, 1, 1, 0.08, 1, 1, 1],
+                      }
+                    : {}
+                }
+                style={{ transformOrigin: '51px 60px' }}
+                transition={{
+                  duration: 4.8,
+                  repeat: Infinity,
+                  times: [0, 0.65, 0.88, 0.9, 0.92, 0.94, 0.96, 1],
+                  ease: 'easeInOut',
+                }}
+              >
+                <ellipse cx="51" cy="60" rx="3.1" ry="3.6" fill="#1b120c" />
+                <circle cx="52" cy="59" r="1.1" fill="#ffffff" />
+                {effectiveMood === 'cheerful' && (
+                  <circle cx="50" cy="61.5" r="0.6" fill="#ffffff" />
+                )}
+              </motion.g>
 
-          {/* Right Eye Group */}
-          <motion.g
-            animate={
-              enableIdleAnimation
-                ? {
-                    scaleY: [1, 1, 1, 1, 0.08, 1, 1, 1],
-                  }
-                : {}
-            }
-            style={{ transformOrigin: '68px 56px' }}
-            transition={{
-              duration: 4.8,
-              repeat: Infinity,
-              times: [0, 0.65, 0.88, 0.9, 0.92, 0.94, 0.96, 1],
-              ease: 'easeInOut',
-            }}
-          >
-            <ellipse cx="68" cy="56" rx="3.2" ry="3.8" fill="#1b120c" />
-            <circle cx="69" cy="55" r="1.2" fill="#ffffff" />
-          </motion.g>
+              {/* Right Eye Group */}
+              <motion.g
+                animate={
+                  enableIdleAnimation
+                    ? {
+                        scaleY: [1, 1, 1, 1, 0.08, 1, 1, 1],
+                      }
+                    : {}
+                }
+                style={{ transformOrigin: '68px 56px' }}
+                transition={{
+                  duration: 4.8,
+                  repeat: Infinity,
+                  times: [0, 0.65, 0.88, 0.9, 0.92, 0.94, 0.96, 1],
+                  ease: 'easeInOut',
+                }}
+              >
+                <ellipse cx="68" cy="56" rx="3.3" ry="3.8" fill="#1b120c" />
+                <circle cx="69" cy="55" r="1.2" fill="#ffffff" />
+                {effectiveMood === 'cheerful' && (
+                  <circle cx="67" cy="57.5" r="0.7" fill="#ffffff" />
+                )}
+
+                {/* Star / Sparkle glint for Focused Power Users */}
+                {effectiveMood === 'focused' && (
+                  <path
+                    d="M 69.5 54 L 70.2 55.2 L 71.5 55.5 L 70.2 55.8 L 69.5 57 L 68.8 55.8 L 67.5 55.5 L 68.8 55.2 Z"
+                    fill="#ffffff"
+                  />
+                )}
+              </motion.g>
+            </>
+          )}
 
           {/* Brown Messy Hair Spikes on Top & Front */}
           <g id="hair-spikes">
@@ -336,6 +488,16 @@ export const MascotAvatar: React.FC<MascotAvatarProps> = ({
           </g>
         </g>
       </svg>
+
+      {/* Optional Subtle Mood Badge */}
+      {showMoodBadge && (
+        <span
+          className="absolute -bottom-0.5 -right-0.5 text-[10px] p-0.5 rounded-full bg-slate-900 border border-slate-700 shadow-xs pointer-events-none"
+          title={`Mood: ${moodConfig.label}`}
+        >
+          {moodConfig.badgeEmoji}
+        </span>
+      )}
     </motion.div>
   );
 };

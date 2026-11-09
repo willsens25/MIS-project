@@ -1,18 +1,21 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI } from '@google/genai';
 
+export const config = {
+  maxDuration: 30
+};
+
+// Priority list: Put stable, fast, high-capacity flash-lite first to avoid 503 high-demand capacity bottlenecks
 const CANDIDATE_MODELS = [
-  'gemini-3.8-flash',
   'gemini-3.1-flash-lite',
   'gemini-flash-latest',
+  'gemini-3.8-flash',
   'gemini-4-argon'
 ];
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 function formatErrorMessage(err: any): string {
   if (!err) return 'Terjadi kendala pada koneksi server AI.';
-  const msg = typeof err === 'string' ? err : err.message || JSON.stringify(err);
+  const msg = typeof err === 'string' ? err : err?.message || JSON.stringify(err);
   if (msg.includes('503') || msg.includes('high demand') || msg.includes('UNAVAILABLE')) {
     return 'Pusat data Google Gemini sedang mengalami antrean trafik tinggi sesaat (HTTP 503 High Demand). Silakan coba kirim ulang dalam beberapa detik.';
   }
@@ -23,6 +26,14 @@ function formatErrorMessage(err: any): string {
     return 'Kunci GEMINI_API_KEY tidak valid. Silakan periksa kembali API Key Anda di Google AI Studio dan perbarui di Settings Vercel.';
   }
   return msg.replace(/\{"error":\{.*?"message":"(.*?)"\}.*?\}/gs, '$1');
+}
+
+// Timeout helper to avoid any model hanging beyond 7 seconds
+function callWithTimeout<T>(promise: Promise<T>, ms = 7000): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Timeout exceeding ${ms}ms`)), ms))
+  ]);
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -65,10 +76,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     for (const model of CANDIDATE_MODELS) {
       try {
-        const response = await ai.models.generateContent({
-          model,
-          contents: fullPrompt,
-        });
+        const response = await callWithTimeout(
+          ai.models.generateContent({
+            model,
+            contents: fullPrompt,
+            config: {
+              temperature: 0.75
+            }
+          }),
+          7000
+        );
 
         if (response.text) {
           replyText = response.text;
@@ -76,12 +93,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       } catch (err: any) {
         lastError = err;
-        const errMsg = String(err?.message || err);
-        const is503 = errMsg.includes('503') || errMsg.includes('high demand') || errMsg.includes('UNAVAILABLE');
-        console.warn(`Model ${model} ${is503 ? 'kapasitas padat (503)' : 'error'} di Vercel function, lanjut ke alternatif...`);
-        if (is503) {
-          await sleep(350);
-        }
+        console.warn(`[Vercel Gemini] Model ${model} failed, trying next candidate:`, err?.message || err);
       }
     }
 

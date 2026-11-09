@@ -1,18 +1,22 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI } from '@google/genai';
 
+export const config = {
+  supportsResponseStreaming: true,
+  maxDuration: 30
+};
+
+// Priority list: Put stable, fast, high-capacity flash-lite first to avoid 503 high-demand capacity bottlenecks
 const CANDIDATE_MODELS = [
-  'gemini-3.8-flash',
   'gemini-3.1-flash-lite',
   'gemini-flash-latest',
+  'gemini-3.8-flash',
   'gemini-4-argon'
 ];
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 function formatErrorMessage(err: any): string {
   if (!err) return 'Terjadi kendala pada koneksi server AI.';
-  const msg = typeof err === 'string' ? err : err.message || JSON.stringify(err);
+  const msg = typeof err === 'string' ? err : err?.message || JSON.stringify(err);
   if (msg.includes('503') || msg.includes('high demand') || msg.includes('UNAVAILABLE')) {
     return 'Pusat data Google Gemini sedang mengalami lonjakan antrean trafik tinggi sesaat (HTTP 503 High Demand). Silakan coba kirim ulang dalam beberapa detik.';
   }
@@ -78,36 +82,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         for await (const chunk of stream) {
           if (chunk.text) {
+            streamSuccess = true;
             res.write(`data: ${JSON.stringify({ chunk: chunk.text })}\n\n`);
           }
         }
 
-        streamSuccess = true;
-        break;
+        if (streamSuccess) {
+          break;
+        }
       } catch (err: any) {
         lastError = err;
-        const errMsg = String(err?.message || err);
-        const is503 = errMsg.includes('503') || errMsg.includes('high demand') || errMsg.includes('UNAVAILABLE');
-        console.warn(`Model ${model} ${is503 ? 'kapasitas padat (503)' : 'error'}, lanjut ke model alternatif...`);
-        if (is503) {
-          await sleep(350);
+        console.warn(`[Vercel Stream] Model ${model} failed, trying next candidate:`, err?.message || err);
+        if (streamSuccess) {
+          // If we already started streaming chunks, stop gracefully
+          break;
         }
-      }
-    }
-
-    if (!streamSuccess) {
-      // Fallback single generation with stable flash-lite model if streaming had issues
-      try {
-        const fallbackRes = await ai.models.generateContent({
-          model: 'gemini-3.1-flash-lite',
-          contents: fullPrompt,
-        });
-        if (fallbackRes.text) {
-          res.write(`data: ${JSON.stringify({ chunk: fallbackRes.text })}\n\n`);
-          streamSuccess = true;
-        }
-      } catch (fbErr: any) {
-        lastError = fbErr;
       }
     }
 
@@ -120,7 +109,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.end();
 
   } catch (err: any) {
-    console.error('Vercel Gemini Stream Error:', err);
+    console.error('Vercel Gemini Stream Fatal Error:', err);
     try {
       res.write(`data: ${JSON.stringify({ chunk: `[Error Server AI]: ${err?.message || 'Terjadi kesalahan sistem'}` })}\n\n`);
       res.write(`data: [DONE]\n\n`);
